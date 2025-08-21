@@ -23,3 +23,16 @@ services:
        echo \"Waiting for shutdown to dump database...\"; tail -f /dev/null"
     volumes:
       - ./database/dumps:/dumps
+  
+  crud:
+    build: ./crud
+    container_name: crud-service
+    environment:
+      - FLASK_APP=main.py
+      - DATABASE_HOST=dev-database
+    depends_on:
+      - mysql
+    ports:
+      - "5000:5000"
+    volumes:
+      - ./crud/main.py:/app/main.py
