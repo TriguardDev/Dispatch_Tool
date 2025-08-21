@@ -10,7 +10,7 @@ services:
     ports:
       - "3307:3306"
     volumes:
-      - ./init_sql:/docker-entrypoint-initdb.d
+      - ./database/init_sql:/docker-entrypoint-initdb.d
   
   mysql-dumper:
     image: mysql:latest
@@ -22,4 +22,4 @@ services:
       "trap 'echo \"Dumping database...\"; mysqldump -h mysql -u admin -padmin5683! dev > /dumps/dev_dump.sql' EXIT;
        echo \"Waiting for shutdown to dump database...\"; tail -f /dev/null"
     volumes:
-      - ./dumps:/dumps
+      - ./database/dumps:/dumps
