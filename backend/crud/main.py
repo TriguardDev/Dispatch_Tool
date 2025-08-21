@@ -13,26 +13,16 @@ db_config = {
     "port": 3306
 }
 
-@app.route("/add_booking", methods=["POST"])
-def add_booking():
+@app.route("/agents", methods=["GET"])
+def get_agents():
     try:
-        data = request.json
-        customerId = data.get("customerId")
-        agentId = data.get("agentId")
-        booking_date = data.get("booking_date")  # should be a string like '2025-08-22 09:00:00'
-        status = data.get("status", "pending")   # default if not provided
-
         conn = mysql.connector.connect(**db_config)
-        cursor = conn.cursor()
+        cursor = conn.cursor(dictionary=True)  # dictionary=True gives JSON-like dicts
 
-        sql = """
-        INSERT INTO bookings (customerId, agentId, booking_date, status)
-        VALUES (%s, %s, %s, %s)
-        """
-        cursor.execute(sql, (customerId, agentId, booking_date, status))
-        conn.commit()
+        cursor.execute("SELECT * FROM field_agents")
+        agents = cursor.fetchall()
 
-        return jsonify({"message": "Booking added successfully!", "bookingId": cursor.lastrowid}), 201
+        return jsonify(agents), 200
 
     except Exception as e:
         return jsonify({"error": str(e)}), 500
@@ -42,6 +32,7 @@ def add_booking():
             cursor.close()
         if 'conn' in locals():
             conn.close()
+
 
 if __name__ == "__main__":
     app.run(debug=True)
