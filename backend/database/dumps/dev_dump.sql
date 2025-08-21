@@ -33,7 +33,7 @@ CREATE TABLE `bookings` (
   KEY `agentId` (`agentId`),
   CONSTRAINT `bookings_ibfk_1` FOREIGN KEY (`customerId`) REFERENCES `customers` (`customerId`) ON DELETE CASCADE,
   CONSTRAINT `bookings_ibfk_2` FOREIGN KEY (`agentId`) REFERENCES `field_agents` (`agentId`) ON DELETE SET NULL
-) ENGINE=InnoDB AUTO_INCREMENT=4 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=5 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -42,7 +42,7 @@ CREATE TABLE `bookings` (
 
 LOCK TABLES `bookings` WRITE;
 /*!40000 ALTER TABLE `bookings` DISABLE KEYS */;
-INSERT INTO `bookings` VALUES (1,1,1,'2025-08-22 09:00:00','pending'),(2,2,2,'2025-08-22 10:30:00','confirmed'),(3,3,3,'2025-08-22 14:00:00','cancelled');
+INSERT INTO `bookings` VALUES (1,1,1,'2025-08-22 09:00:00','pending'),(2,2,2,'2025-08-22 10:30:00','confirmed'),(3,3,3,'2025-08-22 14:00:00','cancelled'),(4,1,1,'2025-08-22 09:00:00','pending');
 /*!40000 ALTER TABLE `bookings` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -144,4 +144,4 @@ UNLOCK TABLES;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2025-08-21 22:51:03
+-- Dump completed on 2025-08-21 23:31:23
