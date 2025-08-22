@@ -36,3 +36,16 @@ services:
       - "5000:5000"
     volumes:
       - ./search/main.py:/app/main.py
+  
+  booking:
+    build: ./booking
+    container_name: booking-service
+    environment:
+      - FLASK_APP=main.py
+      - DATABASE_HOST=dev-database
+    depends_on:
+      - mysql
+    ports:
+      - "6000:6000"
+    volumes:
+      - ./booking/main.py:/app/main.py
