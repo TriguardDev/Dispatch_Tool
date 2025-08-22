@@ -24,9 +24,9 @@ services:
     volumes:
       - ./database/dumps:/dumps
   
-  crud:
-    build: ./crud
-    container_name: crud-service
+  search:
+    build: ./search
+    container_name: search-service
     environment:
       - FLASK_APP=main.py
       - DATABASE_HOST=dev-database
@@ -35,4 +35,4 @@ services:
     ports:
       - "5000:5000"
     volumes:
-      - ./crud/main.py:/app/main.py
+      - ./search/main.py:/app/main.py
