@@ -23,3 +23,16 @@ services:
        echo \"Waiting for shutdown to dump database...\"; tail -f /dev/null"
     volumes:
       - ./database/dumps:/dumps
+  
+  search:
+    build: ./search
+    container_name: search-service
+    environment:
+      - FLASK_APP=main.py
+      - DATABASE_HOST=dev-database
+    depends_on:
+      - mysql
+    ports:
+      - "5000:5000"
+    volumes:
+      - ./search/main.py:/app/main.py
