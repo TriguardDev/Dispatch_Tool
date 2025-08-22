@@ -13,15 +13,30 @@ db_config = {
     "port": 3306
 }
 
-@app.route("/agents", methods=["GET"])
-def get_agents():
+@app.route("/search", methods=["GET"])
+def search_agents():
     try:
+        # Get postal code from query parameters
+        postal_code = request.args.get('postal_code')
+        
         conn = mysql.connector.connect(**db_config)
-        cursor = conn.cursor(dictionary=True)  # dictionary=True gives JSON-like dicts
+        cursor = conn.cursor(dictionary=True)
 
-        cursor.execute("SELECT * FROM field_agents")
+        # Build query based on whether postal_code is provided
+        if postal_code:
+            query = """
+                SELECT fa.*, l.postal_code
+                FROM field_agents fa
+                INNER JOIN locations l ON fa.location_id = l.id
+                WHERE l.postal_code = %s
+            """
+
+            cursor.execute(query, (postal_code,))
+        else:
+            # Return all agents if no postal code specified
+            cursor.execute("SELECT * FROM field_agents")
+        
         agents = cursor.fetchall()
-
         return jsonify(agents), 200
 
     except Exception as e:
