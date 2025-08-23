@@ -40,16 +40,16 @@ def book_agent():
         cursor.execute("""
             INSERT INTO bookings (agentId, customerId, booking_date)
             VALUES (%s, %s, %s)
-        """, (data['agentId'], customer_id, data['booking_date']))
+        """, (data["booking"]['agentId'], customer_id, data["booking"]['booking_date']))
         booking_id = cursor.lastrowid
         
         conn.commit()
 
+        add_to_schedule(booking_info=data["booking"])
         return jsonify({
             "message": "Booking created successfully",
             "customerId": customer_id,
             "bookingId": booking_id,
-            "bookingStatus": "confirmed"
         }), 200
 
     except Exception as e:
@@ -64,6 +64,9 @@ def book_agent():
         if 'conn' in locals():
             conn.close()
 
+# TODO: method to add booking to schedule
+def add_to_schedule(booking_info):
+    pass
 
 if __name__ == "__main__":
     app.run(debug=True)
