@@ -46,6 +46,7 @@ def book_agent():
         conn.commit()
 
         add_to_schedule(booking_info=data["booking"])
+        notify_all_parties()
         return jsonify({
             "message": "Booking created successfully",
             "customerId": customer_id,
@@ -66,6 +67,9 @@ def book_agent():
 
 # TODO: method to add booking to schedule
 def add_to_schedule(booking_info):
+    pass
+
+def notify_all_parties():
     pass
 
 if __name__ == "__main__":
