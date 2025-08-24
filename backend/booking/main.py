@@ -38,9 +38,9 @@ def book_agent():
 
         # Create new booking
         cursor.execute("""
-            INSERT INTO bookings (agentId, customerId, booking_date)
-            VALUES (%s, %s, %s)
-        """, (data["booking"]['agentId'], customer_id, data["booking"]['booking_date']))
+            INSERT INTO bookings (agentId, customerId, booking_date, booking_time)
+            VALUES (%s, %s, %s, %s)
+        """, (data["booking"]['agentId'], customer_id, data["booking"]['booking_date'], data["booking"]["booking_time"]))
         booking_id = cursor.lastrowid
         
         conn.commit()
