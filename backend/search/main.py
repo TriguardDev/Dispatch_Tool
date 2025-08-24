@@ -32,7 +32,7 @@ def search_agents():
             location = cursor.fetchone()
             
             query = """
-                SELECT fa.*, l.latitude, l.longitude,
+                SELECT fa.name,
                     (6371 * ACOS(
                         COS(RADIANS(%s)) * COS(RADIANS(l.latitude)) *
                         COS(RADIANS(l.longitude) - RADIANS(%s)) +
@@ -44,13 +44,13 @@ def search_agents():
                     SELECT b.agentId
                     FROM bookings b
                     WHERE b.booking_date = %s
-                      AND b.booking_time BETWEEN %s AND ADDTIME(%s, %s)
+                      AND b.booking_time BETWEEN SUBTIME(%s, %s) AND ADDTIME(%s, %s)
                 )
                 HAVING distance <= 50
                 ORDER BY distance ASC;
             """
 
-            cursor.execute(query, (location["latitude"], location["longitude"], location["latitude"], booking_date, booking_time, booking_time, booking_period))
+            cursor.execute(query, (location["latitude"], location["longitude"], location["latitude"], booking_date, booking_time, booking_period, booking_time, booking_period))
         else:
             # Return all agents if no postal code specified
             cursor.execute("SELECT * FROM field_agents")
