@@ -19,7 +19,9 @@ def search_agents():
         # Get postal code from query parameters
         postal_code = request.args.get('postal_code')
         booking_date = request.args.get('booking_date')
-
+        booking_time = request.args.get('booking_time')
+        booking_period = '02:00:00'
+        
         conn = mysql.connector.connect(**db_config)
         cursor = conn.cursor(dictionary=True)
 
@@ -42,12 +44,13 @@ def search_agents():
                     SELECT b.agentId
                     FROM bookings b
                     WHERE b.booking_date = %s
+                      AND b.booking_time BETWEEN %s AND ADDTIME(%s, %s)
                 )
                 HAVING distance <= 50
                 ORDER BY distance ASC;
             """
 
-            cursor.execute(query, (location["latitude"], location["longitude"], location["latitude"], booking_date,))
+            cursor.execute(query, (location["latitude"], location["longitude"], location["latitude"], booking_date, booking_time, booking_time, booking_period))
         else:
             # Return all agents if no postal code specified
             cursor.execute("SELECT * FROM field_agents")
