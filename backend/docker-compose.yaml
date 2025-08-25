@@ -62,3 +62,16 @@ services:
       - "8000:8000"
     volumes:
       - ./crud/main.py:/app/main.py
+  
+  login:
+    build: ./login
+    container_name: login-service
+    environment:
+      - FLASK_APP=main.py
+      - DATABASE_HOST=dev-database
+    depends_on:
+      - mysql
+    ports:
+      - "9000:9000"
+    volumes:
+      - ./login/main.py:/app/main.py
