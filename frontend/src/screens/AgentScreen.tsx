@@ -18,7 +18,11 @@ export default function AgentScreen({ agentId }: AgentScreenProps) {
     async function fetchBookings() {
       try {
         setLoading(true);
-        const res = await fetch(`/api/agent-bookings?agentId=${agentId}`);
+        const res = await fetch(`http://localhost:8000/booking?agentId=${agentId}`, {
+          method: "GET",
+          headers: { "Content-Type": "application/json" },
+        });
+
         if (!res.ok) throw new Error("Failed to fetch bookings");
         const data: Booking[] = await res.json();
         setBookings(data);
@@ -34,12 +38,12 @@ export default function AgentScreen({ agentId }: AgentScreenProps) {
 
   const handleStatusChange = async (bookingId: number, status: string) => {
     try {
-      const res = await fetch(`/api/bookings/${bookingId}`, {
-        method: "PATCH",
+      const res = await fetch(`http://localhost:8000/booking`, {
+        method: "PUT",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ status }),
+        body: JSON.stringify({"booking_id": bookingId, "status": status }),
       });
 
       if (!res.ok) throw new Error("Failed to update booking status");
