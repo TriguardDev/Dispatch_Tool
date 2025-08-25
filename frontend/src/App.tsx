@@ -12,7 +12,7 @@ export default function App() {
   }
 
   if (user.user_type === "agent") {
-    return <AgentScreen />;
+    return <AgentScreen agentId={user.id}/>;
   }
 
   if (user.user_type === "dispatcher") {
