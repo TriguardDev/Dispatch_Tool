@@ -6,7 +6,7 @@ import AppointmentCard from "../components/AppointmentCard";
 import NewAppointmentModal from "../components/NewAppointmentModal";
 import { getAllBookings, type Booking } from "../api/crud";
 
-export default function AgentScreen() {
+export default function DispatcherScreen() {
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [loading, setLoading] = useState(true);
