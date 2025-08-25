@@ -25,7 +25,7 @@ def search_agents():
         booking_period = '02:00:00'
         
         conn = mysql.connector.connect(**db_config)
-        cursor = conn.cursor(dictionary=True)
+        cursor = conn.cursor(dictionary=True, buffered=True)
 
         # Build query based on whether postal_code is provided
         if postal_code:

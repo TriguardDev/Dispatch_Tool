@@ -3,6 +3,7 @@ import { useState } from "react";
 interface Props {
   isOpen: boolean;
   onClose: () => void;
+  onSave: () => void; // Callback to refresh bookings after saving
 }
 
 interface Agent {
@@ -10,7 +11,7 @@ interface Agent {
   name: string;
 }
 
-export default function NewAppointmentModal({ isOpen, onClose }: Props) {
+export default function NewAppointmentModal({ isOpen, onClose, onSave }: Props) {
   const [form, setForm] = useState({
     name: "",
     email: "",
@@ -82,6 +83,7 @@ export default function NewAppointmentModal({ isOpen, onClose }: Props) {
       const data = await res.json();
       console.log("✅ Appointment saved:", data);
 
+      if (onSave) onSave();
       onClose();
     } catch (err) {
       console.error("❌ Error saving appointment:", err);

@@ -11,6 +11,7 @@ export default function AgentScreen() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [refreshBookings, setRefreshBookings] = useState(0);
 
   useEffect(() => {
     async function fetchBookings() {
@@ -26,7 +27,7 @@ export default function AgentScreen() {
     }
 
     fetchBookings();
-  }, []);
+  }, [refreshBookings]);
 
   // Categorize bookings by status
   const scheduled = bookings.filter((b) => ["scheduled"].includes(b.status.toLowerCase()));
@@ -84,6 +85,7 @@ export default function AgentScreen() {
       <NewAppointmentModal
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
+        onSave={() => setRefreshBookings((prev) => prev + 1)}
       />
     </div>
   );
