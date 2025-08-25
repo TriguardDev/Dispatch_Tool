@@ -1,6 +1,6 @@
 export interface LoginResponse {
   id: number;
-  user_type: "customer" | "agent";
+  user_type: "dispatcher" | "agent";
 }
 
 export async function login(email: string): Promise<LoginResponse> {
