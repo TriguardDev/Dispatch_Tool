@@ -58,7 +58,7 @@ VALUES
 -- Sample Dispatchers
 INSERT INTO dispatchers (`name`, email)
 VALUES
-('Grace Lee', 'lee@example.com')
+('Grace Lee', 'lee@example.com');
 
 -- Sample Field Agents
 INSERT INTO field_agents (`name`, email, phone, `status`, location_id)

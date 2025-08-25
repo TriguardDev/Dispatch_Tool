@@ -80,19 +80,37 @@ def update_booking_status():
             conn.close()
 
 @app.route("/booking", methods=["GET"])
-def get_all_bookings():
+def get_bookings():
     try:
         conn = mysql.connector.connect(**db_config)
-        cursor = conn.cursor(dictionary=True)
+        cursor = conn.cursor(dictionary=True, buffered=True)
         
-        cursor.execute("""
-            SELECT b.bookingId, b.booking_date, b.booking_time, b.status,
-                   c.name AS customer_name,
-                   fa.name AS agent_name
-            FROM bookings b
-            JOIN customers c ON b.customerId = c.customerId
-            LEFT JOIN field_agents fa ON b.agentId = fa.agentId
-        """)
+        agentId = request.args.get('agentId')
+        query = ""
+        
+        if (agentId):
+            # Find all bookings where bookings.agentId = agentId
+            query = """
+                SELECT b.bookingId, b.booking_date, b.booking_time, b.status,
+                      c.name AS customer_name,
+                      fa.name AS agent_name
+                FROM bookings b
+                JOIN customers c ON b.customerId = c.customerId
+                LEFT JOIN field_agents fa ON b.agentId = fa.agentId
+                WHERE b.agentId = %s
+            """
+            cursor.execute(query, (agentId,))
+        else:
+            query = """
+                SELECT b.bookingId, b.booking_date, b.booking_time, b.status,
+                      c.name AS customer_name,
+                      fa.name AS agent_name
+                FROM bookings b
+                JOIN customers c ON b.customerId = c.customerId
+                LEFT JOIN field_agents fa ON b.agentId = fa.agentId
+            """
+            cursor.execute(query,)
+
         bookings = cursor.fetchall()
 
         for b in bookings:
