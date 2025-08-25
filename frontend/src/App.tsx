@@ -1,6 +1,6 @@
 import { useState } from "react";
 import LoginForm from "./components/LoginForm";
-import CustomerScreen from "./screens/CustomerScreen";
+import DispatcherScreen from "./screens/DispatcherScreen"
 import AgentScreen from "./screens/AgentScreen";
 import type { LoginResponse } from "./api/login";
 
@@ -12,11 +12,11 @@ export default function App() {
   }
 
   if (user.user_type === "agent") {
-    return <CustomerScreen />;
+    return <AgentScreen />;
   }
 
   if (user.user_type === "dispatcher") {
-    return <AgentScreen />;
+    return <DispatcherScreen />;
   }
 
   return null;
