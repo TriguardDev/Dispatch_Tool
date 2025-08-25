@@ -8,11 +8,12 @@ CORS(app)
 @app.route("/notification", methods=["POST"])
 def notify_users():
   zapier_endpoint = 'https://hooks.zapier.com/hooks/catch/24326421/ut0e6ah/'
+  print("notification endpoint hit", flush=True)
   # send post request to endpoint with json payload
   try:
       data = request.get_json()
       print(data, flush=True)
-      response = requests.post(zapier_endpoint, json=data)
+      response = requests.post(zapier_endpoint, json=data, headers={'Content-Type': 'application/json'})
       response.raise_for_status()
       return {"call": "success"}, 200
   except Exception as e:
