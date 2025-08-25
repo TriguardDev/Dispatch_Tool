@@ -1,6 +1,7 @@
 from flask import Flask, request, jsonify
 import mysql.connector
 from flask_cors import CORS
+import datetime
 
 app = Flask(__name__)
 CORS(app)
@@ -71,6 +72,42 @@ def update_booking_status():
 
         conn.commit()
         return {"Message": "Booking status updated"}, 200
+
+    finally:
+        if 'cursor' in locals():
+            cursor.close()
+        if 'conn' in locals():
+            conn.close()
+
+@app.route("/booking", methods=["GET"])
+def get_all_bookings():
+    try:
+        conn = mysql.connector.connect(**db_config)
+        cursor = conn.cursor(dictionary=True)
+        
+        cursor.execute("""
+            SELECT b.bookingId, b.booking_date, b.booking_time, b.status,
+                   c.name AS customer_name,
+                   fa.name AS agent_name
+            FROM bookings b
+            JOIN customers c ON b.customerId = c.customerId
+            LEFT JOIN field_agents fa ON b.agentId = fa.agentId
+        """)
+        bookings = cursor.fetchall()
+
+        for b in bookings:
+            # booking_date as string
+            if isinstance(b['booking_date'], (datetime.date, datetime.datetime)):
+                b['booking_date'] = b['booking_date'].isoformat()  # YYYY-MM-DD
+            # booking_time as string
+            if isinstance(b['booking_time'], datetime.timedelta):
+                total_seconds = int(b['booking_time'].total_seconds())
+                hours = total_seconds // 3600
+                minutes = (total_seconds % 3600) // 60
+                seconds = total_seconds % 60
+                b['booking_time'] = f"{hours:02}:{minutes:02}:{seconds:02}"  # HH:MM:SS
+
+        return jsonify(bookings), 200
 
     finally:
         if 'cursor' in locals():
