@@ -4,9 +4,7 @@ export interface Booking {
   booking_time: string; // HH:MM:SS
   status: string;
   customer_name: string;
-  customer_email: string;
   agent_name: string | null; // agent can be null
-  agent_email: string | null;
 }
 
 export async function getAllBookings(): Promise<Booking[]> {

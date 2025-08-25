@@ -51,13 +51,7 @@ export default function AgentScreen() {
             {scheduled.map((appt) => (
               <AppointmentCard 
                 key={appt.bookingId} 
-                appt={{
-                  id: appt.bookingId.toString(),
-                  name: appt.customer_name,
-                  address: "",
-                  date: appt.booking_date,
-                  time: appt.booking_time,
-                  status: "Scheduled"}} />
+                appt={appt} />
             ))}
           </QueueCard>
 
@@ -69,13 +63,7 @@ export default function AgentScreen() {
             {active.map((appt) => (
               <AppointmentCard 
                 key={appt.bookingId} 
-                appt={{
-                  id: appt.bookingId.toString(),
-                  name: appt.customer_name,
-                  address: "",
-                  date: appt.booking_date,
-                  time: appt.booking_time,
-                  status: "On Site"}} />
+                appt={appt} />
             ))}
           </QueueCard>
 
@@ -87,13 +75,7 @@ export default function AgentScreen() {
             {completed.map((appt) => (
               <AppointmentCard 
                 key={appt.bookingId} 
-                appt={{
-                  id: appt.bookingId.toString(),
-                  name: appt.customer_name,
-                  address: "",
-                  date: appt.booking_date,
-                  time: appt.booking_time,
-                  status: "Completed"}} />
+                appt={appt} />
             ))}
           </QueueCard>
         </div>
