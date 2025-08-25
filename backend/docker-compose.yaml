@@ -46,7 +46,7 @@ services:
     depends_on:
       - mysql
     ports:
-      - "6000:6000"
+      - "5001:5001"
     volumes:
       - ./booking/main.py:/app/main.py
   
@@ -75,3 +75,13 @@ services:
       - "9000:9000"
     volumes:
       - ./login/main.py:/app/main.py
+  
+  notification:
+    build: ./notification
+    container_name: notification-service
+    environment:
+      - FLASK_APP=main.py
+    ports:
+      - "5002:5002"
+    volumes:
+      - ./notification/main.py:/app/main.py

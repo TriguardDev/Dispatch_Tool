@@ -1,8 +1,10 @@
 from flask import Flask, request, jsonify
 import mysql.connector
 from datetime import datetime
+from flask_cors import CORS
 
 app = Flask(__name__)
+CORS(app)
 
 # Configure MySQL connection (match your docker-compose settings!)
 db_config = {
@@ -23,7 +25,7 @@ def search_agents():
         booking_period = '02:00:00'
         
         conn = mysql.connector.connect(**db_config)
-        cursor = conn.cursor(dictionary=True)
+        cursor = conn.cursor(dictionary=True, buffered=True)
 
         # Build query based on whether postal_code is provided
         if postal_code:
@@ -32,7 +34,7 @@ def search_agents():
             location = cursor.fetchone()
             
             query = """
-                SELECT fa.name,
+                SELECT fa.name, fa.agentId,
                     (6371 * ACOS(
                         COS(RADIANS(%s)) * COS(RADIANS(l.latitude)) *
                         COS(RADIANS(l.longitude) - RADIANS(%s)) +
@@ -58,6 +60,8 @@ def search_agents():
         agents = cursor.fetchall()
         return jsonify(agents), 200
 
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
     finally:
         if 'cursor' in locals():
             cursor.close()

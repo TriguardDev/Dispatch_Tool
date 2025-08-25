@@ -1,7 +1,9 @@
 from flask import Flask, request, jsonify
 import mysql.connector
+from flask_cors import CORS
 
 app = Flask(__name__)
+CORS(app)
 
 # Configure MySQL connection (match your docker-compose settings!)
 db_config = {
@@ -23,8 +25,8 @@ def login():
 
         query = """
         (
-            SELECT customerId AS id, 'customer' AS user_type
-            FROM customers
+            SELECT dispatcherId AS id, 'dispatcher' AS user_type
+            FROM dispatchers
             WHERE email = %s
         )
         UNION

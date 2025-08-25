@@ -8,6 +8,13 @@ CREATE TABLE IF NOT EXISTS locations (
     street_number INT
 );
 
+-- Dispatcher Table
+CREATE TABLE IF NOT EXISTS dispatchers (
+    dispatcherId INT AUTO_INCREMENT PRIMARY KEY,
+    `name` VARCHAR(100) NOT NULL,
+    email VARCHAR(100) UNIQUE NOT NULL
+);
+
 -- Field Agent Table
 CREATE TABLE IF NOT EXISTS field_agents (
     agentId INT AUTO_INCREMENT PRIMARY KEY,
@@ -36,7 +43,7 @@ CREATE TABLE IF NOT EXISTS bookings (
     agentId INT,
     booking_date DATE NOT NULL,
     booking_time TIME NOT NULL,
-    `status` ENUM('pending', 'confirmed', 'cancelled', 'completed') DEFAULT 'confirmed',
+    `status` ENUM('scheduled', 'in-progress', 'completed') DEFAULT 'scheduled',
     FOREIGN KEY (customerId) REFERENCES customers(customerId) ON DELETE CASCADE,
     FOREIGN KEY (agentId) REFERENCES field_agents(agentId) ON DELETE SET NULL
 );
@@ -47,6 +54,11 @@ VALUES
 (40.712776, -74.005974, '10007', 'Broadway', 1),
 (34.052235, -118.243683, '90012', 'Sunset Blvd', 101),
 (51.507351, -0.127758, 'SW1A', 'Downing Street', 10);
+
+-- Sample Dispatchers
+INSERT INTO dispatchers (`name`, email)
+VALUES
+('Grace Lee', 'lee@example.com');
 
 -- Sample Field Agents
 INSERT INTO field_agents (`name`, email, phone, `status`, location_id)
@@ -65,6 +77,6 @@ VALUES
 -- Sample Bookings
 INSERT INTO bookings (customerId, agentId, booking_date, booking_time, `status`)
 VALUES
-(1, 1, '2025-08-22', '09:00:00', 'pending'),
-(2, 2, '2025-08-22', '10:30:00', 'confirmed'),
-(3, 3, '2025-08-22', '14:00:00', 'cancelled');
+(1, 1, '2025-08-22', '09:00:00', 'in-progress'),
+(2, 2, '2025-08-22', '10:30:00', 'scheduled'),
+(3, 3, '2025-08-22', '14:00:00', 'completed');
