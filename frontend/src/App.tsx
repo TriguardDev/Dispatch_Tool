@@ -11,11 +11,11 @@ export default function App() {
     return <LoginForm onLogin={setUser} />;
   }
 
-  if (user.user_type === "customer") {
+  if (user.user_type === "agent") {
     return <CustomerScreen />;
   }
 
-  if (user.user_type === "agent") {
+  if (user.user_type === "dispatcher") {
     return <AgentScreen />;
   }
 

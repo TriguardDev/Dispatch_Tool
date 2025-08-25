@@ -25,8 +25,8 @@ def login():
 
         query = """
         (
-            SELECT customerId AS id, 'customer' AS user_type
-            FROM customers
+            SELECT dispatcherId AS id, 'dispatcher' AS user_type
+            FROM dispatchers
             WHERE email = %s
         )
         UNION

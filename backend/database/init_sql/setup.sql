@@ -8,6 +8,13 @@ CREATE TABLE IF NOT EXISTS locations (
     street_number INT
 );
 
+-- Dispatcher Table
+CREATE TABLE IF NOT EXISTS dispatchers (
+    dispatcherId INT AUTO_INCREMENT PRIMARY KEY,
+    `name` VARCHAR(100) NOT NULL,
+    email VARCHAR(100) UNIQUE NOT NULL
+);
+
 -- Field Agent Table
 CREATE TABLE IF NOT EXISTS field_agents (
     agentId INT AUTO_INCREMENT PRIMARY KEY,
@@ -47,6 +54,11 @@ VALUES
 (40.712776, -74.005974, '10007', 'Broadway', 1),
 (34.052235, -118.243683, '90012', 'Sunset Blvd', 101),
 (51.507351, -0.127758, 'SW1A', 'Downing Street', 10);
+
+-- Sample Dispatchers
+INSERT INTO dispatchers (`name`, email)
+VALUES
+('Grace Lee', 'lee@example.com')
 
 -- Sample Field Agents
 INSERT INTO field_agents (`name`, email, phone, `status`, location_id)
