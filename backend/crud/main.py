@@ -2,6 +2,7 @@ from flask import Flask, request, jsonify
 import mysql.connector
 from flask_cors import CORS
 import datetime
+import requests
 
 app = Flask(__name__)
 CORS(app)
@@ -67,9 +68,22 @@ def update_booking_status():
         """, (data["status"], data["booking_id"]))
 
         if data["status"] == "completed":
-            # TODO: notify customer
+            # TODO: send customer surveys
             pass
-
+        
+        # Using bookingId, get customer and agent information
+        cursor.execute("""
+            SELECT c.email AS customer_email, c.phone AS customer_phone,
+                   fa.email AS agent_email, fa.phone AS agent_phone
+            FROM bookings b
+            JOIN customers c ON b.customerId = c.customerId
+            LEFT JOIN field_agents fa ON b.agentId = fa.agentId
+            WHERE b.bookingId = %s
+        """, (data["booking_id"],))
+        res = cursor.fetchone()
+        print(res, flush=True)
+        notify_customer(res)
+          
         conn.commit()
         return {"Message": "Booking status updated"}, 200
 
@@ -132,6 +146,27 @@ def get_bookings():
             cursor.close()
         if 'conn' in locals():
             conn.close()
+
+def notify_customer(data):
+    try:
+        payload = {
+            'customer_name': data.get("customer", {}).get("name", ""),
+            'customer_email': data.get("customer", {}).get("email", ""),
+            'customer_phone': data.get("customer", {}).get("phone", ""),
+            'agent_name': data.get("agent", {}).get("name", ""),
+            'agent_email': data.get("agent", {}).get("email", ""),
+            'agent_phone': data.get("agent", {}).get("phone", ""),
+            'booking_date': data.get("booking", {}).get("booking_date", ""),
+            'booking_time': data.get("booking", {}).get("booking_time", ""),
+            'message': f"{data.get('agent', {}).get('name', '')} is on their way."
+        }
+
+        print("Sending notification:", payload, flush=True)
+        notification_endpoint = 'http://notification:5002/notification'
+        response = requests.post(notification_endpoint, json=payload)
+        response.raise_for_status()
+    except Exception as e:
+        print(f"Failed to notify via internal notification service: {e}")
 
 if __name__ == "__main__":
     app.run(debug=True)
