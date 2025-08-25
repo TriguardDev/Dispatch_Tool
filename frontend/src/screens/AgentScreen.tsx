@@ -1,25 +1,46 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import TopBar from "../components/TopBar";
 import Filters from "../components/Filters";
 import QueueCard from "../components/QueueCard";
 import AppointmentCard from "../components/AppointmentCard";
-import { appointments } from "../sample-data/appointments";
 import NewAppointmentModal from "../components/NewAppointmentModal";
+import { getAllBookings, type Booking } from "../api/crud";
 
 export default function AgentScreen() {
+  const [bookings, setBookings] = useState<Booking[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  const scheduled = appointments.filter((a) => a.status === "Scheduled");
-  const active = appointments.filter(
-    (a) => a.status === "En Route" || a.status === "On Site"
-  );
-  const completed = appointments.filter((a) => a.status === "Completed");
+  useEffect(() => {
+    async function fetchBookings() {
+      try {
+        setLoading(true);
+        const data = await getAllBookings();
+        setBookings(data);
+        setLoading(false);
+      } catch (err: unknown) {
+        setError((err as Error).message || "Failed to fetch bookings");
+        setLoading(false);
+      }
+    }
+
+    fetchBookings();
+  }, []);
+
+  // Categorize bookings by status
+  const scheduled = bookings.filter((b) => b.status === "Scheduled" || b.status === "pending");
+  const active = bookings.filter((b) => b.status === "En Route" || b.status === "On Site" || b.status === "confirmed");
+  const completed = bookings.filter((b) => b.status === "Completed" || b.status === "completed");
+
+  if (loading) return <p className="p-6 text-center">Loading bookings...</p>;
+  if (error) return <p className="p-6 text-center text-red-500">{error}</p>;
 
   return (
     <div className="bg-gray-50 min-h-screen">
       <TopBar />
       <main className="mx-auto max-w-7xl px-4 py-6">
-        <Filters onNewAppt={() => setIsModalOpen(true)}/>
+        <Filters onNewAppt={() => setIsModalOpen(true)} />
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
           <QueueCard
@@ -28,7 +49,15 @@ export default function AgentScreen() {
             count={scheduled.length}
           >
             {scheduled.map((appt) => (
-              <AppointmentCard key={appt.id} appt={appt} />
+              <AppointmentCard 
+                key={appt.bookingId} 
+                appt={{
+                  id: appt.bookingId.toString(),
+                  name: appt.customer_name,
+                  address: "",
+                  date: appt.booking_date,
+                  time: appt.booking_time,
+                  status: "Scheduled"}} />
             ))}
           </QueueCard>
 
@@ -38,7 +67,15 @@ export default function AgentScreen() {
             count={active.length}
           >
             {active.map((appt) => (
-              <AppointmentCard key={appt.id} appt={appt} />
+              <AppointmentCard 
+                key={appt.bookingId} 
+                appt={{
+                  id: appt.bookingId.toString(),
+                  name: appt.customer_name,
+                  address: "",
+                  date: appt.booking_date,
+                  time: appt.booking_time,
+                  status: "On Site"}} />
             ))}
           </QueueCard>
 
@@ -48,13 +85,20 @@ export default function AgentScreen() {
             count={completed.length}
           >
             {completed.map((appt) => (
-              <AppointmentCard key={appt.id} appt={appt} />
+              <AppointmentCard 
+                key={appt.bookingId} 
+                appt={{
+                  id: appt.bookingId.toString(),
+                  name: appt.customer_name,
+                  address: "",
+                  date: appt.booking_date,
+                  time: appt.booking_time,
+                  status: "Completed"}} />
             ))}
           </QueueCard>
         </div>
       </main>
 
-      {/* Modal */}
       <NewAppointmentModal
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}

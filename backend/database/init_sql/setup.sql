@@ -36,7 +36,7 @@ CREATE TABLE IF NOT EXISTS bookings (
     agentId INT,
     booking_date DATE NOT NULL,
     booking_time TIME NOT NULL,
-    `status` ENUM('pending', 'confirmed', 'cancelled', 'completed') DEFAULT 'confirmed',
+    `status` ENUM('pending', 'confirmed', 'completed') DEFAULT 'confirmed',
     FOREIGN KEY (customerId) REFERENCES customers(customerId) ON DELETE CASCADE,
     FOREIGN KEY (agentId) REFERENCES field_agents(agentId) ON DELETE SET NULL
 );
@@ -67,4 +67,4 @@ INSERT INTO bookings (customerId, agentId, booking_date, booking_time, `status`)
 VALUES
 (1, 1, '2025-08-22', '09:00:00', 'pending'),
 (2, 2, '2025-08-22', '10:30:00', 'confirmed'),
-(3, 3, '2025-08-22', '14:00:00', 'cancelled');
+(3, 3, '2025-08-22', '14:00:00', 'completed');

@@ -4,7 +4,7 @@ export interface Appointment {
   address: string;
   date: string;
   time: string;
-  type: string;
+  type?: string;
   notes?: string;
   status: "Scheduled" | "En Route" | "On Site" | "Completed";
 }
