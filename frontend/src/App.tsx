@@ -1,11 +1,23 @@
-import './App.css'
+import { useState } from "react";
+import LoginForm from "./components/LoginForm";
+import CustomerScreen from "./screens/CustomerScreen";
+import AgentScreen from "./screens/AgentScreen";
+import type { LoginResponse } from "./api/login";
 
-function App() {
+export default function App() {
+  const [user, setUser] = useState<LoginResponse | null>(null);
 
-  return (
-    <div>
-    </div>
-  )
+  if (!user) {
+    return <LoginForm onLogin={setUser} />;
+  }
+
+  if (user.user_type === "customer") {
+    return <CustomerScreen />;
+  }
+
+  if (user.user_type === "agent") {
+    return <AgentScreen />;
+  }
+
+  return null;
 }
-
-export default App
