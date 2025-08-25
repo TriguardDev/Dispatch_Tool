@@ -29,9 +29,9 @@ export default function AgentScreen() {
   }, []);
 
   // Categorize bookings by status
-  const scheduled = bookings.filter((b) => b.status === "Scheduled" || b.status === "pending");
-  const active = bookings.filter((b) => b.status === "En Route" || b.status === "On Site" || b.status === "confirmed");
-  const completed = bookings.filter((b) => b.status === "Completed" || b.status === "completed");
+  const scheduled = bookings.filter((b) => ["scheduled"].includes(b.status.toLowerCase()));
+  const active = bookings.filter((b) => ["in-progress"].includes(b.status.toLowerCase()));
+  const completed = bookings.filter((b) => ["completed"].includes(b.status.toLowerCase()));
 
   if (loading) return <p className="p-6 text-center">Loading bookings...</p>;
   if (error) return <p className="p-6 text-center text-red-500">{error}</p>;

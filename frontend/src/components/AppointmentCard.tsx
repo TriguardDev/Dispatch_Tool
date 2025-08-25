@@ -5,8 +5,8 @@ interface Props {
 }
 
 const statusColors: Record<Booking["status"], string> = {
-  pending: "bg-blue-50 text-blue-700",
-  confirmed: "bg-amber-50 text-amber-700",
+  "in-progress": "bg-blue-50 text-blue-700",
+  scheduled: "bg-amber-50 text-amber-700",
   completed: "bg-green-50 text-green-700",
 };
 
