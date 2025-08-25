@@ -1,10 +1,14 @@
+import { useState } from "react";
 import TopBar from "../components/TopBar";
 import Filters from "../components/Filters";
 import QueueCard from "../components/QueueCard";
 import AppointmentCard from "../components/AppointmentCard";
 import { appointments } from "../sample-data/appointments";
+import NewAppointmentModal from "../components/NewAppointmentModal";
 
 export default function AgentScreen() {
+  const [isModalOpen, setIsModalOpen] = useState(false);
+
   const scheduled = appointments.filter((a) => a.status === "Scheduled");
   const active = appointments.filter(
     (a) => a.status === "En Route" || a.status === "On Site"
@@ -15,7 +19,8 @@ export default function AgentScreen() {
     <div className="bg-gray-50 min-h-screen">
       <TopBar />
       <main className="mx-auto max-w-7xl px-4 py-6">
-        <Filters />
+        <Filters onNewAppt={() => setIsModalOpen(true)}/>
+
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
           <QueueCard
             title="Queue — Scheduled"
@@ -48,6 +53,12 @@ export default function AgentScreen() {
           </QueueCard>
         </div>
       </main>
+
+      {/* Modal */}
+      <NewAppointmentModal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+      />
     </div>
   );
 }

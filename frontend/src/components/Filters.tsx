@@ -1,4 +1,8 @@
-export default function Filters() {
+interface FiltersProps {
+  onNewAppt: () => void;
+}
+
+export default function Filters({ onNewAppt }: FiltersProps) {
   return (
     <div className="flex flex-col md:flex-row md:items-center gap-3 mb-6">
       <div className="grid grid-cols-2 md:grid-cols-5 gap-2 flex-1">
@@ -21,9 +25,7 @@ export default function Filters() {
         </select>
       </div>
       <div className="flex gap-2">
-        <button className="btn btn-primary">+ New Appt</button>
-        <button className="btn btn-ghost">Export CSV</button>
-        <button className="btn btn-ghost">Reset Demo Data</button>
+        <button className="btn btn-primary" onClick={onNewAppt}>+ New Appt</button>
       </div>
     </div>
   );

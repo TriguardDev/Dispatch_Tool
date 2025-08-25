@@ -13,7 +13,7 @@ export default function TopBar() {
         </div>
         <div className="ml-auto flex items-center gap-2">
           <div className="hidden sm:flex items-center gap-1 bg-gray-100 rounded-xl p-1">
-            <button className="tab-btn" aria-selected="true" onClick={() => {console.log("Dispatcher btn clicked")}}>Dispatcher</button>
+            <button className="tab-btn" aria-selected="true">Dispatcher</button>
             <button className="tab-btn" aria-selected="false">Rep</button>
             <button className="tab-btn" aria-selected="false">Reporting</button>
           </div>
