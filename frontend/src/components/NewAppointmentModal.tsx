@@ -1,38 +1,68 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 interface Props {
   isOpen: boolean;
   onClose: () => void;
 }
 
+interface Agent {
+  id: string;
+  name: string;
+}
+
 export default function NewAppointmentModal({ isOpen, onClose }: Props) {
   const [form, setForm] = useState({
     name: "",
     phone: "",
-    address: "",
+    street_number: "",
+    street_name: "",
+    postal_code: "",
     date: "",
     time: "",
-    rep: "1001",
+    rep: "",
     type: "Roof Replacement",
-    notes: "",
   });
 
+  const [agents, setAgents] = useState<Agent[]>([]);
+  const [loadingAgents, setLoadingAgents] = useState(false);
+
   const handleChange = (
-    e: React.ChangeEvent<
-      HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
-    >
+    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>
   ) => {
     const { id, value } = e.target;
-    setForm((prev) => ({ ...prev, [id.replace("f-", "")]: value }));
+    const key = id.replace("f-", "");
+    setForm((prev) => ({ ...prev, [key]: value }));
   };
 
   const handleSave = (e: React.FormEvent) => {
     e.preventDefault();
-    console.log("Saving new appointment:", form); // later hook into backend
+    console.log("Saving new appointment:", form);
     onClose();
   };
 
-  // ✅ Move conditional rendering AFTER hooks
+  // 🔍 Auto-search agents whenever postal_code, date, and time are filled
+  useEffect(() => {
+    const fetchAgents = async () => {
+      if (!form.postal_code || !form.date || !form.time) return;
+
+      setLoadingAgents(true);
+      try {
+        const res = await fetch(
+          `http://localhost:5000/search?postal_code=${form.postal_code}&booking_date=${form.date}&booking_time=${form.time}`
+        );
+        const data = await res.json();
+        setAgents(data);
+      } catch (err) {
+        console.error("Error fetching agents:", err);
+        setAgents([]);
+      } finally {
+        setLoadingAgents(false);
+      }
+    };
+
+    fetchAgents();
+  }, [form.postal_code, form.date, form.time]);
+
   if (!isOpen) return null;
 
   return (
@@ -55,12 +85,14 @@ export default function NewAppointmentModal({ isOpen, onClose }: Props) {
 
         {/* Form Body */}
         <div className="p-4 grid grid-cols-1 md:grid-cols-2 gap-3">
+          {/* Customer Fields */}
           <div>
             <div className="label">Customer Name</div>
             <input
               id="f-name"
               className="input"
               required
+              placeholder="Bob"
               value={form.name}
               onChange={handleChange}
             />
@@ -75,16 +107,40 @@ export default function NewAppointmentModal({ isOpen, onClose }: Props) {
               onChange={handleChange}
             />
           </div>
-          <div className="md:col-span-2">
-            <div className="label">Address</div>
+
+          {/* Address */}
+          <div>
+            <div className="label">Street Number</div>
             <input
-              id="f-address"
+              id="f-street_number"
               className="input"
-              placeholder="123 Main St, City, ST"
-              value={form.address}
+              placeholder="5580"
+              value={form.street_number}
               onChange={handleChange}
             />
           </div>
+          <div>
+            <div className="label">Street Name</div>
+            <input
+              id="f-street_name"
+              className="input"
+              placeholder="Lacklon Lane"
+              value={form.street_name}
+              onChange={handleChange}
+            />
+          </div>
+          <div className="md:col-span-2">
+            <div className="label">Postal Code</div>
+            <input
+              id="f-postal_code"
+              className="input"
+              placeholder="BA4 3J7"
+              value={form.postal_code}
+              onChange={handleChange}
+            />
+          </div>
+
+          {/* Date + Time */}
           <div>
             <div className="label">Date</div>
             <input
@@ -107,19 +163,33 @@ export default function NewAppointmentModal({ isOpen, onClose }: Props) {
               onChange={handleChange}
             />
           </div>
-          <div>
+
+          {/* Rep Dropdown (auto-populated) */}
+          <div className="md:col-span-2">
             <div className="label">Assign Rep</div>
             <select
               id="f-rep"
-              className="select"
+              className="select w-full"
               value={form.rep}
               onChange={handleChange}
+              disabled={loadingAgents || agents.length === 0}
             >
-              <option value="1001">Alex Johnson</option>
-              <option value="1002">Maria Lopez</option>
-              <option value="1003">Chris Patel</option>
+              <option value="">
+                {loadingAgents
+                  ? "Searching..."
+                  : agents.length > 0
+                  ? "Select an agent"
+                  : "No agents available"}
+              </option>
+              {agents.map((agent) => (
+                <option key={agent.id} value={agent.id}>
+                  {agent.name}
+                </option>
+              ))}
             </select>
           </div>
+
+          {/* Type */}
           <div>
             <div className="label">Type</div>
             <select
@@ -133,17 +203,6 @@ export default function NewAppointmentModal({ isOpen, onClose }: Props) {
               <option>Insurance Claim</option>
               <option>Repair</option>
             </select>
-          </div>
-          <div className="md:col-span-2">
-            <div className="label">Notes</div>
-            <textarea
-              id="f-notes"
-              className="input"
-              rows={3}
-              placeholder="Financing, pets, gate code, etc."
-              value={form.notes}
-              onChange={handleChange}
-            />
           </div>
         </div>
 
