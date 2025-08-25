@@ -60,6 +60,8 @@ def search_agents():
         agents = cursor.fetchall()
         return jsonify(agents), 200
 
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
     finally:
         if 'cursor' in locals():
             cursor.close()

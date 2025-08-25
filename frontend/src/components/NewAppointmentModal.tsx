@@ -13,6 +13,7 @@ interface Agent {
 export default function NewAppointmentModal({ isOpen, onClose }: Props) {
   const [form, setForm] = useState({
     name: "",
+    email: "",
     phone: "",
     street_number: "",
     street_name: "",
@@ -34,10 +35,49 @@ export default function NewAppointmentModal({ isOpen, onClose }: Props) {
     setForm((prev) => ({ ...prev, [key]: value }));
   };
 
-  const handleSave = (e: React.FormEvent) => {
+  const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
-    console.log("Saving new appointment:", form);
-    onClose();
+
+    // Transform flat form into backend format
+    const payload = {
+      customer: {
+        name: form.name,
+        email: form.email,
+        phone: form.phone,
+      },
+      location: {
+        postal_code: form.postal_code,
+        street_name: form.street_name,
+        street_number: form.street_number,
+      },
+      booking: {
+        agentId: Number(form.rep), // ensure number
+        booking_date: form.date,
+        booking_time: form.time,
+      },
+    };
+
+    try {
+      const res = await fetch("/api/bookings", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(payload),
+      });
+
+      if (!res.ok) {
+        throw new Error(`Failed to save appointment: ${res.statusText}`);
+      }
+
+      const data = await res.json();
+      console.log("✅ Appointment saved:", data);
+
+      onClose();
+    } catch (err) {
+      console.error("❌ Error saving appointment:", err);
+      alert("Error saving appointment. Please try again.");
+    }
   };
 
   // 🔍 Auto-search agents whenever postal_code, date, and time are filled
@@ -94,6 +134,17 @@ export default function NewAppointmentModal({ isOpen, onClose }: Props) {
               required
               placeholder="Bob"
               value={form.name}
+              onChange={handleChange}
+            />
+          </div>
+          <div>
+            <div className="label">Customer Email</div>
+            <input
+              id="f-email"
+              className="input"
+              required
+              placeholder="Bob@example.com"
+              value={form.email}
               onChange={handleChange}
             />
           </div>
@@ -186,22 +237,6 @@ export default function NewAppointmentModal({ isOpen, onClose }: Props) {
                   {agent.name}
                 </option>
               ))}
-            </select>
-          </div>
-
-          {/* Type */}
-          <div>
-            <div className="label">Type</div>
-            <select
-              id="f-type"
-              className="select"
-              value={form.type}
-              onChange={handleChange}
-            >
-              <option>Roof Replacement</option>
-              <option>Inspection</option>
-              <option>Insurance Claim</option>
-              <option>Repair</option>
             </select>
           </div>
         </div>
