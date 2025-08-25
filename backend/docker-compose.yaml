@@ -49,3 +49,16 @@ services:
       - "6000:6000"
     volumes:
       - ./booking/main.py:/app/main.py
+  
+  crud:
+    build: ./crud
+    container_name: crud-service
+    environment:
+      - FLASK_APP=main.py
+      - DATABASE_HOST=dev-database
+    depends_on:
+      - mysql
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./crud/main.py:/app/main.py
