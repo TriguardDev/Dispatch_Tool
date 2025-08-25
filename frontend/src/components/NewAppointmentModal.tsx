@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 
 interface Props {
   isOpen: boolean;
@@ -6,7 +6,7 @@ interface Props {
 }
 
 interface Agent {
-  id: string;
+  agentId: string;
   name: string;
 }
 
@@ -27,6 +27,12 @@ export default function NewAppointmentModal({ isOpen, onClose }: Props) {
   const [agents, setAgents] = useState<Agent[]>([]);
   const [loadingAgents, setLoadingAgents] = useState(false);
 
+  // ensure HH:MM:SS
+  const formatTime = (time: string) => {
+    if (!time) return "";
+    return time.length === 5 ? `${time}:00` : time; // if "HH:MM", add ":00"
+  };
+
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>
   ) => {
@@ -37,7 +43,6 @@ export default function NewAppointmentModal({ isOpen, onClose }: Props) {
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
-
     // Transform flat form into backend format
     const payload = {
       customer: {
@@ -46,19 +51,23 @@ export default function NewAppointmentModal({ isOpen, onClose }: Props) {
         phone: form.phone,
       },
       location: {
+        latitude: 14.22,
+        longitude: 66.44,
         postal_code: form.postal_code,
         street_name: form.street_name,
         street_number: form.street_number,
       },
       booking: {
-        agentId: Number(form.rep), // ensure number
+        agentId: Number(form.rep),
         booking_date: form.date,
-        booking_time: form.time,
+        booking_time: formatTime(form.time),
       },
     };
+    
+    console.log(JSON.stringify(payload))
 
     try {
-      const res = await fetch("/api/bookings", {
+      const res = await fetch("http://localhost:5001/book", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -80,28 +89,21 @@ export default function NewAppointmentModal({ isOpen, onClose }: Props) {
     }
   };
 
-  // 🔍 Auto-search agents whenever postal_code, date, and time are filled
-  useEffect(() => {
-    const fetchAgents = async () => {
-      if (!form.postal_code || !form.date || !form.time) return;
-
-      setLoadingAgents(true);
-      try {
-        const res = await fetch(
-          `http://localhost:5000/search?postal_code=${form.postal_code}&booking_date=${form.date}&booking_time=${form.time}`
-        );
-        const data = await res.json();
-        setAgents(data);
-      } catch (err) {
-        console.error("Error fetching agents:", err);
-        setAgents([]);
-      } finally {
-        setLoadingAgents(false);
-      }
-    };
-
-    fetchAgents();
-  }, [form.postal_code, form.date, form.time]);
+  const handleSearchAgents = async () => {
+    setLoadingAgents(true);
+    console.log("Searching...")
+    try {
+      const res = await fetch(
+        `http://localhost:5000/search?postal_code=${form.postal_code}&booking_date=${form.date}&booking_time=${form.time}`
+      );
+      const data = await res.json();
+      setAgents(data);
+    } catch (err) {
+      console.error("Error fetching agents:", err);
+    } finally {
+      setLoadingAgents(false);
+    }
+  };
 
   if (!isOpen) return null;
 
@@ -142,6 +144,7 @@ export default function NewAppointmentModal({ isOpen, onClose }: Props) {
             <input
               id="f-email"
               className="input"
+              type="email"
               required
               placeholder="Bob@example.com"
               value={form.email}
@@ -153,6 +156,8 @@ export default function NewAppointmentModal({ isOpen, onClose }: Props) {
             <input
               id="f-phone"
               className="input"
+              type="tel"
+              pattern="[0-9]{3}-[0-9]{3}-[0-9]{4}"
               placeholder="(###) ###-####"
               value={form.phone}
               onChange={handleChange}
@@ -215,29 +220,41 @@ export default function NewAppointmentModal({ isOpen, onClose }: Props) {
             />
           </div>
 
-          {/* Rep Dropdown (auto-populated) */}
-          <div className="md:col-span-2">
-            <div className="label">Assign Rep</div>
-            <select
-              id="f-rep"
-              className="select w-full"
-              value={form.rep}
-              onChange={handleChange}
-              disabled={loadingAgents || agents.length === 0}
-            >
-              <option value="">
-                {loadingAgents
-                  ? "Searching..."
-                  : agents.length > 0
-                  ? "Select an agent"
-                  : "No agents available"}
-              </option>
-              {agents.map((agent) => (
-                <option key={agent.id} value={agent.id}>
-                  {agent.name}
+          {/* Rep (Dropdown + Search Button) */}
+          <div className="md:col-span-2 flex items-end gap-2">
+            <div className="flex-1">
+              <div className="label">Assign Rep</div>
+              <select
+                id="f-rep"
+                className="select w-full"
+                value={form.rep}
+                onChange={handleChange}
+                disabled={loadingAgents || agents.length === 0}
+              >
+                <option value="">
+                  {loadingAgents
+                    ? "Searching..."
+                    : agents.length > 0
+                    ? "Select an agent"
+                    : "No agents found"}
                 </option>
-              ))}
-            </select>
+                {agents.map((agent) => {
+                  return (
+                    <option key={agent.agentId} value={agent.agentId}>
+                      {agent.name}
+                    </option>
+                  );
+                })}
+              </select>
+            </div>
+            <button
+              type="button"
+              className="btn btn-secondary"
+              onClick={handleSearchAgents}
+              disabled={!form.postal_code || !form.date || !form.time}
+            >
+              Search
+            </button>
           </div>
         </div>
 

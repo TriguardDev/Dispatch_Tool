@@ -34,7 +34,7 @@ def search_agents():
             location = cursor.fetchone()
             
             query = """
-                SELECT fa.name,
+                SELECT fa.name, fa.agentId,
                     (6371 * ACOS(
                         COS(RADIANS(%s)) * COS(RADIANS(l.latitude)) *
                         COS(RADIANS(l.longitude) - RADIANS(%s)) +

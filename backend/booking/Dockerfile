@@ -9,8 +9,8 @@ COPY wait-for-it.sh .
 
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Expose port 5000 for the Flask app
-EXPOSE 6000
+# Expose port for the Flask app
+EXPOSE 5001
 
 # Run the Flask app
-CMD ["./wait-for-it.sh", "mysql:3306", "--", "flask", "--debug", "run", "--host=0.0.0.0", "--port=6000"]
+CMD ["./wait-for-it.sh", "mysql:3306", "--", "flask", "--debug", "run", "--host=0.0.0.0", "--port=5001"]

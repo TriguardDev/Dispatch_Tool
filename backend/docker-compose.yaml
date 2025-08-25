@@ -46,7 +46,7 @@ services:
     depends_on:
       - mysql
     ports:
-      - "6000:6000"
+      - "5001:5001"
     volumes:
       - ./booking/main.py:/app/main.py
   
