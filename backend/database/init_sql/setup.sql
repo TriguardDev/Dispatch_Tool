@@ -15,7 +15,6 @@ CREATE TABLE IF NOT EXISTS locations (
         postal_code, 
         city, 
         state_province, 
-        country
     )
 );
 
