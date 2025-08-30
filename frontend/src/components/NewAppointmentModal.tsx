@@ -19,6 +19,9 @@ export default function NewAppointmentModal({ isOpen, onClose, onSave }: Props) 
     street_number: "",
     street_name: "",
     postal_code: "",
+    city: "",
+    state_province: "",
+    country: "",    
     date: "",
     time: "",
     rep: "",
@@ -187,7 +190,37 @@ export default function NewAppointmentModal({ isOpen, onClose, onSave }: Props) 
               onChange={handleChange}
             />
           </div>
-          <div className="md:col-span-2">
+          <div>
+            <div className="label">City</div>
+            <input
+              id="f-city"
+              className="input"
+              placeholder="Bedford"
+              value={form.city}
+              onChange={handleChange}
+            />
+          </div>
+          <div>
+            <div className="label">Province</div>
+            <input
+              id="f-state_province"
+              className="input"
+              placeholder="NS"
+              value={form.state_province}
+              onChange={handleChange}
+            />
+          </div>
+          <div>
+            <div className="label">Country</div>
+            <input
+              id="f-country"
+              className="input"
+              placeholder="Canada"
+              value={form.country}
+              onChange={handleChange}
+            />
+          </div>
+          <div>
             <div className="label">Postal Code</div>
             <input
               id="f-postal_code"
