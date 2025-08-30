@@ -24,40 +24,7 @@ def book_agent():
         conn = mysql.connector.connect(**db_config)
         cursor = conn.cursor(dictionary=True)
         
-        # Create entry into location table
-        cursor.execute("""
-            INSERT INTO locations (latitude, longitude, postal_code, street_name, street_number)
-            VALUES (%s, %s, %s, %s, %s)
-        """, (data["location"]['latitude'], data["location"]['longitude'], data["location"]['postal_code'], data["location"]['street_name'], data["location"]['street_number']))
-        location_id = cursor.lastrowid
-
-        # Create entry into customers table
-        cursor.execute("""
-            INSERT INTO customers (name, email, phone, location_id)
-            VALUES (%s, %s, %s, %s)
-        """, (data["customer"]['name'], data["customer"]['email'], data["customer"]['phone'], location_id))
-        
-        customer_id = cursor.lastrowid
-
-        # Create new booking
-        cursor.execute("""
-            INSERT INTO bookings (agentId, customerId, booking_date, booking_time)
-            VALUES (%s, %s, %s, %s)
-        """, (data["booking"]['agentId'], customer_id, data["booking"]['booking_date'], data["booking"]["booking_time"]))
-        booking_id = cursor.lastrowid
-        
-        # Get agent details
-        cursor.execute("SELECT * FROM field_agents WHERE agentId = %s", (data["booking"]['agentId'],))
-        agent = cursor.fetchone()
-        data["agent"] = agent
-
-        conn.commit()
-        notify_all_parties(data)
-        return jsonify({
-            "message": "Booking created successfully",
-            "customerId": customer_id,
-            "bookingId": booking_id,
-        }), 200
+        return {"Endpoint": "Changed"}, 200
 
     except Exception as e:
         if 'conn' in locals():
