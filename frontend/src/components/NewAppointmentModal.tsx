@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { findLatLong } from "../api/location_conversion";
+import AgentSelector from "./AgentSelector";
 
 interface Props {
   isOpen: boolean;
@@ -277,39 +278,14 @@ export default function NewAppointmentModal({ isOpen, onClose, onSave }: Props) 
 
           {/* Rep (Dropdown + Search Button) */}
           <div className="md:col-span-2 flex items-end gap-2">
-            <div className="flex-1">
-              <div className="label">Assign Rep</div>
-              <select
-                id="f-rep"
-                className="select w-full"
-                value={form.rep}
+              <AgentSelector
+                agents={agents}
+                selectedRep={form.rep}
+                loading={loadingAgents}
                 onChange={handleChange}
-                disabled={loadingAgents || agents.length === 0}
-              >
-                <option value="">
-                  {loadingAgents
-                    ? "Searching..."
-                    : agents.length > 0
-                    ? "Select an agent"
-                    : "No agents found"}
-                </option>
-                {agents.map((agent) => {
-                  return (
-                    <option key={agent.agentId} value={agent.agentId}>
-                      {agent.name} - {Math.ceil(Number(agent.distance))} km
-                    </option>
-                  );
-                })}
-              </select>
-            </div>
-            <button
-              type="button"
-              className="btn btn-secondary"
-              onClick={handleSearchAgents}
-              disabled={!form.postal_code || !form.date || !form.time}
-            >
-              Search
-            </button>
+                onSearch={handleSearchAgents}
+                disabledSearch={!form.postal_code || !form.date || !form.time}
+              />
           </div>
         </div>
 
