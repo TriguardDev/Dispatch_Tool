@@ -8,6 +8,7 @@ interface Props {
 }
 
 interface Agent {
+  distance: string;
   agentId: string;
   name: string;
 }
@@ -295,7 +296,7 @@ export default function NewAppointmentModal({ isOpen, onClose, onSave }: Props) 
                 {agents.map((agent) => {
                   return (
                     <option key={agent.agentId} value={agent.agentId}>
-                      {agent.name}
+                      {agent.name} - {Math.ceil(Number(agent.distance))} km
                     </option>
                   );
                 })}
