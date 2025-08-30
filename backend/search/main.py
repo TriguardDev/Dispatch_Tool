@@ -18,8 +18,9 @@ db_config = {
 @app.route("/search", methods=["GET"])
 def search_agents():
     try:
-        # Get postal code from query parameters
-        postal_code = request.args.get('postal_code')
+        # Get lat/lon from query parameters
+        lat = float(request.args.get('latitude'))
+        lon = float(request.args.get('longitude'))
         booking_date = request.args.get('booking_date')
         booking_time = request.args.get('booking_time')
         booking_period = '02:00:00'
@@ -28,11 +29,7 @@ def search_agents():
         cursor = conn.cursor(dictionary=True, buffered=True)
 
         # Build query based on whether postal_code is provided
-        if postal_code:
-            # Get user's lat/long
-            cursor.execute("SELECT latitude, longitude FROM locations WHERE postal_code = %s", (postal_code,))
-            location = cursor.fetchone()
-            
+        if lat and lon:           
             query = """
                 SELECT fa.name, fa.agentId,
                     (6371 * ACOS(
@@ -48,11 +45,10 @@ def search_agents():
                     WHERE b.booking_date = %s
                       AND b.booking_time BETWEEN SUBTIME(%s, %s) AND ADDTIME(%s, %s)
                 )
-                HAVING distance <= 50
                 ORDER BY distance ASC;
             """
 
-            cursor.execute(query, (location["latitude"], location["longitude"], location["latitude"], booking_date, booking_time, booking_period, booking_time, booking_period))
+            cursor.execute(query, (lat, lon, lat, booking_date, booking_time, booking_period, booking_time, booking_period))
         else:
             # Return all agents if no postal code specified
             cursor.execute("SELECT * FROM field_agents")

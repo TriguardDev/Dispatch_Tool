@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { findLatLong } from "../api/location_conversion";
 
 interface Props {
   isOpen: boolean;
@@ -28,6 +29,8 @@ export default function NewAppointmentModal({ isOpen, onClose, onSave }: Props) 
     type: "Roof Replacement",
   });
 
+  const [latLon, setLatLon] = useState<{ lat: number | null, lon: number | null }>({ lat: null, lon: null });
+
   const [agents, setAgents] = useState<Agent[]>([]);
   const [loadingAgents, setLoadingAgents] = useState(false);
 
@@ -55,11 +58,14 @@ export default function NewAppointmentModal({ isOpen, onClose, onSave }: Props) 
         phone: form.phone,
       },
       location: {
-        latitude: 14.22,
-        longitude: 66.44,
+        latitude: latLon.lat,
+        longitude: latLon.lon,
         postal_code: form.postal_code,
         street_name: form.street_name,
         street_number: form.street_number,
+        city: form.city,
+        state_province: form.state_province,
+        country: form.country,
       },
       booking: {
         agentId: Number(form.rep),
@@ -98,11 +104,24 @@ export default function NewAppointmentModal({ isOpen, onClose, onSave }: Props) 
     setLoadingAgents(true);
     console.log("Searching...")
     try {
-      const res = await fetch(
-        `http://localhost:5000/search?postal_code=${form.postal_code}&booking_date=${form.date}&booking_time=${form.time}`
-      );
-      const data = await res.json();
-      setAgents(data);
+      // First get lat/long
+      const { lat, lon } = await findLatLong({street_number: form.street_number, street_name: form.street_name, postal_code: form.postal_code })
+
+      if (lat === null || lon === null){
+        console.error("Could not find lat/lon for address.")
+        setLatLon({ lat: null, lon: null });
+        setAgents([])
+      } else{
+        setLatLon({ lat, lon });
+        const queryParams = new URLSearchParams({
+          latitude: lat.toString(),
+          longitude: lon.toString()
+        })
+
+        const res = await fetch(`http://localhost:5000/search?${queryParams.toString()}`);
+        const data = await res.json();
+        setAgents(data);
+      }      
     } catch (err) {
       console.error("Error fetching agents:", err);
     } finally {
