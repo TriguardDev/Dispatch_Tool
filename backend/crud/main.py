@@ -174,22 +174,65 @@ def book_agent():
         data = request.get_json()
 
         conn = mysql.connector.connect(**db_config)
-        cursor = conn.cursor(dictionary=True)
+        cursor = conn.cursor(dictionary=True)       
         
-        # Create entry into location table
+        # Check if location already exists
         cursor.execute("""
-            INSERT INTO locations (latitude, longitude, postal_code, street_name, street_number)
-            VALUES (%s, %s, %s, %s, %s)
-        """, (data["location"]['latitude'], data["location"]['longitude'], data["location"]['postal_code'], data["location"]['street_name'], data["location"]['street_number']))
-        location_id = cursor.lastrowid
+            SELECT id FROM locations 
+            WHERE street_number = %s 
+              AND street_name = %s 
+              AND postal_code = %s 
+              AND city = %s 
+              AND state_province = %s
+        """, (
+            data["location"]["street_number"],
+            data["location"]["street_name"],
+            data["location"]["postal_code"],
+            data["location"]["city"],
+            data["location"]["state_province"]
+        ))
 
-        # Create entry into customers table
-        cursor.execute("""
-            INSERT INTO customers (name, email, phone, location_id)
-            VALUES (%s, %s, %s, %s)
-        """, (data["customer"]['name'], data["customer"]['email'], data["customer"]['phone'], location_id))
-        
-        customer_id = cursor.lastrowid
+        existing_location = cursor.fetchone()
+        location_id = None
+        if existing_location:
+            location_id = existing_location["id"]
+        else:
+            # Insert new location if it doesn't exist
+            lat, long = find_lat_long({
+                "postal_code": data["location"]["postal_code"], 
+                "street_number": data["location"]["street_number"], 
+                "street_name": data["location"]["street_name"]
+                })
+            
+            print(f'Lat: {lat}, Long: {long}', flush=True)
+            cursor.execute("""
+                INSERT INTO locations (latitude, longitude, postal_code, city, state_province, country, street_name, street_number)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+            """, (
+                lat,
+                long,
+                data["location"]["postal_code"],
+                data["location"]["city"],
+                data["location"]["state_province"],
+                data["location"]["country"],
+                data["location"]["street_name"],
+                data["location"]["street_number"]
+            ))
+            location_id = cursor.lastrowid 
+
+        # Check if customer already exists
+        cursor.execute("SELECT customerId FROM customers WHERE email = %s", (data["customer"]["email"],))
+        existing_customer = cursor.fetchone()
+        customer_id = None
+        if existing_customer:
+            customer_id = existing_customer["customerId"]
+        else:
+            # Insert new customer
+            cursor.execute("""
+                INSERT INTO customers (name, email, phone, location_id)
+                VALUES (%s, %s, %s, %s)
+            """, (data["customer"]["name"], data["customer"]["email"], data["customer"]["phone"], location_id))
+            customer_id = cursor.lastrowid
 
         # Create new booking
         cursor.execute("""
@@ -244,6 +287,29 @@ def notify_all_parties(data):
         response.raise_for_status()
     except Exception as e:
         print(f"Failed to notify via internal notification service: {e}")
+
+def find_lat_long(address):
+    # Use nominatism api to find latitude and longitude, given an address
+    try:
+        url = "https://nominatim.openstreetmap.org/search"
+        params = {
+            'postalcode': address.get("postal_code", ""),
+            'street': f"{address.get('street_number', '')} {address.get('street_name', '')}",
+            'format': 'json'
+        }
+        headers = {
+            "User-Agent": "BookingApp/1.0 (saher.ziauddin@gmail.com)"
+        }
+        response = requests.get(url, params=params, headers=headers)
+        response.raise_for_status()
+        data = response.json()
+        if data:
+            return float(data[0]['lat']), float(data[0]['lon'])
+        else:
+            raise ValueError("No results found for the given address.")
+    except Exception as e:
+        print(f"Error fetching lat/long: {e}")
+        return None, None
 
 if __name__ == "__main__":
     app.run(debug=True)

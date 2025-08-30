@@ -1,4 +1,6 @@
 import { useState } from "react";
+import { findLatLong } from "../api/location_conversion";
+import AgentSelector from "./AgentSelector";
 
 interface Props {
   isOpen: boolean;
@@ -7,6 +9,7 @@ interface Props {
 }
 
 interface Agent {
+  distance: string;
   agentId: string;
   name: string;
 }
@@ -19,11 +22,16 @@ export default function NewAppointmentModal({ isOpen, onClose, onSave }: Props) 
     street_number: "",
     street_name: "",
     postal_code: "",
+    city: "",
+    state_province: "",
+    country: "",    
     date: "",
     time: "",
     rep: "",
     type: "Roof Replacement",
   });
+
+  const [latLon, setLatLon] = useState<{ lat: number | null, lon: number | null }>({ lat: null, lon: null });
 
   const [agents, setAgents] = useState<Agent[]>([]);
   const [loadingAgents, setLoadingAgents] = useState(false);
@@ -52,11 +60,14 @@ export default function NewAppointmentModal({ isOpen, onClose, onSave }: Props) 
         phone: form.phone,
       },
       location: {
-        latitude: 14.22,
-        longitude: 66.44,
+        latitude: latLon.lat,
+        longitude: latLon.lon,
         postal_code: form.postal_code,
         street_name: form.street_name,
         street_number: form.street_number,
+        city: form.city,
+        state_province: form.state_province,
+        country: form.country,
       },
       booking: {
         agentId: Number(form.rep),
@@ -95,11 +106,24 @@ export default function NewAppointmentModal({ isOpen, onClose, onSave }: Props) 
     setLoadingAgents(true);
     console.log("Searching...")
     try {
-      const res = await fetch(
-        `http://localhost:5000/search?postal_code=${form.postal_code}&booking_date=${form.date}&booking_time=${form.time}`
-      );
-      const data = await res.json();
-      setAgents(data);
+      // First get lat/long
+      const { lat, lon } = await findLatLong({street_number: form.street_number, street_name: form.street_name, postal_code: form.postal_code })
+
+      if (lat === null || lon === null){
+        console.error("Could not find lat/lon for address.")
+        setLatLon({ lat: null, lon: null });
+        setAgents([])
+      } else{
+        setLatLon({ lat, lon });
+        const queryParams = new URLSearchParams({
+          latitude: lat.toString(),
+          longitude: lon.toString()
+        })
+
+        const res = await fetch(`http://localhost:5000/search?${queryParams.toString()}`);
+        const data = await res.json();
+        setAgents(data);
+      }      
     } catch (err) {
       console.error("Error fetching agents:", err);
     } finally {
@@ -187,7 +211,37 @@ export default function NewAppointmentModal({ isOpen, onClose, onSave }: Props) 
               onChange={handleChange}
             />
           </div>
-          <div className="md:col-span-2">
+          <div>
+            <div className="label">City</div>
+            <input
+              id="f-city"
+              className="input"
+              placeholder="Bedford"
+              value={form.city}
+              onChange={handleChange}
+            />
+          </div>
+          <div>
+            <div className="label">Province</div>
+            <input
+              id="f-state_province"
+              className="input"
+              placeholder="NS"
+              value={form.state_province}
+              onChange={handleChange}
+            />
+          </div>
+          <div>
+            <div className="label">Country</div>
+            <input
+              id="f-country"
+              className="input"
+              placeholder="Canada"
+              value={form.country}
+              onChange={handleChange}
+            />
+          </div>
+          <div>
             <div className="label">Postal Code</div>
             <input
               id="f-postal_code"
@@ -224,39 +278,14 @@ export default function NewAppointmentModal({ isOpen, onClose, onSave }: Props) 
 
           {/* Rep (Dropdown + Search Button) */}
           <div className="md:col-span-2 flex items-end gap-2">
-            <div className="flex-1">
-              <div className="label">Assign Rep</div>
-              <select
-                id="f-rep"
-                className="select w-full"
-                value={form.rep}
+              <AgentSelector
+                agents={agents}
+                selectedRep={form.rep}
+                loading={loadingAgents}
                 onChange={handleChange}
-                disabled={loadingAgents || agents.length === 0}
-              >
-                <option value="">
-                  {loadingAgents
-                    ? "Searching..."
-                    : agents.length > 0
-                    ? "Select an agent"
-                    : "No agents found"}
-                </option>
-                {agents.map((agent) => {
-                  return (
-                    <option key={agent.agentId} value={agent.agentId}>
-                      {agent.name}
-                    </option>
-                  );
-                })}
-              </select>
-            </div>
-            <button
-              type="button"
-              className="btn btn-secondary"
-              onClick={handleSearchAgents}
-              disabled={!form.postal_code || !form.date || !form.time}
-            >
-              Search
-            </button>
+                onSearch={handleSearchAgents}
+                disabledSearch={!form.postal_code || !form.date || !form.time}
+              />
           </div>
         </div>
 

@@ -22,7 +22,7 @@
       "server": "localhost",
       "port": 3307,
       "driver": "MySQL",
-      "name": "Triguard_Db",
+      "name": "Trigaurd",
       "database": "dev",
       "username": "admin"
     }

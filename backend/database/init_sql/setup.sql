@@ -3,9 +3,19 @@ CREATE TABLE IF NOT EXISTS locations (
     id INT AUTO_INCREMENT PRIMARY KEY,
     latitude DECIMAL(9,6) NOT NULL,
     longitude DECIMAL(9,6) NOT NULL,
-    postal_code VARCHAR(255) NOT NULL,
-    street_name VARCHAR(255),
-    street_number INT
+    postal_code VARCHAR(12) NOT NULL,
+    city VARCHAR(100) NOT NULL,
+    state_province VARCHAR(100) NOT NULL,
+    country VARCHAR(100) NOT NULL,
+    street_name VARCHAR(150) NOT NULL,
+    street_number VARCHAR(20) NOT NULL,
+    UNIQUE KEY unique_location (
+        street_number, 
+        street_name, 
+        postal_code, 
+        city, 
+        state_province, 
+    )
 );
 
 -- Dispatcher Table
@@ -49,11 +59,12 @@ CREATE TABLE IF NOT EXISTS bookings (
 );
 
 -- Sample Locations
-INSERT INTO locations (latitude, longitude, postal_code, street_name, street_number)
+-- Sample Locations (with country)
+INSERT INTO locations (latitude, longitude, postal_code, city, state_province, country, street_name, street_number)
 VALUES
-(40.712776, -74.005974, '10007', 'Broadway', 1),
-(34.052235, -118.243683, '90012', 'Sunset Blvd', 101),
-(51.507351, -0.127758, 'SW1A', 'Downing Street', 10);
+(40.712776, -74.005974, '10007', 'New York', 'NY', 'USA', 'Broadway', '1'),         -- NYC, USA
+(34.052235, -118.243683, '90012', 'Los Angeles', 'CA', 'USA', 'Sunset Blvd', '101'), -- LA, USA
+(43.653225, -79.383186, 'M5H 2N2', 'Toronto', 'ON', 'Canada', 'Bay Street', '100'); -- Toronto, Canada
 
 -- Sample Dispatchers
 INSERT INTO dispatchers (`name`, email)
