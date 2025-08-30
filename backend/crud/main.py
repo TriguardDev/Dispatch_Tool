@@ -197,20 +197,12 @@ def book_agent():
         if existing_location:
             location_id = existing_location["id"]
         else:
-            # Insert new location if it doesn't exist
-            lat, long = find_lat_long({
-                "postal_code": data["location"]["postal_code"], 
-                "street_number": data["location"]["street_number"], 
-                "street_name": data["location"]["street_name"]
-                })
-            
-            print(f'Lat: {lat}, Long: {long}', flush=True)
             cursor.execute("""
                 INSERT INTO locations (latitude, longitude, postal_code, city, state_province, country, street_name, street_number)
                 VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
             """, (
-                lat,
-                long,
+                data["location"]["latitude"],
+                data["location"]["longitude"],
                 data["location"]["postal_code"],
                 data["location"]["city"],
                 data["location"]["state_province"],
@@ -287,29 +279,6 @@ def notify_all_parties(data):
         response.raise_for_status()
     except Exception as e:
         print(f"Failed to notify via internal notification service: {e}")
-
-def find_lat_long(address):
-    # Use nominatism api to find latitude and longitude, given an address
-    try:
-        url = "https://nominatim.openstreetmap.org/search"
-        params = {
-            'postalcode': address.get("postal_code", ""),
-            'street': f"{address.get('street_number', '')} {address.get('street_name', '')}",
-            'format': 'json'
-        }
-        headers = {
-            "User-Agent": "BookingApp/1.0 (saher.ziauddin@gmail.com)"
-        }
-        response = requests.get(url, params=params, headers=headers)
-        response.raise_for_status()
-        data = response.json()
-        if data:
-            return float(data[0]['lat']), float(data[0]['lon'])
-        else:
-            raise ValueError("No results found for the given address.")
-    except Exception as e:
-        print(f"Error fetching lat/long: {e}")
-        return None, None
 
 if __name__ == "__main__":
     app.run(debug=True)

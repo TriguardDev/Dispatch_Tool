@@ -282,7 +282,7 @@ export default function NewAppointmentModal({ isOpen, onClose, onSave }: Props) 
                 agents={agents}
                 selectedRep={form.rep}
                 loading={loadingAgents}
-                onChange={handleChange}
+                onChange={(agentId: string) => setForm(prev => ({ ...prev, rep: agentId }))}
                 onSearch={handleSearchAgents}
                 disabledSearch={!form.postal_code || !form.date || !form.time}
               />
