@@ -245,5 +245,25 @@ def notify_all_parties(data):
     except Exception as e:
         print(f"Failed to notify via internal notification service: {e}")
 
+def find_lat_long(address):
+    # Use nominatism api to find latitude and longitude, given an address
+    try:
+        url = "https://nominatim.openstreetmap.org/search"
+        params = {
+            'postcalcode': address.get("postcal_code", ""),
+            'street': f"{address.get('street_number', '')} {address.get('street_name', '')}",
+            'format': 'json'
+        }
+        response = requests.get(url, params=params)
+        response.raise_for_status()
+        data = response.json()
+        if data:
+            return float(data[0]['lat']), float(data[0]['lon'])
+        else:
+            raise ValueError("No results found for the given address.")
+    except Exception as e:
+        print(f"Error fetching lat/long: {e}")
+        return None, None
+
 if __name__ == "__main__":
     app.run(debug=True)
