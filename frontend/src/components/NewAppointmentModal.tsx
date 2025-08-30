@@ -68,7 +68,7 @@ export default function NewAppointmentModal({ isOpen, onClose, onSave }: Props) 
     console.log(JSON.stringify(payload))
 
     try {
-      const res = await fetch("http://localhost:5001/book", {
+      const res = await fetch("http://localhost:8000/booking", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
