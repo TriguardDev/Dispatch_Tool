@@ -105,23 +105,41 @@ def get_bookings():
         if (agentId):
             # Find all bookings where bookings.agentId = agentId
             query = """
-                SELECT b.bookingId, b.booking_date, b.booking_time, b.status,
-                      c.name AS customer_name,
-                      fa.name AS agent_name
-                FROM bookings b
-                JOIN customers c ON b.customerId = c.customerId
-                LEFT JOIN field_agents fa ON b.agentId = fa.agentId
-                WHERE b.agentId = %s
+                      SELECT 
+                          b.bookingId, 
+                          b.booking_date, 
+                          b.booking_time, 
+                          b.status,
+                          c.name AS customer_name,
+                          fa.name AS agent_name,
+                          d.dispositionId AS disposition_id,
+                          d.typeCode AS disposition_code,
+                          dt.description AS disposition_description
+                      FROM bookings b
+                      JOIN customers c 
+                          ON b.customerId = c.customerId
+                      LEFT JOIN field_agents fa 
+                          ON b.agentId = fa.agentId
+                      LEFT JOIN dispositions d 
+                          ON b.dispositionId = d.dispositionId
+                      LEFT JOIN disposition_types dt
+                          ON d.typeCode = dt.typeCode
+                      WHERE b.agentId = %s;
             """
             cursor.execute(query, (agentId,))
         else:
             query = """
                 SELECT b.bookingId, b.booking_date, b.booking_time, b.status,
                       c.name AS customer_name,
-                      fa.name AS agent_name
+                      fa.name AS agent_name,
+                      d.dispositionId AS disposition_id,
+                      d.typeCode AS disposition_code,
+                      dt.description AS disposition_description
                 FROM bookings b
                 JOIN customers c ON b.customerId = c.customerId
                 LEFT JOIN field_agents fa ON b.agentId = fa.agentId
+                LEFT JOIN dispositions d ON b.dispositionId = d.dispositionId
+                LEFT JOIN disposition_types dt ON d.typeCode = dt.typeCode;
             """
             cursor.execute(query,)
 
@@ -146,27 +164,6 @@ def get_bookings():
             cursor.close()
         if 'conn' in locals():
             conn.close()
-
-def notify_customer(data):
-    try:
-        payload = {
-            'customer_name': data.get("customer", {}).get("name", ""),
-            'customer_email': data.get("customer", {}).get("email", ""),
-            'customer_phone': data.get("customer", {}).get("phone", ""),
-            'agent_name': data.get("agent", {}).get("name", ""),
-            'agent_email': data.get("agent", {}).get("email", ""),
-            'agent_phone': data.get("agent", {}).get("phone", ""),
-            'booking_date': data.get("booking", {}).get("booking_date", ""),
-            'booking_time': data.get("booking", {}).get("booking_time", ""),
-            'message': f"{data.get('agent', {}).get('name', '')} is on their way."
-        }
-
-        print("Sending notification:", payload, flush=True)
-        notification_endpoint = 'http://notification:5002/notification'
-        response = requests.post(notification_endpoint, json=payload)
-        response.raise_for_status()
-    except Exception as e:
-        print(f"Failed to notify via internal notification service: {e}")
 
 @app.route("/booking", methods=["POST"])
 def book_agent():
@@ -257,6 +254,84 @@ def book_agent():
             cursor.close()
         if 'conn' in locals():
             conn.close()
+
+@app.route("/disposition", methods=["POST"])
+def add_disposition():
+    try:
+        data = request.get_json()
+        booking_id = data.get("bookingId")
+        disposition_type = data.get("dispositionType")
+        note = data.get("note")
+
+        conn = mysql.connector.connect(**db_config)
+        cursor = conn.cursor(dictionary=True)
+
+        # 1. Check if booking already has a disposition
+        cursor.execute("SELECT dispositionId FROM bookings WHERE bookingId = %s", (booking_id,))
+        booking = cursor.fetchone()
+
+        if not booking:
+            return jsonify({"error": f"Booking {booking_id} not found"}), 404
+
+        disposition_id = booking.get("dispositionId")
+
+        if disposition_id:
+            # 2a. Update existing disposition
+            update_query = """
+                UPDATE dispositions
+                SET typeCode = %s, note = %s
+                WHERE dispositionId = %s
+            """
+            cursor.execute(update_query, (disposition_type, note, disposition_id))
+        else:
+            # 2b. Create new disposition
+            insert_query = """
+                INSERT INTO dispositions (typeCode, note)
+                VALUES (%s, %s)
+            """
+            cursor.execute(insert_query, (disposition_type, note))
+            new_disposition_id = cursor.lastrowid
+
+            # Update booking to point to this new disposition
+            cursor.execute(
+                "UPDATE bookings SET dispositionId = %s WHERE bookingId = %s",
+                (new_disposition_id, booking_id)
+            )
+
+        conn.commit()
+        return jsonify({"message": "Disposition saved successfully"}), 200
+
+    except Exception as e:
+        if 'conn' in locals():
+            conn.rollback()
+        return jsonify({"error": str(e)}), 500
+
+    finally:
+        if 'cursor' in locals():
+            cursor.close()
+        if 'conn' in locals():
+            conn.close()       
+
+def notify_customer(data):
+    try:
+        payload = {
+            'customer_name': data.get("customer", {}).get("name", ""),
+            'customer_email': data.get("customer", {}).get("email", ""),
+            'customer_phone': data.get("customer", {}).get("phone", ""),
+            'agent_name': data.get("agent", {}).get("name", ""),
+            'agent_email': data.get("agent", {}).get("email", ""),
+            'agent_phone': data.get("agent", {}).get("phone", ""),
+            'booking_date': data.get("booking", {}).get("booking_date", ""),
+            'booking_time': data.get("booking", {}).get("booking_time", ""),
+            'message': f"{data.get('agent', {}).get('name', '')} is on their way."
+        }
+
+        print("Sending notification:", payload, flush=True)
+        notification_endpoint = 'http://notification:5002/notification'
+        response = requests.post(notification_endpoint, json=payload)
+        response.raise_for_status()
+    except Exception as e:
+        print(f"Failed to notify via internal notification service: {e}")
 
 def notify_all_parties(data):
     # send post request to /notification endpoint with a json payload

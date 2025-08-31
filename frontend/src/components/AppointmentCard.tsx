@@ -36,6 +36,17 @@ export default function AppointmentCard({ appt }: Props) {
               Assigned to: {appt.agent_name}
             </div>
           )}
+
+          {/* Disposition info */}
+          {appt.disposition_description ? (
+            <p className="text-sm text-green-700 font-medium">
+              Disposition: {appt.disposition_description}
+            </p>
+          ) : (
+            <p className="text-sm text-gray-400 italic">
+              No disposition yet
+            </p>
+          )}
         </div>
       </div>
     </div>

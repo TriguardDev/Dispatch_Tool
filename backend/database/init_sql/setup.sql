@@ -51,6 +51,7 @@ CREATE TABLE IF NOT EXISTS bookings (
     bookingId INT AUTO_INCREMENT PRIMARY KEY,
     customerId INT NOT NULL,
     agentId INT,
+    dispositionId INT,
     booking_date DATE NOT NULL,
     booking_time TIME NOT NULL,
     `status` ENUM('scheduled', 'in-progress', 'completed') DEFAULT 'scheduled',
@@ -58,7 +59,21 @@ CREATE TABLE IF NOT EXISTS bookings (
     FOREIGN KEY (agentId) REFERENCES field_agents(agentId) ON DELETE SET NULL
 );
 
--- Sample Locations
+-- Lookup table of possible dispositions
+CREATE TABLE IF NOT EXISTS disposition_types (
+    typeCode VARCHAR(50) PRIMARY KEY,        -- e.g., "SOLD_CASH_PIF"
+    description VARCHAR(255) NOT NULL        -- e.g., "Sold – Cash Deal (Paid in Full)"
+);
+
+-- Main dispositions table
+CREATE TABLE IF NOT EXISTS dispositions (
+    dispositionId INT AUTO_INCREMENT PRIMARY KEY,
+    typeCode VARCHAR(50) NOT NULL,
+    changedAt TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    note TEXT,
+    FOREIGN KEY (typeCode) REFERENCES disposition_types(typeCode)
+);
+
 -- Sample Locations (with country)
 INSERT INTO locations (latitude, longitude, postal_code, city, state_province, country, street_name, street_number)
 VALUES
@@ -91,3 +106,17 @@ VALUES
 (1, 1, '2025-08-22', '09:00:00', 'in-progress'),
 (2, 2, '2025-08-22', '10:30:00', 'scheduled'),
 (3, 3, '2025-08-22', '14:00:00', 'completed');
+
+-- Populate your disposition types
+INSERT INTO disposition_types (typeCode, description) VALUES
+('SOLD_CASH_PIF', 'Sold - Cash Deal (Paid in Full)'),
+('SOLD_CHECK_COLLECTED', 'Sold - Check Collected'),
+('SOLD_CARD_ACH_SUBMITTED', 'Sold - Card/ACH Payment Submitted'),
+('SOLD_DEPOSIT_COLLECTED', 'Sold - Deposit Collected (Balance Due)'),
+('SOLD_LENDER_SUBMITTED', 'Sold - Lender Financing Submitted'),
+('SOLD_LENDER_APPROVED_DOCS', 'Sold - Lender Approved (Docs Signed)'),
+('SOLD_FUNDED', 'Sold - Funded (Lender Disbursed)'),
+('SOLD_LENDER_DECLINED', 'Sold - Lender Declined'),
+('SOLD_IN_HOUSE_PLAN', 'Sold - Payment Plan (In-House)'),
+('SOLD_FINAL_PAYMENT', 'Sold - Balance Paid (Final Payment)'),
+('SOLD_RESCINDED_REVERSED', 'Sale Rescinded / Payment Reversed');
