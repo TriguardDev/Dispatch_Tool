@@ -28,7 +28,7 @@ export default function DispatcherScreen() {
 
     fetchBookings();
 
-    const interval = setInterval(fetchBookings, 10000)
+    const interval = setInterval(fetchBookings, 1000000)
     return () => clearInterval(interval);
   }, [refreshBookings]);
 

@@ -10,8 +10,8 @@ CREATE TABLE IF NOT EXISTS locations (
     street_name VARCHAR(150) NOT NULL,
     street_number VARCHAR(20) NOT NULL,
     UNIQUE KEY unique_location (
-        street_number, 
-        street_name, 
+        street_name,
+        street_number,
         postal_code, 
         city, 
         state_province 
@@ -22,17 +22,19 @@ CREATE TABLE IF NOT EXISTS locations (
 CREATE TABLE IF NOT EXISTS dispatchers (
     dispatcherId INT AUTO_INCREMENT PRIMARY KEY,
     `name` VARCHAR(100) NOT NULL,
-    email VARCHAR(100) UNIQUE NOT NULL
+    email VARCHAR(100) UNIQUE NOT NULL,
+    password VARCHAR(255) NOT NULL
 );
 
 -- Field Agent Table
 CREATE TABLE IF NOT EXISTS field_agents (
     agentId INT AUTO_INCREMENT PRIMARY KEY,
     `name` VARCHAR(100) NOT NULL,
+    password VARCHAR(255) NOT NULL,
     email VARCHAR(100) UNIQUE NOT NULL,
     phone VARCHAR(15),
     `status` ENUM('available', 'unavailable', 'accepted', 'declined', 'enroute') DEFAULT 'available',
-    location_id INT UNIQUE,
+    location_id INT,
     FOREIGN KEY (location_id) REFERENCES locations(id) ON DELETE SET NULL
 );
 
@@ -77,21 +79,23 @@ CREATE TABLE IF NOT EXISTS dispositions (
 -- Sample Locations (with country)
 INSERT INTO locations (latitude, longitude, postal_code, city, state_province, country, street_name, street_number)
 VALUES
-(40.712776, -74.005974, '10007', 'New York', 'NY', 'USA', 'Broadway', '1'),         -- NYC, USA
-(34.052235, -118.243683, '90012', 'Los Angeles', 'CA', 'USA', 'Sunset Blvd', '101'), -- LA, USA
-(43.653225, -79.383186, 'M5H 2N2', 'Toronto', 'ON', 'Canada', 'Bay Street', '100'); -- Toronto, Canada
+(26.1936248, -98.2118124, '78502', 'McAllen', 'Texas', 'USA', 'Broadway', '1'),
+(26.3237612, -98.1369012, '78542', 'Edinburg', 'Texas', 'USA', 'Sunset Blvd', '101'),
+(33.1811789, -96.6291685, '75069', 'McKinney', 'Texas', 'USA', 'Bay Street', '100');
 
 -- Sample Dispatchers
-INSERT INTO dispatchers (`name`, email)
+INSERT INTO dispatchers (`name`, email, password)
 VALUES
-('Grace Lee', 'lee@example.com');
+('Pete Stathopoulos', 'pete@triguardroofing.com', 'pete_stat_333');
 
 -- Sample Field Agents
-INSERT INTO field_agents (`name`, email, phone, `status`, location_id)
+INSERT INTO field_agents (`name`, email, password, phone, `status`, location_id)
 VALUES
-('Alice Johnson', 'alice@example.com', '555-1111', 'available', 1),
-('Bob Smith', 'bob@example.com', '555-2222', 'enroute', 2),
-('Carol Davis', 'carol@example.com', '555-3333', 'accepted', 3);
+('Larey Farias', 'larey@triguardroofing.com', "larey_farias_333", '555-1111', 'available', 1),
+('Arthur Garica', 'arthur@triguardroofing.com', 'arthur_garica_333', '555-1111', 'available', 1),
+('Jeremy Moreno', 'jeremy@triguardroofing.com', 'jeremy_moreno_333', '555-2222', 'available', 2),
+('rebecca steward', 'rebecca@triguardroofing.com', 'rebecca_steward_333', '555-2222', 'available', 3),
+('tester', 'test@example.com', 'tester', '555-6666', 'available', 3);
 
 -- Sample Customers
 INSERT INTO customers (`name`, email, phone, location_id)
