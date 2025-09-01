@@ -86,15 +86,15 @@ VALUES
 -- Sample Dispatchers
 INSERT INTO dispatchers (`name`, email, password)
 VALUES
-('Pete Stathopoulos', 'pete@triguardroofing.com', 'pete_stat_333');
+('Pete Stathopoulos', 'pete@triguardroofing.com', 'pete');
 
 -- Sample Field Agents
 INSERT INTO field_agents (`name`, email, password, phone, `status`, location_id)
 VALUES
-('Larey Farias', 'larey@triguardroofing.com', "larey_farias_333", '555-1111', 'available', 1),
-('Arthur Garica', 'arthur@triguardroofing.com', 'arthur_garica_333', '555-1111', 'available', 1),
-('Jeremy Moreno', 'jeremy@triguardroofing.com', 'jeremy_moreno_333', '555-2222', 'available', 2),
-('rebecca steward', 'rebecca@triguardroofing.com', 'rebecca_steward_333', '555-2222', 'available', 3),
+('Larey Farias', 'larey@triguardroofing.com', "larey", '555-1111', 'available', 1),
+('Arthur Garica', 'arthur@triguardroofing.com', 'arthur', '555-1111', 'available', 1),
+('Jeremy Moreno', 'jeremy@triguardroofing.com', 'jeremy', '555-2222', 'available', 2),
+('rebecca steward', 'rebecca@triguardroofing.com', 'rebecca', '555-2222', 'available', 3),
 ('tester', 'test@example.com', 'tester', '555-6666', 'available', 3);
 
 -- Populate your disposition types
