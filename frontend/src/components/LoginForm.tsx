@@ -24,10 +24,10 @@ export default function LoginForm({ onLogin }: Props) {
   };
 
   return (
-    <div className="flex h-screen items-center justify-center bg-gray-100">
+    <div className="flex h-screen items-center justify-center bg-gray-800 ">
       <form
         onSubmit={handleSubmit}
-        className="bg-white p-6 rounded-2xl shadow-lg w-80"
+        className="bg-gray-900  p-6 rounded-2xl shadow-lg w-80"
       >
         <h1 className="text-xl font-bold mb-4 text-center">Login</h1>
 

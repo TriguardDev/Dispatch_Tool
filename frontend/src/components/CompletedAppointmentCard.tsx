@@ -12,7 +12,7 @@ export function CompletedAppointmentCard({
   const [note, setNote] = useState("");
 
   return (
-    <div className="mb-4 p-2 border rounded-lg bg-white shadow-sm">
+    <div className="mb-4 p-2 border rounded-lg bg-gray-900  shadow-sm">
       <AppointmentCard appt={appt} />
 
       {/* Disposition select */}

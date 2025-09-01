@@ -37,11 +37,11 @@ export default function AgentSelector({
     <div className="md:col-span-2 flex flex-col md:flex-row items-end gap-3 relative">
       {/* Custom Select */}
       <div className="flex-1 relative">
-        <label className="label font-medium text-gray-700">
+        <label className="label font-medium text-gray-200 ">
           Assign Rep
         </label>
         <div
-          className="w-full border border-gray-300 rounded-lg px-3 py-2 cursor-pointer flex justify-between items-center"
+          className="w-full border border-gray-700 rounded-lg px-3 py-2 cursor-pointer flex justify-between items-center"
           onClick={() => setIsOpen(!isOpen)}
         >
           {selectedAgent
@@ -55,14 +55,14 @@ export default function AgentSelector({
         </div>
 
         {isOpen && agents.length > 0 && (
-          <div className="absolute mt-1 w-full max-h-60 overflow-y-auto border border-gray-300 bg-white rounded-lg shadow-lg z-50">
+          <div className="absolute mt-1 w-full max-h-60 overflow-y-auto border border-gray-700 bg-gray-900  rounded-lg shadow-lg z-50">
             {agents.map((agent) => {
               const distance = Math.ceil(Number(agent.distance));
               const color = getDistanceColor(distance);
               return (
                 <div
                   key={agent.agentId}
-                  className={`px-3 py-2 cursor-pointer hover:bg-gray-100 flex justify-between ${selectedRep === agent.agentId ? "bg-gray-100" : ""}`}
+                  className={`px-3 py-2 cursor-pointer hover:bg-gray-800  flex justify-between ${selectedRep === agent.agentId ? "bg-gray-800 " : ""}`}
                   onClick={() => {
                     onChange(agent.agentId);
                     setIsOpen(false);

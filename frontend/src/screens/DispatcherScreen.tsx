@@ -41,7 +41,7 @@ export default function DispatcherScreen() {
   if (error) return <p className="p-6 text-center text-red-500">{error}</p>;
 
   return (
-    <div className="bg-gray-50 min-h-screen">
+    <div className="bg-gray-900 min-h-screen">
       <TopBar />
       <main className="mx-auto max-w-7xl px-4 py-6">
         <Filters onNewAppt={() => setIsModalOpen(true)} />

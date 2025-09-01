@@ -1,1 +1,33 @@
 @import "tailwindcss";
+
+
+@layer base {
+  html, body, #root {
+    @apply h-full bg-gray-900 text-gray-100;
+  }
+}
+
+
+body { @apply bg-gray-900 text-gray-100; }
+
+
+.card { @apply bg-gray-900 border border-gray-700 rounded-xl shadow-sm; }
+.badge { @apply inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-gray-800 text-gray-200; }
+
+.btn { @apply inline-flex items-center justify-center px-3 py-2 rounded-md border border-transparent text-sm font-medium transition; }
+.btn:hover { @apply opacity-90; }
+.btn:disabled { @apply opacity-50 cursor-not-allowed; }
+.btn-primary { @apply bg-blue-600 text-white; }
+.btn-ghost { @apply bg-transparent text-gray-200 border border-gray-700; }
+
+.input, .select, .textarea {
+  @apply w-full rounded-md border border-gray-700 bg-gray-900 text-gray-100 placeholder-gray-500 px-3 py-2;
+}
+.select { @apply pr-8; }
+.textarea { @apply min-h-24; }
+
+.tab-btn {
+  @apply px-3 py-1 rounded-lg text-sm text-gray-300  aria-selected:bg-gray-900 border border-transparent aria-selected:border-gray-700;
+}
+
+.scroll-slim { scrollbar-width: thin; }

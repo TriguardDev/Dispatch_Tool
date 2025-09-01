@@ -138,14 +138,14 @@ export default function NewAppointmentModal({ isOpen, onClose, onSave }: Props) 
     <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
       <form
         onSubmit={handleSave}
-        className="card bg-white w-[min(680px,95vw)] max-h-[90vh] overflow-y-auto"
+        className="card bg-gray-900  w-[min(680px,95vw)] max-h-[90vh] overflow-y-auto"
       >
         {/* Header */}
         <header className="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
           <h3 className="font-semibold">New Appointment</h3>
           <button
             type="button"
-            className="btn btn-ghost text-gray-600"
+            className="btn btn-ghost text-gray-300 "
             onClick={onClose}
           >
             ✕

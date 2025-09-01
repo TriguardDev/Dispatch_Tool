@@ -12,7 +12,7 @@ const statusColors: Record<Booking["status"], string> = {
 
 export default function AppointmentCard({ appt }: Props) {
   return (
-    <div className="card p-3 bg-white rounded shadow-sm">
+    <div className="card p-3 bg-gray-900  rounded shadow-sm">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           {/* Customer Name and Status */}
@@ -26,13 +26,13 @@ export default function AppointmentCard({ appt }: Props) {
           </div>
 
           {/* Booking Date and Time */}
-          <div className="text-xs text-gray-500 mt-1">
+          <div className="text-xs text-gray-400  mt-1">
             {appt.booking_date} · {appt.booking_time}
           </div>
 
           {/* Agent Name */}
           {appt.agent_name && (
-            <div className="text-sm text-gray-700 mt-1">
+            <div className="text-sm text-gray-200  mt-1">
               Assigned to: {appt.agent_name}
             </div>
           )}
@@ -49,7 +49,7 @@ export default function AppointmentCard({ appt }: Props) {
           )}
 
           {appt.disposition_note && (
-            <p className="mt-2 text-sm text-gray-700">
+            <p className="mt-2 text-sm text-gray-200 ">
               <span className="font-semibold">Note:</span> {appt.disposition_note}
             </p>
           )}
