@@ -27,6 +27,9 @@ export default function DispatcherScreen() {
     }
 
     fetchBookings();
+
+    const interval = setInterval(fetchBookings, 1000000)
+    return () => clearInterval(interval);
   }, [refreshBookings]);
 
   // Categorize bookings by status

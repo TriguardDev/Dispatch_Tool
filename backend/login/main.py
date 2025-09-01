@@ -19,6 +19,7 @@ def login():
     try:
         data = request.get_json()
         email = data.get("email")
+        password = data.get("password")
 
         conn = mysql.connector.connect(**db_config)
         cursor = conn.cursor(dictionary=True)
@@ -27,17 +28,17 @@ def login():
         (
             SELECT dispatcherId AS id, 'dispatcher' AS user_type
             FROM dispatchers
-            WHERE email = %s
+            WHERE email = %s AND password = %s
         )
         UNION
         (
             SELECT agentId AS id, 'agent' AS user_type
             FROM field_agents
-            WHERE email = %s
+            WHERE email = %s AND password = %s
         )
         """
 
-        cursor.execute(query, (email, email))
+        cursor.execute(query, (email, password, email, password))
         result = cursor.fetchone()
 
         if result:
@@ -47,7 +48,7 @@ def login():
                 "user_type": result["user_type"]
             }, 200
         else:
-            return {"error": "Email not found"}, 404
+            return {"error": "Email or password incorrect"}, 404
 
     finally:
         if 'cursor' in locals():

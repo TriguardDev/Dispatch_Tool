@@ -3,6 +3,7 @@ import TopBar from "../components/TopBar";
 import QueueCard from "../components/QueueCard";
 import AppointmentCard from "../components/AppointmentCard";
 import { type Booking } from "../api/crud";
+import { CompletedAppointmentCard } from "../components/CompletedAppointmentCard";
 
 interface AgentScreenProps {
   agentId: number; // passed from login
@@ -34,6 +35,8 @@ export default function AgentScreen({ agentId }: AgentScreenProps) {
     }
 
     fetchBookings();
+    const interval = setInterval(fetchBookings, 1000000)
+    return () => clearInterval(interval);
   }, [agentId, refresh]);
 
   const handleStatusChange = async (bookingId: number, status: string) => {
@@ -51,6 +54,26 @@ export default function AgentScreen({ agentId }: AgentScreenProps) {
     } catch (err) {
       console.error(err);
       alert("Error updating booking status");
+    }
+  };
+
+  const handleDispositionChange = async (bookingId: number, dispositionType: string, note: string = "") => {
+    try {
+      const res = await fetch(`http://localhost:8000/disposition`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          bookingId: bookingId,
+          dispositionType: dispositionType,
+          note: note
+        }),
+      });
+
+      if (!res.ok) throw new Error("Failed to save disposition");
+      setRefresh((prev) => prev + 1);
+    } catch (err) {
+      console.error(err);
+      alert("Error saving disposition");
     }
   };
 
@@ -115,9 +138,14 @@ export default function AgentScreen({ agentId }: AgentScreenProps) {
             count={completed.length}
           >
             {completed.map((appt) => (
-              <AppointmentCard key={appt.bookingId} appt={appt} />
+              <CompletedAppointmentCard
+                key={appt.bookingId}
+                appt={appt}
+                onSave={handleDispositionChange}
+              />
             ))}
           </QueueCard>
+
         </div>
       </main>
     </div>
