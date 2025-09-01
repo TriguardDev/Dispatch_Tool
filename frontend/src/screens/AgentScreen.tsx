@@ -3,6 +3,7 @@ import TopBar from "../components/TopBar";
 import QueueCard from "../components/QueueCard";
 import AppointmentCard from "../components/AppointmentCard";
 import { type Booking } from "../api/crud";
+import { CompletedAppointmentCard } from "../components/CompletedAppointmentCard";
 
 interface AgentScreenProps {
   agentId: number; // passed from login
@@ -137,30 +138,14 @@ export default function AgentScreen({ agentId }: AgentScreenProps) {
             count={completed.length}
           >
             {completed.map((appt) => (
-              <div key={appt.bookingId} className="mb-2">
-                <AppointmentCard appt={appt} />
-                {/* Add disposition select for completed bookings */}
-                <select
-                  className="select mt-1 w-full"
-                  defaultValue={appt.disposition_code || ""}
-                  onChange={(e) => handleDispositionChange(appt.bookingId, e.target.value)}
-                >
-                  <option value="">Select Disposition</option>
-                  <option value="SOLD_CASH_PIF">Sold – Cash Deal (Paid in Full)</option>
-                  <option value="SOLD_CHECK_COLLECTED">Sold – Check Collected</option>
-                  <option value="SOLD_CARD_ACH_SUBMITTED">Sold – Card/ACH Payment Submitted</option>
-                  <option value="SOLD_DEPOSIT_COLLECTED">Sold – Deposit Collected (Balance Due)</option>
-                  <option value="SOLD_LENDER_SUBMITTED">Sold – Lender Financing Submitted</option>
-                  <option value="SOLD_LENDER_APPROVED_DOCS">Sold – Lender Approved (Docs Signed)</option>
-                  <option value="SOLD_FUNDED">Sold – Funded (Lender Disbursed)</option>
-                  <option value="SOLD_LENDER_DECLINED">Sold – Lender Declined</option>
-                  <option value="SOLD_IN_HOUSE_PLAN">Sold – Payment Plan (In-House)</option>
-                  <option value="SOLD_FINAL_PAYMENT">Sold – Balance Paid (Final Payment)</option>
-                  <option value="SOLD_RESCINDED_REVERSED">Sale Rescinded / Payment Reversed</option>
-                </select>
-              </div>
+              <CompletedAppointmentCard
+                key={appt.bookingId}
+                appt={appt}
+                onSave={handleDispositionChange}
+              />
             ))}
           </QueueCard>
+
         </div>
       </main>
     </div>
