@@ -4,6 +4,7 @@ import QueueCard from "../components/QueueCard";
 import AppointmentCard from "../components/AppointmentCard";
 import { type Booking } from "../api/crud";
 import { CompletedAppointmentCard } from "../components/CompletedAppointmentCard";
+import { BASE_URL } from "../utils/constants";
 
 interface AgentScreenProps {
   agentId: number; // passed from login
@@ -19,7 +20,7 @@ export default function AgentScreen({ agentId }: AgentScreenProps) {
     async function fetchBookings() {
       try {
         setLoading(true);
-        const res = await fetch(`http://localhost:8000/booking?agentId=${agentId}`, {
+        const res = await fetch(`${BASE_URL}:8000/booking?agentId=${agentId}`, {
           method: "GET",
           headers: { "Content-Type": "application/json" },
         });
@@ -41,7 +42,7 @@ export default function AgentScreen({ agentId }: AgentScreenProps) {
 
   const handleStatusChange = async (bookingId: number, status: string) => {
     try {
-      const res = await fetch(`http://localhost:8000/booking`, {
+      const res = await fetch(`${BASE_URL}:8000/booking`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
@@ -59,7 +60,7 @@ export default function AgentScreen({ agentId }: AgentScreenProps) {
 
   const handleDispositionChange = async (bookingId: number, dispositionType: string, note: string = "") => {
     try {
-      const res = await fetch(`http://localhost:8000/disposition`, {
+      const res = await fetch(`${BASE_URL}:8000/disposition`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

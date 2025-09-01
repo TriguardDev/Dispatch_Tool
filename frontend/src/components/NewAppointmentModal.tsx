@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { findLatLong } from "../api/location_conversion";
 import AgentSelector from "./AgentSelector";
+import { BASE_URL } from "../utils/constants";
 
 interface Props {
   isOpen: boolean;
@@ -79,7 +80,7 @@ export default function NewAppointmentModal({ isOpen, onClose, onSave }: Props) 
     console.log(JSON.stringify(payload))
 
     try {
-      const res = await fetch("http://localhost:8000/booking", {
+      const res = await fetch(`${BASE_URL}:8000/booking`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -120,7 +121,7 @@ export default function NewAppointmentModal({ isOpen, onClose, onSave }: Props) 
           longitude: lon.toString()
         })
 
-        const res = await fetch(`http://localhost:5000/search?${queryParams.toString()}`);
+        const res = await fetch(`${BASE_URL}:5000/search?${queryParams.toString()}`);
         const data = await res.json();
         setAgents(data);
       }      

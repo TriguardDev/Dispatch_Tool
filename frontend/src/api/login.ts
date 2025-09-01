@@ -1,10 +1,12 @@
+import { BASE_URL } from "../utils/constants";
+
 export interface LoginResponse {
   id: number;
   user_type: "dispatcher" | "agent";
 }
 
 export async function login(email: string, password: string): Promise<LoginResponse> {
-  const res = await fetch("http://localhost:9000/login", {
+  const res = await fetch(`${BASE_URL}:9000/login`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ email, password}),

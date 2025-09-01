@@ -1,3 +1,5 @@
+import { BASE_URL } from "../utils/constants";
+
 export interface Booking {
   bookingId: number;
   booking_date: string; // YYYY-MM-DD
@@ -12,7 +14,7 @@ export interface Booking {
 }
 
 export async function getAllBookings(): Promise<Booking[]> {
-  const res = await fetch("http://localhost:8000/booking", {
+  const res = await fetch(`${BASE_URL}:8000/booking`, {
     method: "GET", // your API is now GET
     headers: { "Content-Type": "application/json" },
   });
