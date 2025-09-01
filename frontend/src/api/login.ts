@@ -3,6 +3,7 @@ import { BASE_URL } from "../utils/constants";
 export interface LoginResponse {
   id: number;
   user_type: "dispatcher" | "agent";
+  token: string;
 }
 
 export async function login(email: string, password: string): Promise<LoginResponse> {

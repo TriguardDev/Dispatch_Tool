@@ -1,6 +1,7 @@
 from flask import Flask, request, jsonify
 import mysql.connector
 from flask_cors import CORS
+import uuid
 
 app = Flask(__name__)
 CORS(app)
@@ -45,7 +46,8 @@ def login():
             return {
                 "Login": "Successful",
                 "id": result["id"],
-                "user_type": result["user_type"]
+                "user_type": result["user_type"],
+                "token": str(uuid.uuid4())
             }, 200
         else:
             return {"error": "Email or password incorrect"}, 404
