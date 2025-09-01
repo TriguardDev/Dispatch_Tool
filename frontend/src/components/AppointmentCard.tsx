@@ -2,6 +2,7 @@ import type { Booking } from "../api/crud";
 
 interface Props {
   appt: Booking;
+  addressText: string;
 }
 
 const statusColors: Record<Booking["status"], string> = {
@@ -10,7 +11,7 @@ const statusColors: Record<Booking["status"], string> = {
   completed: "bg-green-50 text-green-700",
 };
 
-export default function AppointmentCard({ appt }: Props) {
+export default function AppointmentCard({ appt, addressText }: Props) {
   return (
     <div className="card p-3 bg-gray-900  rounded shadow-sm">
       <div className="flex items-start justify-between gap-3">
@@ -23,6 +24,9 @@ export default function AppointmentCard({ appt }: Props) {
             <span className={`badge ${statusColors[appt.status]}`}>
               {appt.status}
             </span>
+          </div>
+          <div className="text-xs text-gray-400  mt-1">
+            {addressText}
           </div>
 
           {/* Booking Date and Time */}

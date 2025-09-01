@@ -55,7 +55,8 @@ export default function DispatcherScreen() {
             {scheduled.map((appt) => (
               <AppointmentCard 
                 key={appt.bookingId} 
-                appt={appt} />
+                appt={appt}
+                addressText={appt.customer_address ?? ""} />
             ))}
           </QueueCard>
 
@@ -67,7 +68,8 @@ export default function DispatcherScreen() {
             {active.map((appt) => (
               <AppointmentCard 
                 key={appt.bookingId} 
-                appt={appt} />
+                appt={appt}
+                addressText={appt.customer_address ?? ""} />
             ))}
           </QueueCard>
 
@@ -79,7 +81,8 @@ export default function DispatcherScreen() {
             {completed.map((appt) => (
               <AppointmentCard 
                 key={appt.bookingId} 
-                appt={appt} />
+                appt={appt}
+                addressText={appt.customer_address ?? ""} />
             ))}
           </QueueCard>
         </div>

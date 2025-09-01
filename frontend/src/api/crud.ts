@@ -4,6 +4,7 @@ export interface Booking {
   bookingId: number;
   booking_date: string; // YYYY-MM-DD
   booking_time: string; // HH:MM:SS
+  customer_address: string | null;
   status: string;
   customer_name: string;
   agent_name: string | null; // agent can be null

@@ -98,7 +98,14 @@ export default function AgentScreen({ agentId }: AgentScreenProps) {
           >
             {scheduled.map((appt) => (
               <div key={appt.bookingId} className="mb-2">
-                <AppointmentCard appt={appt} />
+                {bookings.map((appt) => {
+                  const addressText =
+                    appt.status === "in-progress"
+                      ? appt.customer_address
+                      : "Address hidden until on route";
+
+                  return <AppointmentCard key={appt.bookingId} appt={appt} addressText={addressText ?? ""} />;
+                })}
                 <select
                   className="select mt-1 w-full"
                   value={appt.status}
@@ -119,7 +126,14 @@ export default function AgentScreen({ agentId }: AgentScreenProps) {
           >
             {active.map((appt) => (
               <div key={appt.bookingId} className="mb-2">
-                <AppointmentCard appt={appt} />
+                {bookings.map((appt) => {
+                  const addressText =
+                    appt.status === "in-progress"
+                      ? appt.customer_address
+                      : "Address hidden until on route";
+
+                  return <AppointmentCard key={appt.bookingId} appt={appt} addressText={addressText ?? ""} />;
+                })}
                 <select
                   className="select mt-1 w-full"
                   value={appt.status}
