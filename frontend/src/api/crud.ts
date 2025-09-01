@@ -8,6 +8,7 @@ export interface Booking {
   disposition_id: number | null
   disposition_code: string | null
   disposition_description: string | null
+  disposition_note: string | null
 }
 
 export async function getAllBookings(): Promise<Booking[]> {

@@ -47,6 +47,12 @@ export default function AppointmentCard({ appt }: Props) {
               No disposition yet
             </p>
           )}
+
+          {appt.disposition_note && (
+            <p className="mt-2 text-sm text-gray-700">
+              <span className="font-semibold">Note:</span> {appt.disposition_note}
+            </p>
+          )}
         </div>
       </div>
     </div>

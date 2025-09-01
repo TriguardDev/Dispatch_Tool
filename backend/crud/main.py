@@ -114,6 +114,7 @@ def get_bookings():
                           fa.name AS agent_name,
                           d.dispositionId AS disposition_id,
                           d.typeCode AS disposition_code,
+                          d.note AS disposition_note,
                           dt.description AS disposition_description
                       FROM bookings b
                       JOIN customers c 
