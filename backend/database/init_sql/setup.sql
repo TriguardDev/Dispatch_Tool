@@ -97,20 +97,6 @@ VALUES
 ('rebecca steward', 'rebecca@triguardroofing.com', 'rebecca_steward_333', '555-2222', 'available', 3),
 ('tester', 'test@example.com', 'tester', '555-6666', 'available', 3);
 
--- Sample Customers
-INSERT INTO customers (`name`, email, phone, location_id)
-VALUES
-('Dave Wilson', 'dave@example.com', '555-4444', 1),
-('Eve Thompson', 'eve@example.com', '555-5555', 2),
-('Frank Martin', 'frank@example.com', '555-6666', 3);
-
--- Sample Bookings
-INSERT INTO bookings (customerId, agentId, booking_date, booking_time, `status`)
-VALUES
-(1, 1, '2025-08-22', '09:00:00', 'in-progress'),
-(2, 2, '2025-08-22', '10:30:00', 'scheduled'),
-(3, 3, '2025-08-22', '14:00:00', 'completed');
-
 -- Populate your disposition types
 INSERT INTO disposition_types (typeCode, description) VALUES
 ('SOLD_CASH_PIF', 'Sold - Cash Deal (Paid in Full)'),
