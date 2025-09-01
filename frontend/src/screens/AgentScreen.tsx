@@ -34,6 +34,8 @@ export default function AgentScreen({ agentId }: AgentScreenProps) {
     }
 
     fetchBookings();
+    const interval = setInterval(fetchBookings, 10000)
+    return () => clearInterval(interval);
   }, [agentId, refresh]);
 
   const handleStatusChange = async (bookingId: number, status: string) => {
