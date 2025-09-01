@@ -48,6 +48,26 @@ export default function NewAppointmentModal({ isOpen, onClose, onSave }: Props) 
   ) => {
     const { id, value } = e.target;
     const key = id.replace("f-", "");
+
+    // Special handling for phone number
+    if (key === "phone") {
+      // Remove all non-digit characters
+      let digits = value.replace(/\D/g, "");
+      // Limit to 10 digits
+      digits = digits.slice(0, 10);
+
+      // Format as xxx-xxx-xxxx
+      let formatted = digits;
+      if (digits.length > 3 && digits.length <= 6) {
+        formatted = `${digits.slice(0, 3)}-${digits.slice(3)}`;
+      } else if (digits.length > 6) {
+        formatted = `${digits.slice(0, 3)}-${digits.slice(3, 6)}-${digits.slice(6, 10)}`;
+      }
+
+      setForm((prev) => ({ ...prev, [key]: formatted }));
+      return;
+    }
+
     setForm((prev) => ({ ...prev, [key]: value }));
   };
 
