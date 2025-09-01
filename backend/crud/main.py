@@ -143,12 +143,20 @@ def get_bookings():
                       fa.name AS agent_name,
                       d.dispositionId AS disposition_id,
                       d.typeCode AS disposition_code,
-                      dt.description AS disposition_description
+                      d.note AS disposition_note,
+                      dt.description AS disposition_description,
+                      CONCAT(
+                          l.street_number, ' ', 
+                          l.street_name, ', ', 
+                          l.postal_code, ' ', 
+                          l.city
+                      ) AS customer_address
                 FROM bookings b
                 JOIN customers c ON b.customerId = c.customerId
                 LEFT JOIN field_agents fa ON b.agentId = fa.agentId
                 LEFT JOIN dispositions d ON b.dispositionId = d.dispositionId
-                LEFT JOIN disposition_types dt ON d.typeCode = dt.typeCode;
+                LEFT JOIN disposition_types dt ON d.typeCode = dt.typeCode
+                LEFT JOIN locations l ON c.location_id = l.id;
             """
             cursor.execute(query,)
 
