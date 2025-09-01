@@ -1,0 +1,68 @@
+from flask import Flask, request, jsonify
+import mysql.connector
+from datetime import datetime
+from flask_cors import CORS
+
+app = Flask(__name__)
+CORS(app)
+
+# Configure MySQL connection (match your docker-compose settings!)
+db_config = {
+    "host": "dev-database",   # the container_name or service name of your MySQL container
+    "user": "admin",
+    "password": "admin5683!",
+    "database": "dev",
+    "port": 3306
+}
+
+@app.route("/search", methods=["GET"])
+def search_agents():
+    try:
+        # Get lat/lon from query parameters
+        lat = float(request.args.get('latitude'))
+        lon = float(request.args.get('longitude'))
+        booking_date = request.args.get('booking_date')
+        booking_time = request.args.get('booking_time')
+        booking_period = '02:00:00'
+        
+        conn = mysql.connector.connect(**db_config)
+        cursor = conn.cursor(dictionary=True, buffered=True)
+
+        # Build query based on whether postal_code is provided
+        if lat and lon:           
+            query = """
+                SELECT fa.name, fa.agentId,
+                    (6371 * ACOS(
+                        COS(RADIANS(%s)) * COS(RADIANS(l.latitude)) *
+                        COS(RADIANS(l.longitude) - RADIANS(%s)) +
+                        SIN(RADIANS(%s)) * SIN(RADIANS(l.latitude))
+                    )) AS distance
+                FROM field_agents fa
+                INNER JOIN locations l ON fa.location_id = l.id
+                WHERE fa.agentId NOT IN (
+                    SELECT b.agentId
+                    FROM bookings b
+                    WHERE b.booking_date = %s
+                      AND b.booking_time BETWEEN SUBTIME(%s, %s) AND ADDTIME(%s, %s)
+                )
+                ORDER BY distance ASC;
+            """
+
+            cursor.execute(query, (lat, lon, lat, booking_date, booking_time, booking_period, booking_time, booking_period))
+        else:
+            # Return all agents if no postal code specified
+            cursor.execute("SELECT * FROM field_agents")
+        
+        agents = cursor.fetchall()
+        return jsonify(agents), 200
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+    finally:
+        if 'cursor' in locals():
+            cursor.close()
+        if 'conn' in locals():
+            conn.close()
+
+if __name__ == "__main__":
+    app.run(debug=True)
