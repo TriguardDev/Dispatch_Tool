@@ -254,7 +254,7 @@ def book_agent():
         data["agent"] = agent
 
         conn.commit()
-        notify_all_parties(data)
+        # TODO: Notify all parties
         return jsonify({
             "message": "Booking created successfully",
             "customerId": customer_id,
@@ -423,47 +423,9 @@ def login():
             conn.close()
 
 def notify_customer(data):
-    try:
-        payload = {
-            'customer_name': data.get("customer", {}).get("name", ""),
-            'customer_email': data.get("customer", {}).get("email", ""),
-            'customer_phone': data.get("customer", {}).get("phone", ""),
-            'agent_name': data.get("agent", {}).get("name", ""),
-            'agent_email': data.get("agent", {}).get("email", ""),
-            'agent_phone': data.get("agent", {}).get("phone", ""),
-            'booking_date': data.get("booking", {}).get("booking_date", ""),
-            'booking_time': data.get("booking", {}).get("booking_time", ""),
-            'message': f"{data.get('agent', {}).get('name', '')} is on their way."
-        }
-
-        print("Sending notification:", payload, flush=True)
-        notification_endpoint = 'http://notification:5002/notification'
-        response = requests.post(notification_endpoint, json=payload)
-        response.raise_for_status()
-    except Exception as e:
-        print(f"Failed to notify via internal notification service: {e}")
-
-def notify_all_parties(data):
-    # send post request to /notification endpoint with a json payload
-    try:
-        payload = {
-            'customer_name': data["customer"]['name'],
-            'customer_email': data["customer"]['email'],
-            'customer_phone': data['customer']['phone'],
-            'agent_name': data['agent']['name'],
-            'agent_email': data['agent']['email'],
-            'agent_phone': data['agent']['phone'],
-            'booking_date': data['booking']['booking_date'],
-            'booking_time': data['booking']['booking_time'],
-            'message': f"You have been scheduled with {data['agent']['name']} at {data['booking']['booking_date']} {data['booking']['booking_time']}."
-        }
-
-        print("Sending notification:", payload, flush=True)
-        notification_endpoint = 'http://notification:5002/notification'
-        response = requests.post(notification_endpoint, json=payload)
-        response.raise_for_status()
-    except Exception as e:
-        print(f"Failed to notify via internal notification service: {e}")
+  # TODO: Send notification
+  print("Notifying all parties...", flush=True)
+  pass
 
 if __name__ == "__main__":
     app.run(debug=True)

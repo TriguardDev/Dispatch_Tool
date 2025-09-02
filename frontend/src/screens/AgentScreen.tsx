@@ -19,6 +19,7 @@ export default function AgentScreen({ agentId }: AgentScreenProps) {
   useEffect(() => {
     async function fetchBookings() {
       try {
+        console.log("fetching bookings..")
         setLoading(true);
         const res = await fetch(`${BASE_URL}:8000/booking?agentId=${agentId}`, {
           method: "GET",
@@ -34,7 +35,7 @@ export default function AgentScreen({ agentId }: AgentScreenProps) {
         setLoading(false);
       }
     }
-
+    
     fetchBookings();
     const interval = setInterval(fetchBookings, 1000000)
     return () => clearInterval(interval);
