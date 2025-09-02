@@ -1,4 +1,3 @@
-import smtplib
 from twilio.rest import Client
 from config import Config
 from flask_mail import Message

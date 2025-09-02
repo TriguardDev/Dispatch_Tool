@@ -1,6 +1,5 @@
 from flask import Flask
 from flask_cors import CORS
-from flask_mail import Mail
 from routes.booking import booking_bp
 from routes.agent import agent_bp
 from routes.disposition import disposition_bp
