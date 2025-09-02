@@ -118,7 +118,9 @@ export default function NewAppointmentModal({ isOpen, onClose, onSave }: Props) 
         setLatLon({ lat, lon });
         const queryParams = new URLSearchParams({
           latitude: lat.toString(),
-          longitude: lon.toString()
+          longitude: lon.toString(),
+          booking_date: form.date,
+          booking_time: formatTime(form.time),
         })
 
         const res = await fetch(`${BASE_URL}:8000/search?${queryParams.toString()}`);

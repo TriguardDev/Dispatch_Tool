@@ -19,6 +19,7 @@ export default function AgentScreen({ agentId }: AgentScreenProps) {
   useEffect(() => {
     async function fetchBookings() {
       try {
+        console.log("fetching bookings..");
         setLoading(true);
         const res = await fetch(`${BASE_URL}:8000/booking?agentId=${agentId}`, {
           method: "GET",
@@ -36,7 +37,7 @@ export default function AgentScreen({ agentId }: AgentScreenProps) {
     }
 
     fetchBookings();
-    const interval = setInterval(fetchBookings, 1000000)
+    const interval = setInterval(fetchBookings, 1000000);
     return () => clearInterval(interval);
   }, [agentId, refresh]);
 
@@ -47,7 +48,7 @@ export default function AgentScreen({ agentId }: AgentScreenProps) {
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({"booking_id": bookingId, "status": status }),
+        body: JSON.stringify({ booking_id: bookingId, status }),
       });
 
       if (!res.ok) throw new Error("Failed to update booking status");
@@ -58,15 +59,19 @@ export default function AgentScreen({ agentId }: AgentScreenProps) {
     }
   };
 
-  const handleDispositionChange = async (bookingId: number, dispositionType: string, note: string = "") => {
+  const handleDispositionChange = async (
+    bookingId: number,
+    dispositionType: string,
+    note: string = ""
+  ) => {
     try {
       const res = await fetch(`${BASE_URL}:8000/disposition`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          bookingId: bookingId,
-          dispositionType: dispositionType,
-          note: note
+          bookingId,
+          dispositionType,
+          note,
         }),
       });
 
@@ -79,9 +84,15 @@ export default function AgentScreen({ agentId }: AgentScreenProps) {
   };
 
   // Categorize bookings
-  const scheduled = bookings.filter((b) => b.status.toLowerCase() === "scheduled");
-  const active = bookings.filter((b) => b.status.toLowerCase() === "in-progress");
-  const completed = bookings.filter((b) => b.status.toLowerCase() === "completed");
+  const scheduled = bookings.filter(
+    (b) => b.status.toLowerCase() === "scheduled"
+  );
+  const active = bookings.filter(
+    (b) => b.status.toLowerCase() === "in-progress"
+  );
+  const completed = bookings.filter(
+    (b) => b.status.toLowerCase() === "completed"
+  );
 
   if (loading) return <p className="p-6 text-center">Loading bookings...</p>;
   if (error) return <p className="p-6 text-center text-red-500">{error}</p>;
@@ -91,62 +102,75 @@ export default function AgentScreen({ agentId }: AgentScreenProps) {
       <TopBar />
       <main className="mx-auto max-w-7xl px-4 py-6">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+          {/* Scheduled */}
           <QueueCard
             title="Scheduled"
             badgeColor="bg-blue-50 text-blue-700"
             count={scheduled.length}
           >
-            {scheduled.map((appt) => (
-              <div key={appt.bookingId} className="mb-2">
-                {bookings.map((appt) => {
-                  const addressText =
-                    appt.status === "in-progress"
-                      ? appt.customer_address
-                      : "Address hidden until on route";
+            {scheduled.map((appt) => {
+              const addressText =
+                appt.status === "in-progress"
+                  ? appt.customer_address
+                  : "Address hidden until on route";
 
-                  return <AppointmentCard key={appt.bookingId} appt={appt} addressText={addressText ?? ""} />;
-                })}
-                <select
-                  className="select mt-1 w-full"
-                  value={appt.status}
-                  onChange={(e) => handleStatusChange(appt.bookingId, e.target.value)}
-                >
-                  <option value="scheduled">Scheduled</option>
-                  <option value="in-progress">En Route / On Site</option>
-                  <option value="completed">Completed</option>
-                </select>
-              </div>
-            ))}
+              return (
+                <div key={appt.bookingId} className="mb-2">
+                  <AppointmentCard
+                    appt={appt}
+                    addressText={addressText ?? ""}
+                  />
+                  <select
+                    className="select mt-1 w-full"
+                    value={appt.status}
+                    onChange={(e) =>
+                      handleStatusChange(appt.bookingId, e.target.value)
+                    }
+                  >
+                    <option value="scheduled">Scheduled</option>
+                    <option value="in-progress">En Route / On Site</option>
+                    <option value="completed">Completed</option>
+                  </select>
+                </div>
+              );
+            })}
           </QueueCard>
 
+          {/* En Route / On Site */}
           <QueueCard
             title="En Route / On Site"
             badgeColor="bg-yellow-50 text-yellow-700"
             count={active.length}
           >
-            {active.map((appt) => (
-              <div key={appt.bookingId} className="mb-2">
-                {bookings.map((appt) => {
-                  const addressText =
-                    appt.status === "in-progress"
-                      ? appt.customer_address
-                      : "Address hidden until on route";
+            {active.map((appt) => {
+              const addressText =
+                appt.status === "in-progress"
+                  ? appt.customer_address
+                  : "Address hidden until on route";
 
-                  return <AppointmentCard key={appt.bookingId} appt={appt} addressText={addressText ?? ""} />;
-                })}
-                <select
-                  className="select mt-1 w-full"
-                  value={appt.status}
-                  onChange={(e) => handleStatusChange(appt.bookingId, e.target.value)}
-                >
-                  <option value="scheduled">Scheduled</option>
-                  <option value="in-progress">En Route / On Site</option>
-                  <option value="completed">Completed</option>
-                </select>
-              </div>
-            ))}
+              return (
+                <div key={appt.bookingId} className="mb-2">
+                  <AppointmentCard
+                    appt={appt}
+                    addressText={addressText ?? ""}
+                  />
+                  <select
+                    className="select mt-1 w-full"
+                    value={appt.status}
+                    onChange={(e) =>
+                      handleStatusChange(appt.bookingId, e.target.value)
+                    }
+                  >
+                    <option value="scheduled">Scheduled</option>
+                    <option value="in-progress">En Route / On Site</option>
+                    <option value="completed">Completed</option>
+                  </select>
+                </div>
+              );
+            })}
           </QueueCard>
 
+          {/* Completed */}
           <QueueCard
             title="Completed"
             badgeColor="bg-emerald-50 text-emerald-700"
@@ -160,7 +184,6 @@ export default function AgentScreen({ agentId }: AgentScreenProps) {
               />
             ))}
           </QueueCard>
-
         </div>
       </main>
     </div>
