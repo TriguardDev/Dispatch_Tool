@@ -48,7 +48,16 @@ def update_booking_status():
             f"Hi {res['customer_name']}, the status of your booking on "
             f"{res['booking_date']} at {res['booking_time']} has been updated to '{new_status}'."
         )
-        # TODO: Send email 
+
+        # Send Email
+        if res.get("customer_email"):
+          send_email(
+              to_email=res['customer_email'],
+              subject="Booking Status Updated",
+              html_body=f"<p>{customer_message}</p>",
+          )
+
+        # Send SMS
         if res.get("customer_phone"):
             send_sms(res['customer_phone'], customer_message)
 
@@ -58,9 +67,18 @@ def update_booking_status():
             f"{res['customer_name']} on {res['booking_date']} at {res['booking_time']} "
             f"has been updated to '{new_status}'."
         )
-        # TODO: Send email 
+
+        # Send SMS
         if res.get("agent_phone"):
             send_sms(res['agent_phone'], agent_message)
+
+        # Send Email
+        if res.get("agent_email"):
+            send_email(
+                to_email=res['agent_email'],
+                subject="Booking Status Updated",
+                html_body=f"<p>{agent_message}</p>"
+            )
 
         # TODO: send survey link if completed
         return jsonify({"success": True, "message": "Booking updated"}), 200
@@ -246,18 +264,34 @@ def create_booking():
             f"Hi {data['customer']['name']}, your booking with {agent['name']} "
             f"on {data['booking']['booking_date']} at {data['booking']['booking_time']} has been confirmed."
         )
-        # TODO: Send email to customer
+        
+        # Send SMS
         if data['customer'].get("phone"):
             send_sms(data['customer']['phone'], customer_message)
+        # Send Email
+        if data['customer'].get("email"):
+            send_email(
+                to_email=data['customer']['email'],
+                subject="Booking Confirmation",
+                html_body=f"<p>{customer_message}</p>"
+            )
 
         # Agent notification
         agent_message = (
             f"Hi {agent['name']}, you have a new booking with {data['customer']['name']} "
             f"on {data['booking']['booking_date']} at {data['booking']['booking_time']}."
         )
-        # TODO: Send email to agent
+
+        # Send SMS
         if agent.get("phone"):
             send_sms(agent['phone'], agent_message)
+        # Send Email
+        if agent.get("email"):
+            send_email(
+                to_email=agent['email'],
+                subject="New Booking Assigned",
+                html_body=f"<p>{agent_message}</p>"
+            )
 
         return jsonify({
             "success": True,
