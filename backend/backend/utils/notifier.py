@@ -18,11 +18,9 @@ def send_email(to_email: str, subject: str, html_body: str, text_body: str = Non
         bool: True if email sent successfully, False otherwise
     """
     try:
-        print(f"STMP User: {Config.SMTP_USER}")
-
         # Create a multipart message
         msg = MIMEMultipart("alternative")
-        msg["From"] = Config.EMAIL_FROM
+        msg["From"] = Config.SMTP_USER
         msg["To"] = to_email
         msg["Subject"] = subject
 
