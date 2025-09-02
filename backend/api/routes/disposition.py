@@ -1,7 +1,7 @@
 from flask import Blueprint, request, jsonify
 from db import get_connection
 
-disposition_bp = Blueprint("disposition", __name__)
+disposition_bp = Blueprint("disposition", __name__, url_prefix="/api")
 
 @disposition_bp.route("/disposition", methods=["POST"])
 def add_disposition():

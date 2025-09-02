@@ -2,7 +2,7 @@ from flask import Blueprint, request, jsonify
 from db import get_connection
 import uuid
 
-auth_bp = Blueprint("auth", __name__)
+auth_bp = Blueprint("auth", __name__, url_prefix="/api")
 
 @auth_bp.route("/login", methods=["POST"])
 def login():

@@ -1,7 +1,7 @@
 from flask import Blueprint, request, jsonify
 from db import get_connection
 
-agent_bp = Blueprint("agent", __name__)
+agent_bp = Blueprint("agent", __name__, url_prefix="/api")
 
 @agent_bp.route("/agent", methods=["PUT"])
 def update_agent_status():

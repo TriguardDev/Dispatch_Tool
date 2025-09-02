@@ -3,7 +3,7 @@ from db import get_connection
 from utils.notifier import send_sms, send_email
 import datetime
 
-booking_bp = Blueprint("booking", __name__)
+booking_bp = Blueprint("booking", __name__, url_prefix="/api")
 
 @booking_bp.route("/booking", methods=["PUT"])
 def update_booking_status():

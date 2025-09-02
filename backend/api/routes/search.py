@@ -1,7 +1,7 @@
 from flask import Blueprint, request, jsonify
 from db import get_connection
 
-search_bp = Blueprint("search", __name__)
+search_bp = Blueprint("search", __name__, url_prefix="/api")
 
 @search_bp.route("/search", methods=["GET"])
 def search_agents():
