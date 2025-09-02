@@ -121,7 +121,7 @@ export default function NewAppointmentModal({ isOpen, onClose, onSave }: Props) 
           longitude: lon.toString()
         })
 
-        const res = await fetch(`${BASE_URL}:5000/search?${queryParams.toString()}`);
+        const res = await fetch(`${BASE_URL}:8000/search?${queryParams.toString()}`);
         const data = await res.json();
         setAgents(data);
       }      

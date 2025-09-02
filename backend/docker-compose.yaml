@@ -12,19 +12,6 @@ services:
     volumes:
       - ./database/init_sql:/docker-entrypoint-initdb.d
   
-  search:
-    build: ./search
-    container_name: search-service
-    environment:
-      - FLASK_APP=main.py
-      - DATABASE_HOST=dev-database
-    depends_on:
-      - mysql
-    ports:
-      - "5000:5000"
-    volumes:
-      - ./search/main.py:/app/main.py
-  
   crud:
     build: ./crud
     container_name: crud-service
@@ -37,19 +24,6 @@ services:
       - "8000:8000"
     volumes:
       - ./crud/main.py:/app/main.py
-  
-  login:
-    build: ./login
-    container_name: login-service
-    environment:
-      - FLASK_APP=main.py
-      - DATABASE_HOST=dev-database
-    depends_on:
-      - mysql
-    ports:
-      - "9000:9000"
-    volumes:
-      - ./login/main.py:/app/main.py
   
   notification:
     build: ./notification
