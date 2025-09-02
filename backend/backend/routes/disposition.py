@@ -44,6 +44,7 @@ def add_disposition():
                 UPDATE bookings SET dispositionId=%s WHERE bookingId=%s
             """, (new_id, booking_id))
 
+        # TODO: Send notification to dispatcher (and customer and agent?)
         conn.commit()
         return jsonify({"success": True, "message": "Disposition saved"}), 200
 

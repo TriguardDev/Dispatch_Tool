@@ -1,6 +1,7 @@
 import smtplib
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
+from twilio.rest import Client
 from config import Config
 
 def send_email(to_email: str, subject: str, html_body: str, text_body: str = None) -> bool:
@@ -49,4 +50,21 @@ def send_email(to_email: str, subject: str, html_body: str, text_body: str = Non
         return False
     except Exception as e:
         print(f"[ERROR] Unexpected error sending email to {to_email}: {e}", flush=True)
+        return False
+
+def send_sms(to_phone: str, message: str) -> bool:
+    """
+    Send an SMS via Twilio.
+    """
+    try:
+        client = Client(Config.TWILIO_ACCOUNT_SID, Config.TWILIO_AUTH_TOKEN)
+        msg = client.messages.create(
+            body=message,
+            from_=Config.TWILIO_PHONE_NUMBER,
+            to=to_phone
+        )
+        print(f"[INFO] SMS sent to {to_phone}, SID: {msg.sid}")
+        return True
+    except Exception as e:
+        print(f"[ERROR] Failed to send SMS to {to_phone}: {e}")
         return False

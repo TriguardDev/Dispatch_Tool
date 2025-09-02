@@ -1,6 +1,6 @@
 from flask import Blueprint, request, jsonify
 from db import get_connection
-from utils.notifier import send_email
+from utils.notifier import send_email, send_sms
 import uuid
 
 auth_bp = Blueprint("auth", __name__)
@@ -36,7 +36,7 @@ def login():
         """
         cursor.execute(query, (email, password, email, password))
         result = cursor.fetchone()
-
+        
         if result:
             return jsonify({
                 "success": True,

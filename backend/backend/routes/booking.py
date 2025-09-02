@@ -1,5 +1,6 @@
 from flask import Blueprint, request, jsonify
 from db import get_connection
+from utils.notifier import send_sms, send_email
 import datetime
 
 booking_bp = Blueprint("booking", __name__)
@@ -36,12 +37,32 @@ def update_booking_status():
         """, (booking_id,))
         res = cursor.fetchone()
 
-        if new_status == "completed":
-            # Example: send survey link
-            # TODO: notify customer
-            pass
+        if not res:
+            return jsonify({"success": False, "error": "Booking not found"}), 404
 
         conn.commit()
+
+        # -------------------- Notifications -------------------- #
+        # Customer notification
+        customer_message = (
+            f"Hi {res['customer_name']}, the status of your booking on "
+            f"{res['booking_date']} at {res['booking_time']} has been updated to '{new_status}'."
+        )
+        # TODO: Send email 
+        if res.get("customer_phone"):
+            send_sms(res['customer_phone'], customer_message)
+
+        # Agent notification
+        agent_message = (
+            f"Hi {res['agent_name']}, the status of booking with "
+            f"{res['customer_name']} on {res['booking_date']} at {res['booking_time']} "
+            f"has been updated to '{new_status}'."
+        )
+        # TODO: Send email 
+        if res.get("agent_phone"):
+            send_sms(res['agent_phone'], agent_message)
+
+        # TODO: send survey link if completed
         return jsonify({"success": True, "message": "Booking updated"}), 200
 
     except Exception as e:
@@ -213,7 +234,31 @@ def create_booking():
         ))
         booking_id = cursor.lastrowid
 
+        # Fetch agent info
+        cursor.execute("SELECT name, email, phone FROM field_agents WHERE agentId=%s", (data["booking"]["agentId"],))
+        agent = cursor.fetchone()
+
         conn.commit()
+
+        # -------------------- Notifications -------------------- #
+        # Customer notification
+        customer_message = (
+            f"Hi {data['customer']['name']}, your booking with {agent['name']} "
+            f"on {data['booking']['booking_date']} at {data['booking']['booking_time']} has been confirmed."
+        )
+        # TODO: Send email to customer
+        if data['customer'].get("phone"):
+            send_sms(data['customer']['phone'], customer_message)
+
+        # Agent notification
+        agent_message = (
+            f"Hi {agent['name']}, you have a new booking with {data['customer']['name']} "
+            f"on {data['booking']['booking_date']} at {data['booking']['booking_time']}."
+        )
+        # TODO: Send email to agent
+        if agent.get("phone"):
+            send_sms(agent['phone'], agent_message)
+
         return jsonify({
             "success": True,
             "message": "Booking created",
