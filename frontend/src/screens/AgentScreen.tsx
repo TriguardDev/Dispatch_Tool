@@ -21,7 +21,7 @@ export default function AgentScreen({ agentId }: AgentScreenProps) {
       try {
         console.log("fetching bookings..");
         setLoading(true);
-        const res = await fetch(`${BASE_URL}:8000/booking?agentId=${agentId}`, {
+        const res = await fetch(`${BASE_URL}/booking?agentId=${agentId}`, {
           method: "GET",
           headers: { "Content-Type": "application/json" },
         });
@@ -43,7 +43,7 @@ export default function AgentScreen({ agentId }: AgentScreenProps) {
 
   const handleStatusChange = async (bookingId: number, status: string) => {
     try {
-      const res = await fetch(`${BASE_URL}:8000/booking`, {
+      const res = await fetch(`${BASE_URL}/booking`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
@@ -65,7 +65,7 @@ export default function AgentScreen({ agentId }: AgentScreenProps) {
     note: string = ""
   ) => {
     try {
-      const res = await fetch(`${BASE_URL}:8000/disposition`, {
+      const res = await fetch(`${BASE_URL}/disposition`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

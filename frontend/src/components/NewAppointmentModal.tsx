@@ -80,7 +80,7 @@ export default function NewAppointmentModal({ isOpen, onClose, onSave }: Props) 
     console.log(JSON.stringify(payload))
 
     try {
-      const res = await fetch(`${BASE_URL}:8000/booking`, {
+      const res = await fetch(`${BASE_URL}/booking`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -123,7 +123,7 @@ export default function NewAppointmentModal({ isOpen, onClose, onSave }: Props) 
           booking_time: formatTime(form.time),
         })
 
-        const res = await fetch(`${BASE_URL}:8000/search?${queryParams.toString()}`);
+        const res = await fetch(`${BASE_URL}/search?${queryParams.toString()}`);
         const data = await res.json();
         setAgents(data);
       }      
