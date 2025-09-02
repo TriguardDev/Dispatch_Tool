@@ -12,9 +12,9 @@ services:
     volumes:
       - ./database/init_sql:/docker-entrypoint-initdb.d
   
-  backend:
-    build: ./backend
-    container_name: backend-service
+  api:
+    build: ./api
+    container_name: api-service
     env_file:
       - .env
     environment:
@@ -29,4 +29,4 @@ services:
     ports:
       - "8000:8000"
     volumes:
-      - ./backend/:/app/
+      - ./api/:/app/
