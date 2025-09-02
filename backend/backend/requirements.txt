@@ -5,3 +5,4 @@ requests
 uuid
 dotenv
 twilio
+flask_mail

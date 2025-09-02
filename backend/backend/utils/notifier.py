@@ -1,8 +1,8 @@
 import smtplib
-from email.mime.multipart import MIMEMultipart
-from email.mime.text import MIMEText
 from twilio.rest import Client
 from config import Config
+from flask_mail import Message
+from extensions import mail
 
 def send_email(to_email: str, subject: str, html_body: str, text_body: str = None) -> bool:
     """
@@ -18,37 +18,21 @@ def send_email(to_email: str, subject: str, html_body: str, text_body: str = Non
         bool: True if email sent successfully, False otherwise
     """
     try:
-        # Create a multipart message
-        msg = MIMEMultipart("alternative")
-        msg["From"] = Config.SMTP_USER
-        msg["To"] = to_email
-        msg["Subject"] = subject
-
-        # Attach text and HTML parts
-        if text_body:
-            msg.attach(MIMEText(text_body, "plain"))
-        msg.attach(MIMEText(html_body, "html"))
-
-        # Connect to Office 365 SMTP server
-        with smtplib.SMTP(Config.SMTP_HOST, Config.SMTP_PORT) as server:
-            server.ehlo()
-            server.starttls()  # Enable TLS
-            server.ehlo()
-            server.login(Config.SMTP_USER, Config.SMTP_PASSWORD)
-            server.send_message(msg)
+        msg = Message(
+            subject=subject,
+            recipients=[to_email],
+            body=text_body or "",
+            html=html_body
+        )
+        mail.send(msg)
 
         print(f"[INFO] Email sent to {to_email}", flush=True)
         return True
 
-    except smtplib.SMTPAuthenticationError:
-        print(f"[ERROR] Authentication failed. Check SMTP_USER and SMTP_PASSWORD.", flush=True)
-        return False
-    except smtplib.SMTPException as e:
-        print(f"[ERROR] SMTP error: {e}", flush=True)
-        return False
     except Exception as e:
-        print(f"[ERROR] Unexpected error sending email to {to_email}: {e}", flush=True)
+        print(f"[ERROR] Failed to send email: {e}", flush=True)
         return False
+
 
 def send_sms(to_phone: str, message: str) -> bool:
     """

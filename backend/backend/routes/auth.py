@@ -37,6 +37,14 @@ def login():
         cursor.execute(query, (email, password, email, password))
         result = cursor.fetchone()
         
+        msg = "Hello World"
+        success = send_email(
+          to_email='saher.ziauddin@gmail.com',
+          subject='Triguard email test',
+          html_body=f"<p>{msg}</p>",
+          text_body=msg
+        )
+
         if result:
             return jsonify({
                 "success": True,
