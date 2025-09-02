@@ -3,3 +3,4 @@ mysql-connector-python
 flask_cors
 requests
 uuid
+dotenv

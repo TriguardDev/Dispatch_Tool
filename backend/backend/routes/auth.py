@@ -1,5 +1,6 @@
 from flask import Blueprint, request, jsonify
 from db import get_connection
+from utils.notifier import send_email
 import uuid
 
 auth_bp = Blueprint("auth", __name__)
