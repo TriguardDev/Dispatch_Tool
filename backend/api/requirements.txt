@@ -6,3 +6,5 @@ uuid
 dotenv
 twilio
 flask_mail
+bcrypt
+PyJWT

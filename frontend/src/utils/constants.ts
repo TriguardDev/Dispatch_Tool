@@ -1,1 +1,1 @@
-export const BASE_URL = "https://app.salesdispatcher.com/api"
+export const BASE_URL = "http://app.salesdispatcher.com/api"

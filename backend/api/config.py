@@ -29,3 +29,7 @@ class Config:
     MAIL_USERNAME = os.getenv("SMTP_USER")
     MAIL_PASSWORD = os.getenv("SMTP_PASSWORD")
     MAIL_DEFAULT_SENDER = os.getenv("SMTP_USER")
+
+    # JWT
+    JWT_SECRET_KEY = os.getenv("JWT_SECRET_KEY")
+    JWT_ACCESS_TOKEN_EXPIRES = int(os.getenv("JWT_ACCESS_TOKEN_EXPIRES", 86400))  # 24 hours in seconds

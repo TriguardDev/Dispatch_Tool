@@ -1,18 +1,23 @@
 import React from "react";
-import { clearToken } from "../utils/session";
+import { logout } from "../api/login";
 
 interface Props {
   onLogout?: () => void;
 }
 
 export default function LogoutButton({ onLogout }: Props) {
-  const handleLogout = () => {
-    clearToken();
-    localStorage.removeItem("user"); // clear saved user
-    if (onLogout) {
-      onLogout();
-    } else {
-      window.location.reload(); // fallback: reload page to show login form
+  const handleLogout = async () => {
+    try {
+      await logout(); // Call backend logout endpoint
+      if (onLogout) {
+        onLogout();
+      }
+    } catch (error) {
+      console.error("Logout failed:", error);
+      // Even if logout fails, clear frontend state
+      if (onLogout) {
+        onLogout();
+      }
     }
   };
 
