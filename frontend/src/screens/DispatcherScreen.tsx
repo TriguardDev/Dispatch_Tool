@@ -6,7 +6,11 @@ import AppointmentCard from "../components/AppointmentCard";
 import NewAppointmentModal from "../components/NewAppointmentModal";
 import { getAllBookings, type Booking } from "../api/crud";
 
-export default function DispatcherScreen() {
+interface DispatcherScreenProps {
+  onLogout: () => void;
+}
+
+export default function DispatcherScreen({ onLogout }: DispatcherScreenProps) {
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -21,16 +25,23 @@ export default function DispatcherScreen() {
         setBookings(data);
         setLoading(false);
       } catch (err: unknown) {
-        setError((err as Error).message || "Failed to fetch bookings");
+        console.error("Error fetching bookings:", err);
+        const errorMessage = (err as Error).message || "Failed to fetch bookings";
+        setError(errorMessage);
         setLoading(false);
+        
+        // If authentication error, might need to re-login
+        if (errorMessage.includes("Authentication required")) {
+          onLogout();
+        }
       }
     }
 
     fetchBookings();
 
-    const interval = setInterval(fetchBookings, 1000000)
+    const interval = setInterval(fetchBookings, 30000); // Poll every 30 seconds
     return () => clearInterval(interval);
-  }, [refreshBookings]);
+  }, [refreshBookings, onLogout]);
 
   // Categorize bookings by status
   const scheduled = bookings.filter((b) => ["scheduled"].includes(b.status.toLowerCase()));
@@ -42,7 +53,7 @@ export default function DispatcherScreen() {
 
   return (
     <div className="bg-gray-900 min-h-screen">
-      <TopBar />
+      <TopBar onLogOut={onLogout} />
       <main className="mx-auto max-w-7xl px-4 py-6">
         <Filters onNewAppt={() => setIsModalOpen(true)} />
 
@@ -92,6 +103,7 @@ export default function DispatcherScreen() {
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
         onSave={() => setRefreshBookings((prev) => prev + 1)}
+        onLogout={onLogout}
       />
     </div>
   );

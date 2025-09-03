@@ -10,7 +10,19 @@ from extensions import mail
 
 def create_app():
     app = Flask(__name__)
-    CORS(app)
+    
+    # Configure CORS to allow credentials (cookies)
+    CORS(app, 
+         supports_credentials=True,  # Allow cookies to be sent
+         origins=[
+             "http://localhost:3000",    # React dev server
+             "http://localhost:5173",    # Vite dev server
+             "http://localhost:4173",    # Vite preview
+             "https://app.salesdispatcher.com"  # Replace with your actual domain
+         ],
+         allow_headers=["Content-Type", "Authorization"],
+         methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"]
+    )
 
     # Register blueprints
     app.register_blueprint(booking_bp)
@@ -31,4 +43,4 @@ def create_app():
 
 if __name__ == "__main__":
     app = create_app()
-    app.run(debug=True, host="0.0.0.0")
+    app.run(debug=True, host="0.0.0.0", port=8000)

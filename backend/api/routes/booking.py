@@ -1,11 +1,13 @@
 from flask import Blueprint, request, jsonify
 from db import get_connection
 from utils.notifier import send_sms, send_email
+from utils.middleware import require_auth, require_dispatcher
 import datetime
 
 booking_bp = Blueprint("booking", __name__, url_prefix="/api")
 
 @booking_bp.route("/booking", methods=["PUT"])
+@require_auth
 def update_booking_status():
     """
     Update booking status. If completed, trigger survey notifications.
@@ -21,6 +23,15 @@ def update_booking_status():
         conn = get_connection()
         cursor = conn.cursor(dictionary=True)
 
+        # Verify user has access to this booking
+        if request.user_type == 'agent':
+            cursor.execute("""
+                SELECT bookingId FROM bookings 
+                WHERE bookingId = %s AND agentId = %s
+            """, (booking_id, request.user_id))
+            if not cursor.fetchone():
+                return jsonify({"success": False, "error": "Access denied"}), 403
+
         cursor.execute("""
             UPDATE bookings
             SET status = %s
@@ -28,8 +39,9 @@ def update_booking_status():
         """, (new_status, booking_id))
 
         cursor.execute("""
-            SELECT c.email AS customer_email, c.phone AS customer_phone,
-                   fa.email AS agent_email, fa.phone AS agent_phone
+            SELECT c.email AS customer_email, c.phone AS customer_phone, c.name AS customer_name,
+                   fa.email AS agent_email, fa.phone AS agent_phone, fa.name AS agent_name,
+                   b.booking_date, b.booking_time
             FROM bookings b
             JOIN customers c ON b.customerId = c.customerId
             LEFT JOIN field_agents fa ON b.agentId = fa.agentId
@@ -62,23 +74,24 @@ def update_booking_status():
             send_sms(res['customer_phone'], customer_message)
 
         # Agent notification
-        agent_message = (
-            f"Hi {res['agent_name']}, the status of booking with "
-            f"{res['customer_name']} on {res['booking_date']} at {res['booking_time']} "
-            f"has been updated to '{new_status}'."
-        )
-
-        # Send SMS
-        if res.get("agent_phone"):
-            send_sms(res['agent_phone'], agent_message)
-
-        # Send Email
-        if res.get("agent_email"):
-            send_email(
-                to_email=res['agent_email'],
-                subject="Booking Status Updated",
-                html_body=f"<p>{agent_message}</p>"
+        if res.get("agent_name"):
+            agent_message = (
+                f"Hi {res['agent_name']}, the status of booking with "
+                f"{res['customer_name']} on {res['booking_date']} at {res['booking_time']} "
+                f"has been updated to '{new_status}'."
             )
+
+            # Send SMS
+            if res.get("agent_phone"):
+                send_sms(res['agent_phone'], agent_message)
+
+            # Send Email
+            if res.get("agent_email"):
+                send_email(
+                    to_email=res['agent_email'],
+                    subject="Booking Status Updated",
+                    html_body=f"<p>{agent_message}</p>"
+                )
 
         # TODO: send survey link if completed
         return jsonify({"success": True, "message": "Booking updated"}), 200
@@ -92,6 +105,7 @@ def update_booking_status():
 
 
 @booking_bp.route("/booking", methods=["GET"])
+@require_auth
 def get_bookings():
     """
     Get all bookings or bookings for a specific agent.
@@ -101,7 +115,11 @@ def get_bookings():
         conn = get_connection()
         cursor = conn.cursor(dictionary=True)
 
-        if (agentId):
+        # If user is an agent, they can only see their own bookings
+        if request.user_type == 'agent':
+            agentId = request.user_id
+
+        if agentId:
           # Find all bookings where bookings.agentId = agentId
           query = """
             SELECT 
@@ -132,10 +150,15 @@ def get_bookings():
                 ON d.typeCode = dt.typeCode
             LEFT JOIN locations l
                 ON c.location_id = l.id
-            WHERE b.agentId = %s;
+            WHERE b.agentId = %s
+            ORDER BY b.booking_date, b.booking_time;
           """
           cursor.execute(query, (agentId,))
         else:
+          # Only dispatchers can see all bookings
+          if request.user_type != 'dispatcher':
+              return jsonify({"success": False, "error": "Access denied"}), 403
+              
           query = """
             SELECT b.bookingId, b.booking_date, b.booking_time, b.status,
               c.name AS customer_name,
@@ -155,9 +178,10 @@ def get_bookings():
             LEFT JOIN field_agents fa ON b.agentId = fa.agentId
             LEFT JOIN dispositions d ON b.dispositionId = d.dispositionId
             LEFT JOIN disposition_types dt ON d.typeCode = dt.typeCode
-            LEFT JOIN locations l ON c.location_id = l.id;
+            LEFT JOIN locations l ON c.location_id = l.id
+            ORDER BY b.booking_date, b.booking_time;
           """
-          cursor.execute(query,)
+          cursor.execute(query)
 
         bookings = cursor.fetchall()
 
@@ -182,6 +206,7 @@ def get_bookings():
 
 
 @booking_bp.route("/booking", methods=["POST"])
+@require_dispatcher  # Only dispatchers can create bookings
 def create_booking():
     """
     Create a new booking, inserting location + customer if new.

@@ -2,15 +2,15 @@ import { useState, useEffect } from "react";
 import TopBar from "../components/TopBar";
 import QueueCard from "../components/QueueCard";
 import AppointmentCard from "../components/AppointmentCard";
-import { type Booking } from "../api/crud";
+import { type Booking, getAgentBookings, updateBookingStatus, saveDisposition } from "../api/crud";
 import { CompletedAppointmentCard } from "../components/CompletedAppointmentCard";
-import { BASE_URL } from "../utils/constants";
 
 interface AgentScreenProps {
   agentId: number; // passed from login
+  onLogout: () => void;
 }
 
-export default function AgentScreen({ agentId }: AgentScreenProps) {
+export default function AgentScreen({ agentId, onLogout }: AgentScreenProps) {
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -19,43 +19,42 @@ export default function AgentScreen({ agentId }: AgentScreenProps) {
   useEffect(() => {
     async function fetchBookings() {
       try {
-        console.log("fetching bookings..");
+        console.log("fetching bookings for agent:", agentId);
         setLoading(true);
-        const res = await fetch(`${BASE_URL}/booking?agentId=${agentId}`, {
-          method: "GET",
-          headers: { "Content-Type": "application/json" },
-        });
-
-        if (!res.ok) throw new Error("Failed to fetch bookings");
-        const data: Booking[] = await res.json();
+        const data: Booking[] = await getAgentBookings(agentId);
         setBookings(data);
       } catch (err: unknown) {
-        setError((err as Error).message || "Failed to fetch bookings");
+        console.error("Error fetching bookings:", err);
+        const errorMessage = (err as Error).message || "Failed to fetch bookings";
+        setError(errorMessage);
+        
+        // If authentication error, might need to re-login
+        if (errorMessage.includes("Authentication required")) {
+          onLogout();
+        }
       } finally {
         setLoading(false);
       }
     }
 
     fetchBookings();
-    const interval = setInterval(fetchBookings, 1000000);
+    const interval = setInterval(fetchBookings, 30000); // Poll every 30 seconds
     return () => clearInterval(interval);
-  }, [agentId, refresh]);
+  }, [agentId, refresh, onLogout]);
 
   const handleStatusChange = async (bookingId: number, status: string) => {
     try {
-      const res = await fetch(`${BASE_URL}/booking`, {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ booking_id: bookingId, status }),
-      });
-
-      if (!res.ok) throw new Error("Failed to update booking status");
+      await updateBookingStatus(bookingId, status);
       setRefresh((prev) => prev + 1);
     } catch (err) {
       console.error(err);
-      alert("Error updating booking status");
+      const errorMessage = (err as Error).message || "Error updating booking status";
+      
+      if (errorMessage.includes("Authentication required")) {
+        onLogout();
+      } else {
+        alert(errorMessage);
+      }
     }
   };
 
@@ -65,21 +64,17 @@ export default function AgentScreen({ agentId }: AgentScreenProps) {
     note: string = ""
   ) => {
     try {
-      const res = await fetch(`${BASE_URL}/disposition`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          bookingId,
-          dispositionType,
-          note,
-        }),
-      });
-
-      if (!res.ok) throw new Error("Failed to save disposition");
+      await saveDisposition(bookingId, dispositionType, note);
       setRefresh((prev) => prev + 1);
     } catch (err) {
       console.error(err);
-      alert("Error saving disposition");
+      const errorMessage = (err as Error).message || "Error saving disposition";
+      
+      if (errorMessage.includes("Authentication required")) {
+        onLogout();
+      } else {
+        alert(errorMessage);
+      }
     }
   };
 
@@ -99,7 +94,7 @@ export default function AgentScreen({ agentId }: AgentScreenProps) {
 
   return (
     <div className="bg-gray-900 min-h-screen">
-      <TopBar />
+      <TopBar onLogOut={onLogout} />
       <main className="mx-auto max-w-7xl px-4 py-6">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
           {/* Scheduled */}

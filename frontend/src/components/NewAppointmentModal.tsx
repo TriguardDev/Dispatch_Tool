@@ -1,13 +1,13 @@
 import { useState } from "react";
 import { findLatLong } from "../api/location_conversion";
+import { createBooking, searchAgents } from "../api/crud";
 import AgentSelector from "./AgentSelector";
-import { BASE_URL } from "../utils/constants";
-import PhoneInput from "./PhoneInput";
 
 interface Props {
   isOpen: boolean;
   onClose: () => void;
   onSave: () => void; // Callback to refresh bookings after saving
+  onLogout: () => void;
 }
 
 interface Agent {
@@ -16,7 +16,7 @@ interface Agent {
   name: string;
 }
 
-export default function NewAppointmentModal({ isOpen, onClose, onSave }: Props) {
+export default function NewAppointmentModal({ isOpen, onClose, onSave, onLogout }: Props) {
   const [form, setForm] = useState({
     name: "",
     email: "",
@@ -37,7 +37,6 @@ export default function NewAppointmentModal({ isOpen, onClose, onSave }: Props) 
 
   const [agents, setAgents] = useState<Agent[]>([]);
   const [loadingAgents, setLoadingAgents] = useState(false);
-  const [phoneValid, setPhoneValid] = useState(false)
 
   // ensure HH:MM:SS
   const formatTime = (time: string) => {
@@ -55,12 +54,6 @@ export default function NewAppointmentModal({ isOpen, onClose, onSave }: Props) 
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
-
-    // Validate phone if provided
-    if (form.phone && !phoneValid) {
-      alert("Please enter a valid phone number");
-      return;
-    }
     // Transform flat form into backend format
     const payload = {
       customer: {
@@ -88,26 +81,20 @@ export default function NewAppointmentModal({ isOpen, onClose, onSave }: Props) 
     console.log(JSON.stringify(payload))
 
     try {
-      const res = await fetch(`${BASE_URL}/booking`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(payload),
-      });
-
-      if (!res.ok) {
-        throw new Error(`Failed to save appointment: ${res.statusText}`);
-      }
-
-      const data = await res.json();
-      console.log("✅ Appointment saved:", data);
+      await createBooking(payload);
+      console.log("✅ Appointment saved");
 
       if (onSave) onSave();
       onClose();
     } catch (err) {
       console.error("❌ Error saving appointment:", err);
-      alert("Error saving appointment. Please try again.");
+      const errorMessage = (err as Error).message || "Error saving appointment";
+      
+      if (errorMessage.includes("Authentication required")) {
+        onLogout();
+      } else {
+        alert(errorMessage);
+      }
     }
   };
 
@@ -124,26 +111,26 @@ export default function NewAppointmentModal({ isOpen, onClose, onSave }: Props) 
         setAgents([])
       } else{
         setLatLon({ lat, lon });
-        const queryParams = new URLSearchParams({
+        const data = await searchAgents({
           latitude: lat.toString(),
           longitude: lon.toString(),
           booking_date: form.date,
           booking_time: formatTime(form.time),
-        })
-
-        const res = await fetch(`${BASE_URL}/search?${queryParams.toString()}`);
-        const data = await res.json();
+        });
         setAgents(data);
       }      
     } catch (err) {
       console.error("Error fetching agents:", err);
+      const errorMessage = (err as Error).message || "Error searching agents";
+      
+      if (errorMessage.includes("Authentication required")) {
+        onLogout();
+      } else {
+        alert(errorMessage);
+      }
     } finally {
       setLoadingAgents(false);
     }
-  };
-
-  const handlePhoneChange = (phoneValue: string) => {
-    setForm((prev) => ({ ...prev, phone: phoneValue }));
   };
 
   if (!isOpen) return null;
@@ -194,13 +181,14 @@ export default function NewAppointmentModal({ isOpen, onClose, onSave }: Props) 
           </div>
           <div>
             <div className="label">Phone</div>
-            <PhoneInput
-              value={form.phone}
-              onChange={handlePhoneChange}
-              onValidityChange={setPhoneValid}
-              placeholder="(123) 456-7890"
+            <input
               id="f-phone"
-              name="phone"
+              className="input"
+              type="tel"
+              pattern="[0-9]{3}-[0-9]{3}-[0-9]{4}"
+              placeholder="(###) ###-####"
+              value={form.phone}
+              onChange={handleChange}
             />
           </div>
 

@@ -1,6 +1,10 @@
 import LogoutButton from "./LogoutButton";
 
-export default function TopBar() {
+interface TopBarProps {
+  onLogOut: () => void;
+}
+
+export default function TopBar({onLogOut}: TopBarProps) {
   return (
     <header className="sticky top-0 z-30 bg-gray-900   backdrop-blur border-b border-gray-700 ">
       <div className="mx-auto max-w-7xl px-4 py-3 flex items-center gap-3">
@@ -15,7 +19,7 @@ export default function TopBar() {
         </div>
         <div className="ml-auto flex items-center gap-2">
           <div className="hidden sm:flex items-center gap-1 bg-gray-800  rounded-xl p-1">
-            <LogoutButton/>
+            <LogoutButton onLogout={onLogOut}/>
           </div>
         </div>
       </div>
