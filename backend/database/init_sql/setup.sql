@@ -9,6 +9,8 @@ CREATE TABLE IF NOT EXISTS locations (
     country VARCHAR(100) NOT NULL,
     street_name VARCHAR(150) NOT NULL,
     street_number VARCHAR(20) NOT NULL,
+    created_time TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_time TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     UNIQUE KEY unique_location (
         street_name,
         street_number,
@@ -23,7 +25,9 @@ CREATE TABLE IF NOT EXISTS dispatchers (
     dispatcherId INT AUTO_INCREMENT PRIMARY KEY,
     `name` VARCHAR(100) NOT NULL,
     email VARCHAR(100) UNIQUE NOT NULL,
-    password VARCHAR(255) NOT NULL
+    password VARCHAR(255) NOT NULL,
+    created_time TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_time TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 );
 
 -- Field Agent Table
@@ -35,6 +39,8 @@ CREATE TABLE IF NOT EXISTS field_agents (
     phone VARCHAR(15),
     `status` ENUM('available', 'unavailable', 'accepted', 'declined', 'enroute') DEFAULT 'available',
     location_id INT,
+    created_time TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_time TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     FOREIGN KEY (location_id) REFERENCES locations(id) ON DELETE SET NULL
 );
 
@@ -45,6 +51,8 @@ CREATE TABLE IF NOT EXISTS customers (
     email VARCHAR(100) UNIQUE NOT NULL,
     phone VARCHAR(15),
     location_id INT UNIQUE,
+    created_time TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_time TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     FOREIGN KEY (location_id) REFERENCES locations(id) ON DELETE SET NULL
 );
 
@@ -57,6 +65,8 @@ CREATE TABLE IF NOT EXISTS bookings (
     booking_date DATE NOT NULL,
     booking_time TIME NOT NULL,
     `status` ENUM('scheduled', 'in-progress', 'completed') DEFAULT 'scheduled',
+    created_time TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_time TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     FOREIGN KEY (customerId) REFERENCES customers(customerId) ON DELETE CASCADE,
     FOREIGN KEY (agentId) REFERENCES field_agents(agentId) ON DELETE SET NULL
 );
@@ -64,15 +74,18 @@ CREATE TABLE IF NOT EXISTS bookings (
 -- Lookup table of possible dispositions
 CREATE TABLE IF NOT EXISTS disposition_types (
     typeCode VARCHAR(50) PRIMARY KEY,        -- e.g., "SOLD_CASH_PIF"
-    description VARCHAR(255) NOT NULL        -- e.g., "Sold – Cash Deal (Paid in Full)"
+    description VARCHAR(255) NOT NULL,       -- e.g., "Sold â€" Cash Deal (Paid in Full)"
+    created_time TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_time TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 );
 
 -- Main dispositions table
 CREATE TABLE IF NOT EXISTS dispositions (
     dispositionId INT AUTO_INCREMENT PRIMARY KEY,
     typeCode VARCHAR(50) NOT NULL,
-    changedAt TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     note TEXT,
+    created_time TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_time TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     FOREIGN KEY (typeCode) REFERENCES disposition_types(typeCode)
 );
 
