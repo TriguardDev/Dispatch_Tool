@@ -2,6 +2,7 @@ import { useState } from "react";
 import { findLatLong } from "../api/location_conversion";
 import { createBooking, searchAgents } from "../api/crud";
 import AgentSelector from "./AgentSelector";
+import PhoneInput from "./PhoneInput";
 
 interface Props {
   isOpen: boolean;
@@ -34,7 +35,7 @@ export default function NewAppointmentModal({ isOpen, onClose, onSave, onLogout 
   });
 
   const [latLon, setLatLon] = useState<{ lat: number | null, lon: number | null }>({ lat: null, lon: null });
-
+  const [phoneValid, setPhoneValid] = useState(false);
   const [agents, setAgents] = useState<Agent[]>([]);
   const [loadingAgents, setLoadingAgents] = useState(false);
 
@@ -54,6 +55,12 @@ export default function NewAppointmentModal({ isOpen, onClose, onSave, onLogout 
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (form.phone && !phoneValid) {
+      alert("Please enter a valid phone number");
+      return;
+    }
+
     // Transform flat form into backend format
     const payload = {
       customer: {
@@ -133,6 +140,10 @@ export default function NewAppointmentModal({ isOpen, onClose, onSave, onLogout 
     }
   };
 
+  const handlePhoneChange = (phoneValue: string) => {
+    setForm((prev) => ({ ...prev, phone: phoneValue }));
+  };
+
   if (!isOpen) return null;
 
   return (
@@ -181,14 +192,13 @@ export default function NewAppointmentModal({ isOpen, onClose, onSave, onLogout 
           </div>
           <div>
             <div className="label">Phone</div>
-            <input
-              id="f-phone"
-              className="input"
-              type="tel"
-              pattern="[0-9]{3}-[0-9]{3}-[0-9]{4}"
-              placeholder="(###) ###-####"
+            <PhoneInput
               value={form.phone}
-              onChange={handleChange}
+              onChange={handlePhoneChange}
+              onValidityChange={setPhoneValid}
+              placeholder="(123) 456-7890"
+              id="f-phone"
+              name="phone"
             />
           </div>
 
