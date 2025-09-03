@@ -2,6 +2,7 @@ import { useState } from "react";
 import { findLatLong } from "../api/location_conversion";
 import AgentSelector from "./AgentSelector";
 import { BASE_URL } from "../utils/constants";
+import PhoneInput from "./PhoneInput";
 
 interface Props {
   isOpen: boolean;
@@ -36,6 +37,7 @@ export default function NewAppointmentModal({ isOpen, onClose, onSave }: Props) 
 
   const [agents, setAgents] = useState<Agent[]>([]);
   const [loadingAgents, setLoadingAgents] = useState(false);
+  const [phoneValid, setPhoneValid] = useState(false)
 
   // ensure HH:MM:SS
   const formatTime = (time: string) => {
@@ -53,6 +55,12 @@ export default function NewAppointmentModal({ isOpen, onClose, onSave }: Props) 
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    // Validate phone if provided
+    if (form.phone && !phoneValid) {
+      alert("Please enter a valid phone number");
+      return;
+    }
     // Transform flat form into backend format
     const payload = {
       customer: {
@@ -134,6 +142,10 @@ export default function NewAppointmentModal({ isOpen, onClose, onSave }: Props) 
     }
   };
 
+  const handlePhoneChange = (phoneValue: string) => {
+    setForm((prev) => ({ ...prev, phone: phoneValue }));
+  };
+
   if (!isOpen) return null;
 
   return (
@@ -182,14 +194,13 @@ export default function NewAppointmentModal({ isOpen, onClose, onSave }: Props) 
           </div>
           <div>
             <div className="label">Phone</div>
-            <input
-              id="f-phone"
-              className="input"
-              type="tel"
-              pattern="[0-9]{3}-[0-9]{3}-[0-9]{4}"
-              placeholder="(###) ###-####"
+            <PhoneInput
               value={form.phone}
-              onChange={handleChange}
+              onChange={handlePhoneChange}
+              onValidityChange={setPhoneValid}
+              placeholder="(123) 456-7890"
+              id="f-phone"
+              name="phone"
             />
           </div>
 
