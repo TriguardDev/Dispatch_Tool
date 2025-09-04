@@ -44,6 +44,16 @@ CREATE TABLE IF NOT EXISTS field_agents (
     FOREIGN KEY (location_id) REFERENCES locations(id) ON DELETE SET NULL
 );
 
+-- Admin Table
+CREATE TABLE IF NOT EXISTS admins (
+    adminId INT AUTO_INCREMENT PRIMARY KEY,
+    `name` VARCHAR(100) NOT NULL,
+    email VARCHAR(100) UNIQUE NOT NULL,
+    password VARCHAR(255) NOT NULL,
+    created_time TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_time TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);
+
 -- Customer Table
 CREATE TABLE IF NOT EXISTS customers (
     customerId INT AUTO_INCREMENT PRIMARY KEY,
@@ -109,6 +119,11 @@ VALUES
 ('Jeremy Moreno', 'jeremy@triguardroofing.com', 'jeremy', '555-2222', 'available', 2),
 ('rebecca steward', 'rebecca@triguardroofing.com', 'rebecca', '555-2222', 'available', 3),
 ('tester', 'test@example.com', 'tester', '555-6666', 'available', 3);
+
+-- Sample Admin
+INSERT INTO admins (`name`, email, password)
+VALUES
+('Admin User', 'admin@triguardroofing.com', 'admin123');
 
 -- Populate your disposition types
 INSERT INTO disposition_types (typeCode, description) VALUES
