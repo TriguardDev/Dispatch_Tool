@@ -1,11 +1,14 @@
-import { Box, TextField, Select, MenuItem, FormControl, InputLabel, Button } from "@mui/material";
+import { Box, TextField, Select, MenuItem, FormControl, InputLabel, Button, IconButton, Tooltip } from "@mui/material";
+import { Refresh } from "@mui/icons-material";
 import Grid from '@mui/material/Grid';
 
 interface FiltersProps {
   onNewAppt: () => void;
+  onRefresh?: () => void;
+  refreshing?: boolean;
 }
 
-export default function Filters({ onNewAppt }: FiltersProps) {
+export default function Filters({ onNewAppt, onRefresh, refreshing = false }: FiltersProps) {
   return (
     <Box sx={{ mb: 3 }}>
       <Grid container spacing={2} alignItems="center">
@@ -65,12 +68,41 @@ export default function Filters({ onNewAppt }: FiltersProps) {
           </FormControl>
         </Grid>
 
-        <Grid size={{ xs: 12, md: 1 }}>
+        <Grid size={{ xs: 6, md: 1 }}>
+          {onRefresh && (
+            <Tooltip title="Refresh data">
+              <IconButton 
+                onClick={onRefresh}
+                disabled={refreshing}
+                color="primary"
+                sx={{ 
+                  width: '100%',
+                  height: 40,
+                  border: '1px solid',
+                  borderColor: 'primary.main'
+                }}
+              >
+                <Refresh sx={{ 
+                  animation: refreshing ? 'spin 1s linear infinite' : 'none',
+                  '@keyframes spin': {
+                    '0%': { transform: 'rotate(0deg)' },
+                    '100%': { transform: 'rotate(360deg)' }
+                  }
+                }} />
+              </IconButton>
+            </Tooltip>
+          )}
+        </Grid>
+        
+        <Grid size={{ xs: 6, md: onRefresh ? 1 : 1 }}>
           <Button 
             variant="contained" 
             onClick={onNewAppt}
             fullWidth
-            sx={{ whiteSpace: 'nowrap' }}
+            sx={{ 
+              whiteSpace: 'nowrap',
+              height: 40
+            }}
           >
             + New Appt
           </Button>

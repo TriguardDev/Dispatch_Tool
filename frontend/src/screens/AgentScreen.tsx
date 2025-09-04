@@ -1,10 +1,12 @@
-import { useState, useEffect } from "react";
+import React from "react";
 import { Box, Typography, CircularProgress, Container, Select, MenuItem, FormControl } from "@mui/material";
 import TopBar from "../components/TopBar";
 import QueueCard from "../components/QueueCard";
 import AppointmentCard from "../components/AppointmentCard";
 import { type Booking, getAgentBookings, updateBookingStatus, saveDisposition } from "../api/crud";
 import { CompletedAppointmentCard } from "../components/CompletedAppointmentCard";
+import { useSmartPolling } from "../hooks/useSmartPolling";
+import { useUserActivity } from "../hooks/useUserActivity";
 
 interface AgentScreenProps {
   agentId: number; // passed from login
@@ -12,41 +14,40 @@ interface AgentScreenProps {
 }
 
 export default function AgentScreen({ agentId, onLogout }: AgentScreenProps) {
-  const [bookings, setBookings] = useState<Booking[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [refresh, setRefresh] = useState(0);
-
-  useEffect(() => {
-    async function fetchBookings() {
-      try {
-        console.log("fetching bookings for agent:", agentId);
-        setLoading(true);
-        const data: Booking[] = await getAgentBookings(agentId);
-        setBookings(data);
-      } catch (err: unknown) {
-        console.error("Error fetching bookings:", err);
-        const errorMessage = (err as Error).message || "Failed to fetch bookings";
-        setError(errorMessage);
-        
-        // If authentication error, might need to re-login
-        if (errorMessage.includes("Authentication required")) {
-          onLogout();
-        }
-      } finally {
-        setLoading(false);
-      }
-    }
-
-    fetchBookings();
-    const interval = setInterval(fetchBookings, 30000); // Poll every 30 seconds
-    return () => clearInterval(interval);
-  }, [agentId, refresh, onLogout]);
+  const { startActivity, endActivity } = useUserActivity();
+  
+  // Memoize the fetch function to prevent unnecessary re-renders
+  const fetchAgentBookings = React.useCallback(() => {
+    console.log("Fetching bookings for agent:", agentId);
+    return getAgentBookings(agentId);
+  }, [agentId]);
+  
+  const {
+    data: bookings,
+    loading,
+    error,
+    refetch,
+    pausePolling,
+    resumePolling,
+    optimisticUpdate
+  } = useSmartPolling({
+    fetchFunction: fetchAgentBookings,
+    onLogout
+  });
 
   const handleStatusChange = async (bookingId: number, status: string) => {
+    const activityId = `status-change-${bookingId}`;
+    startActivity(activityId);
+    
     try {
+      // Optimistic update - immediately update UI
+      optimisticUpdate(bookingId, { status: status as Booking['status'] });
+      
+      // Make API call
       await updateBookingStatus(bookingId, status);
-      setRefresh((prev) => prev + 1);
+      
+      // Refresh data to ensure consistency
+      await refetch();
     } catch (err) {
       console.error(err);
       const errorMessage = (err as Error).message || "Error updating booking status";
@@ -54,8 +55,12 @@ export default function AgentScreen({ agentId, onLogout }: AgentScreenProps) {
       if (errorMessage.includes("Authentication required")) {
         onLogout();
       } else {
+        // Revert optimistic update on error
+        await refetch();
         alert(errorMessage);
       }
+    } finally {
+      endActivity(activityId);
     }
   };
 
@@ -64,9 +69,18 @@ export default function AgentScreen({ agentId, onLogout }: AgentScreenProps) {
     dispositionType: string,
     note: string = ""
   ) => {
+    const activityId = `disposition-change-${bookingId}`;
+    startActivity(activityId);
+    
     try {
+      // Optimistic update
+      optimisticUpdate(bookingId, { 
+        disposition_code: dispositionType,
+        disposition_note: note 
+      });
+      
       await saveDisposition(bookingId, dispositionType, note);
-      setRefresh((prev) => prev + 1);
+      await refetch();
     } catch (err) {
       console.error(err);
       const errorMessage = (err as Error).message || "Error saving disposition";
@@ -74,8 +88,12 @@ export default function AgentScreen({ agentId, onLogout }: AgentScreenProps) {
       if (errorMessage.includes("Authentication required")) {
         onLogout();
       } else {
+        // Revert optimistic update on error
+        await refetch();
         alert(errorMessage);
       }
+    } finally {
+      endActivity(activityId);
     }
   };
 
