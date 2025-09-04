@@ -2,16 +2,17 @@ const BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
 export interface LoginResponse {
   id: number;
-  user_type: "dispatcher" | "agent";
+  user_type: "dispatcher" | "field_agent" | "admin";
+  role: "dispatcher" | "field_agent" | "admin";
   // No token in response since it's now in HTTP-only cookie
 }
 
-export async function login(email: string, password: string): Promise<LoginResponse> {
+export async function login(email: string, password: string, role: "dispatcher" | "field_agent" | "admin"): Promise<LoginResponse> {
   const res = await fetch(`${BASE_URL}/login`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     credentials: "include", // Important: include cookies in requests
-    body: JSON.stringify({ email, password }),
+    body: JSON.stringify({ email, password, role }),
   });
 
   if (!res.ok) {

@@ -1,14 +1,17 @@
 import { useState } from "react";
-import { Box, Paper, TextField, Button, Typography, Alert } from "@mui/material";
+import { Box, Paper, TextField, Button, Typography, Alert, Select, MenuItem, FormControl, InputLabel } from "@mui/material";
 import { login, type LoginResponse } from "../api/login";
 
 interface Props {
   onLogin: (user: LoginResponse) => void;
 }
 
+type UserRole = "dispatcher" | "field_agent" | "admin";
+
 export default function LoginForm({ onLogin }: Props) {
   const [email, setEmail] = useState("");
-  const [password, setPassword] = useState(""); // added
+  const [password, setPassword] = useState("");
+  const [role, setRole] = useState<UserRole>("field_agent");
   const [error, setError] = useState("");
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -16,10 +19,10 @@ export default function LoginForm({ onLogin }: Props) {
     setError("");
 
     try {
-      const data = await login(email, password); // send password too
+      const data = await login(email, password, role);
       onLogin(data);
     } catch (err) {
-      setError("Invalid email or password");
+      setError("Invalid email, password, or role");
       console.error(err);
     }
   };
@@ -51,6 +54,21 @@ export default function LoginForm({ onLogin }: Props) {
         <Typography variant="h4" align="center" fontWeight="bold">
           Login
         </Typography>
+        
+        <FormControl fullWidth>
+          <InputLabel id="role-label">Role</InputLabel>
+          <Select
+            labelId="role-label"
+            id="role-select"
+            value={role}
+            label="Role"
+            onChange={(e) => setRole(e.target.value as UserRole)}
+          >
+            <MenuItem value="admin">Admin</MenuItem>
+            <MenuItem value="dispatcher">Dispatcher</MenuItem>
+            <MenuItem value="field_agent">Field Agent</MenuItem>
+          </Select>
+        </FormControl>
 
         <TextField
           type="email"

@@ -19,7 +19,8 @@ function AppContent() {
         if (authResult.success && authResult.user_id && authResult.user_type) {
           setUser({
             id: authResult.user_id,
-            user_type: authResult.user_type as "dispatcher" | "agent"
+            user_type: authResult.user_type as "dispatcher" | "field_agent" | "admin",
+            role: authResult.user_type as "dispatcher" | "field_agent" | "admin"
           });
         }
       } catch (error) {
@@ -63,12 +64,16 @@ function AppContent() {
     return <LoginForm onLogin={handleLogin} />;
   }
 
-  if (user.user_type === "agent") {
+  if (user.user_type === "field_agent") {
     return <AgentScreen agentId={user.id} onLogout={handleLogout} />;
   }
 
   if (user.user_type === "dispatcher") {
     return <DispatcherScreen onLogout={handleLogout} />;
+  }
+
+  if (user.user_type === "admin") {
+    return <DispatcherScreen onLogout={handleLogout} />; // For now, admins see the dispatcher screen
   }
 
   return null;
