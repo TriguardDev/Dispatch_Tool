@@ -1,4 +1,4 @@
-import { BASE_URL } from "../utils/constants";
+const BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
 export interface LoginResponse {
   id: number;
