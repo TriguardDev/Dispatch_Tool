@@ -33,9 +33,9 @@ def require_auth(f):
             
             # Add user info to request context
             request.user_id = payload['user_id']
-            request.user_type = payload['user_type']
+            request.role = payload['role']
             
-            print(f"[DEBUG] Auth successful - User ID: {request.user_id}, Type: {request.user_type}", flush=True)
+            print(f"[DEBUG] Auth successful - User ID: {request.user_id}, Role: {request.role}", flush=True)
             
             return f(*args, **kwargs)
             
@@ -57,11 +57,11 @@ def require_dispatcher(f):
             
             payload = verify_jwt_token(token)
             
-            if payload['user_type'] != 'dispatcher':
+            if payload['role'] != 'dispatcher':
                 return jsonify({"success": False, "error": "Dispatcher access required"}), 403
             
             request.user_id = payload['user_id']
-            request.user_type = payload['user_type']
+            request.role = payload['role']
             
             return f(*args, **kwargs)
             
@@ -82,11 +82,11 @@ def require_agent(f):
             
             payload = verify_jwt_token(token)
             
-            if payload['user_type'] != 'agent':
+            if payload['role'] != 'field_agent':
                 return jsonify({"success": False, "error": "Agent access required"}), 403
             
             request.user_id = payload['user_id']
-            request.user_type = payload['user_type']
+            request.role = payload['role']
             
             return f(*args, **kwargs)
             

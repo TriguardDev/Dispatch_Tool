@@ -8,7 +8,6 @@ import AgentScreen from "./screens/AgentScreen";
 import { verifyAuth, type LoginResponse } from "./api/login";
 
 function AppContent() {
-  const { mode } = useTheme();
   const [user, setUser] = useState<LoginResponse | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -16,11 +15,10 @@ function AppContent() {
     const checkAuth = async () => {
       try {
         const authResult = await verifyAuth();
-        if (authResult.success && authResult.user_id && authResult.user_type) {
+        if (authResult.success && authResult.user_id && authResult.role) {
           setUser({
             id: authResult.user_id,
-            user_type: authResult.user_type as "dispatcher" | "field_agent" | "admin",
-            role: authResult.user_type as "dispatcher" | "field_agent" | "admin"
+            role: authResult.role as "dispatcher" | "field_agent" | "admin"
           });
         }
       } catch (error) {
@@ -64,15 +62,15 @@ function AppContent() {
     return <LoginForm onLogin={handleLogin} />;
   }
 
-  if (user.user_type === "field_agent") {
+  if (user.role === "field_agent") {
     return <AgentScreen agentId={user.id} onLogout={handleLogout} />;
   }
 
-  if (user.user_type === "dispatcher") {
+  if (user.role === "dispatcher") {
     return <DispatcherScreen onLogout={handleLogout} />;
   }
 
-  if (user.user_type === "admin") {
+  if (user.role === "admin") {
     return <DispatcherScreen onLogout={handleLogout} />; // For now, admins see the dispatcher screen
   }
 

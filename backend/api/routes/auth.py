@@ -17,11 +17,11 @@ def verify_password(password: str, hashed: str) -> bool:
     """Verify a password against its hash"""
     return bcrypt.checkpw(password.encode('utf-8'), hashed.encode('utf-8'))
 
-def generate_jwt_token(user_id: int, user_type: str) -> str:
+def generate_jwt_token(user_id: int, role: str) -> str:
     """Generate a JWT token for a user"""
     payload = {
         'user_id': user_id,
-        'user_type': user_type,
+        'role': role,
         'exp': datetime.utcnow() + timedelta(hours=24),  # Token expires in 24 hours
         'iat': datetime.utcnow()  # Issued at time
     }
@@ -78,7 +78,6 @@ def login():
             response = make_response(jsonify({
                 "success": True,
                 "id": user_id,
-                "user_type": role,
                 "role": role
             }))
             # Set HTTP-only cookie with JWT token
@@ -123,7 +122,7 @@ def verify_token():
         return jsonify({
             "success": True,
             "user_id": payload['user_id'],
-            "user_type": payload['user_type']
+            "role": payload['role']
         }), 200
     
     except Exception as e:

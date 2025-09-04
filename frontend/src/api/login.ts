@@ -2,7 +2,6 @@ const BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
 export interface LoginResponse {
   id: number;
-  user_type: "dispatcher" | "field_agent" | "admin";
   role: "dispatcher" | "field_agent" | "admin";
   // No token in response since it's now in HTTP-only cookie
 }
@@ -35,7 +34,7 @@ export async function logout(): Promise<void> {
   }
 }
 
-export async function verifyAuth(): Promise<{success: boolean, user_id?: number, user_type?: string}> {
+export async function verifyAuth(): Promise<{success: boolean, user_id?: number, role?: string}> {
   try {
     const res = await fetch(`${BASE_URL}/verify`, {
       method: "GET",

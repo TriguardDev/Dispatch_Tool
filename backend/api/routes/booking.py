@@ -24,7 +24,7 @@ def update_booking_status():
         cursor = conn.cursor(dictionary=True)
 
         # Verify user has access to this booking
-        if request.user_type == 'agent':
+        if request.role == 'field_agent':
             cursor.execute("""
                 SELECT bookingId FROM bookings 
                 WHERE bookingId = %s AND agentId = %s
@@ -116,7 +116,7 @@ def get_bookings():
         cursor = conn.cursor(dictionary=True)
 
         # If user is an agent, they can only see their own bookings
-        if request.user_type == 'agent':
+        if request.role == 'field_agent':
             agentId = request.user_id
 
         if agentId:
@@ -156,7 +156,7 @@ def get_bookings():
           cursor.execute(query, (agentId,))
         else:
           # Only dispatchers can see all bookings
-          if request.user_type != 'dispatcher':
+          if request.role != 'dispatcher':
               return jsonify({"success": False, "error": "Access denied"}), 403
               
           query = """
