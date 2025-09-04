@@ -1,5 +1,22 @@
 import { useState } from "react";
-import { useTheme } from "@mui/material/styles";
+import { 
+  Dialog, 
+  DialogTitle, 
+  DialogContent, 
+  DialogActions, 
+  TextField, 
+  Button, 
+  IconButton,
+  Typography,
+  Box,
+  Select,
+  MenuItem,
+  FormControl,
+  InputLabel,
+  CircularProgress
+} from "@mui/material";
+import Grid from '@mui/material/Grid';
+import { Close } from "@mui/icons-material";
 import { findLatLong } from "../api/location_conversion";
 import { createBooking, searchAgents } from "../api/crud";
 import AgentSelector from "./AgentSelector";
@@ -19,7 +36,6 @@ interface Agent {
 }
 
 export default function NewAppointmentModal({ isOpen, onClose, onSave, onLogout }: Props) {
-  const theme = useTheme();
   const [form, setForm] = useState({
     name: "",
     email: "",
@@ -146,178 +162,190 @@ export default function NewAppointmentModal({ isOpen, onClose, onSave, onLogout 
     setForm((prev) => ({ ...prev, phone: phoneValue }));
   };
 
-  if (!isOpen) return null;
-
   return (
-    <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
-      <form
-        onSubmit={handleSave}
-        className="card w-[min(680px,95vw)] max-h-[90vh] overflow-y-auto"
-        style={{ backgroundColor: theme.palette.background.paper }}
-      >
-        {/* Header */}
-        <header className="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
-          <h3 className="font-semibold">New Appointment</h3>
-          <button
-            type="button"
-            className="btn btn-ghost text-gray-300 "
-            onClick={onClose}
-          >
-            ✕
-          </button>
-        </header>
+    <Dialog 
+      open={isOpen} 
+      onClose={onClose}
+      maxWidth="md"
+      fullWidth
+      PaperProps={{
+        sx: { maxHeight: '90vh' }
+      }}
+    >
+      <form onSubmit={handleSave}>
+        <DialogTitle>
+          <Box display="flex" justifyContent="space-between" alignItems="center">
+            <Typography variant="h6" fontWeight="bold">
+              New Appointment
+            </Typography>
+            <IconButton onClick={onClose} size="small">
+              <Close />
+            </IconButton>
+          </Box>
+        </DialogTitle>
 
-        {/* Form Body */}
-        <div className="p-4 grid grid-cols-1 md:grid-cols-2 gap-3">
-          {/* Customer Fields */}
-          <div>
-            <div className="label">Customer Name</div>
-            <input
-              id="f-name"
-              className="input"
-              required
-              placeholder="Bob"
-              value={form.name}
-              onChange={handleChange}
-            />
-          </div>
-          <div>
-            <div className="label">Customer Email</div>
-            <input
-              id="f-email"
-              className="input"
-              type="email"
-              required
-              placeholder="Bob@example.com"
-              value={form.email}
-              onChange={handleChange}
-            />
-          </div>
-          <div>
-            <div className="label">Phone</div>
-            <PhoneInput
-              value={form.phone}
-              onChange={handlePhoneChange}
-              onValidityChange={setPhoneValid}
-              placeholder="(123) 456-7890"
-              id="f-phone"
-              name="phone"
-            />
-          </div>
-
-          {/* Address */}
-          <div>
-            <div className="label">Street Number</div>
-            <input
-              id="f-street_number"
-              className="input"
-              placeholder="5580"
-              value={form.street_number}
-              onChange={handleChange}
-            />
-          </div>
-          <div>
-            <div className="label">Street Name</div>
-            <input
-              id="f-street_name"
-              className="input"
-              placeholder="Lacklon Lane"
-              value={form.street_name}
-              onChange={handleChange}
-            />
-          </div>
-          <div>
-            <div className="label">City</div>
-            <input
-              id="f-city"
-              className="input"
-              placeholder="Bedford"
-              value={form.city}
-              onChange={handleChange}
-            />
-          </div>
-          <div>
-            <div className="label">Province</div>
-            <input
-              id="f-state_province"
-              className="input"
-              placeholder="NS"
-              value={form.state_province}
-              onChange={handleChange}
-            />
-          </div>
-          <div>
-            <div className="label">Country</div>
-            <input
-              id="f-country"
-              className="input"
-              placeholder="Canada"
-              value={form.country}
-              onChange={handleChange}
-            />
-          </div>
-          <div>
-            <div className="label">Postal Code</div>
-            <input
-              id="f-postal_code"
-              className="input"
-              placeholder="BA4 3J7"
-              value={form.postal_code}
-              onChange={handleChange}
-            />
-          </div>
-
-          {/* Date + Time */}
-          <div>
-            <div className="label">Date</div>
-            <input
-              id="f-date"
-              type="date"
-              className="input"
-              required
-              value={form.date}
-              onChange={handleChange}
-            />
-          </div>
-          <div>
-            <div className="label">Time (local)</div>
-            <input
-              id="f-time"
-              type="time"
-              className="input"
-              required
-              value={form.time}
-              onChange={handleChange}
-            />
-          </div>
-
-          {/* Rep (Dropdown + Search Button) */}
-          <div className="md:col-span-2 flex items-end gap-2">
-              <AgentSelector
-                agents={agents}
-                selectedRep={form.rep}
-                loading={loadingAgents}
-                onChange={(agentId: string) => setForm(prev => ({ ...prev, rep: agentId }))}
-                onSearch={handleSearchAgents}
-                disabledSearch={!form.postal_code || !form.date || !form.time}
+        <DialogContent>
+          <Grid container spacing={3} sx={{ mt: 1 }}>
+            {/* Customer Fields */}
+            <Grid size={{xs:12, md:6}}>
+              <TextField
+                id="f-name"
+                label="Customer Name"
+                placeholder="Bob"
+                value={form.name}
+                onChange={handleChange}
+                required
+                fullWidth
               />
-          </div>
-        </div>
+            </Grid>
 
-        {/* Footer */}
-        <footer className="px-4 py-3 border-t border-gray-100 flex items-center justify-end gap-2">
-          <button
-            type="button"
-            className="btn btn-ghost"
-            onClick={onClose}
-          >
+            <Grid size={{xs:12, md:6}}>
+              <TextField
+                id="f-email"
+                label="Customer Email"
+                type="email"
+                placeholder="Bob@example.com"
+                value={form.email}
+                onChange={handleChange}
+                required
+                fullWidth
+              />
+            </Grid>
+
+            <Grid size={{xs:12, md:6}}>
+              <PhoneInput
+                value={form.phone}
+                onChange={handlePhoneChange}
+                onValidityChange={setPhoneValid}
+                placeholder="(123) 456-7890"
+                id="f-phone"
+                name="phone"
+              />
+            </Grid>
+
+            {/* Address Fields */}
+            <Grid size={{xs:12, md:6}}>
+              <TextField
+                id="f-street_number"
+                label="Street Number"
+                placeholder="5580"
+                value={form.street_number}
+                onChange={handleChange}
+                fullWidth
+              />
+            </Grid>
+
+            <Grid size={{xs:12, md:6}}>
+              <TextField
+                id="f-street_name"
+                label="Street Name"
+                placeholder="Lacklon Lane"
+                value={form.street_name}
+                onChange={handleChange}
+                fullWidth
+              />
+            </Grid>
+
+            <Grid size={{xs:12, md:6}}>
+              <TextField
+                id="f-city"
+                label="City"
+                placeholder="Bedford"
+                value={form.city}
+                onChange={handleChange}
+                fullWidth
+              />
+            </Grid>
+
+            <Grid size={{xs:12, md:6}}>
+              <TextField
+                id="f-state_province"
+                label="Province"
+                placeholder="NS"
+                value={form.state_province}
+                onChange={handleChange}
+                fullWidth
+              />
+            </Grid>
+
+            <Grid size={{xs:12, md:6}}>
+              <TextField
+                id="f-country"
+                label="Country"
+                placeholder="Canada"
+                value={form.country}
+                onChange={handleChange}
+                fullWidth
+              />
+            </Grid>
+
+            <Grid size={{xs:12, md:6}}>
+              <TextField
+                id="f-postal_code"
+                label="Postal Code"
+                placeholder="BA4 3J7"
+                value={form.postal_code}
+                onChange={handleChange}
+                fullWidth
+              />
+            </Grid>
+
+            {/* Date + Time */}
+            <Grid size={{xs:12, md:6}}>
+              <TextField
+                id="f-date"
+                label="Date"
+                type="date"
+                value={form.date}
+                onChange={handleChange}
+                required
+                fullWidth
+                InputLabelProps={{
+                  shrink: true,
+                }}
+              />
+            </Grid>
+
+            <Grid size={{xs:12, md:6}}>
+              <TextField
+                id="f-time"
+                label="Time (local)"
+                type="time"
+                value={form.time}
+                onChange={handleChange}
+                required
+                fullWidth
+                InputLabelProps={{
+                  shrink: true,
+                }}
+              />
+            </Grid>
+
+            {/* Agent Selection */}
+            <Grid size={{ xs: 12 }}>
+              <Box display="flex" alignItems="flex-end" gap={2}>
+                <AgentSelector
+                  agents={agents}
+                  selectedRep={form.rep}
+                  loading={loadingAgents}
+                  onChange={(agentId: string) => setForm(prev => ({ ...prev, rep: agentId }))}
+                  onSearch={handleSearchAgents}
+                  disabledSearch={!form.postal_code || !form.date || !form.time}
+                />
+              </Box>
+            </Grid>
+          </Grid>
+        </DialogContent>
+
+        <DialogActions sx={{ px: 3, pb: 3 }}>
+          <Button onClick={onClose} color="secondary">
             Cancel
-          </button>
-          <button type="submit" className="btn btn-primary">
+          </Button>
+          <Button type="submit" variant="contained" color="primary">
             Save
-          </button>
-        </footer>
+          </Button>
+        </DialogActions>
       </form>
-    </div>
+    </Dialog>
   );
 }

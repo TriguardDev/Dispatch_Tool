@@ -1,4 +1,3 @@
-import React from "react";
 import { Button } from "@mui/material";
 import { logout } from "../api/login";
 

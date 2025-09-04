@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { Box, Paper, TextField, Button, Typography, Alert } from "@mui/material";
 import { login, type LoginResponse } from "../api/login";
-import { setToken } from "../utils/session";
 
 interface Props {
   onLogin: (user: LoginResponse) => void;
@@ -18,7 +17,6 @@ export default function LoginForm({ onLogin }: Props) {
 
     try {
       const data = await login(email, password); // send password too
-      setToken(data.token)
       onLogin(data);
     } catch (err) {
       setError("Invalid email or password");
