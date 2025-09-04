@@ -1,5 +1,6 @@
-// components/PhoneInput.tsx
 import React, { useState, useEffect } from 'react';
+import { TextField, FormHelperText, Box, InputAdornment } from '@mui/material';
+import { Check } from '@mui/icons-material';
 import { formatPhoneNumber, isValidPhoneNumber, stripPhoneFormatting, displayPhoneNumber } from '../utils/phoneUtils';
 
 interface PhoneInputProps {
@@ -9,9 +10,11 @@ interface PhoneInputProps {
   placeholder?: string;
   required?: boolean;
   disabled?: boolean;
-  className?: string;
   id?: string;
   name?: string;
+  label?: string;
+  fullWidth?: boolean;
+  size?: 'small' | 'medium';
   international?: boolean;
 }
 
@@ -22,9 +25,11 @@ export default function PhoneInput({
   placeholder = "(123) 456-7890",
   required = false,
   disabled = false,
-  className = "input",
   id,
   name,
+  label = "Phone",
+  fullWidth = true,
+  size = "medium",
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   international = false
 }: PhoneInputProps) {
@@ -76,30 +81,16 @@ export default function PhoneInput({
     onValidityChange?.(valid);
   };
 
-  // Determine input styling based on validation state
-  const getInputClassName = () => {
-    let classes = className;
-    
-    if (touched) {
-      if (displayValue && !isValid) {
-        classes += ' border-red-500 focus:border-red-500 focus:ring-red-500';
-      } else if (isValid) {
-        classes += ' border-green-500 focus:border-green-500 focus:ring-green-500';
-      }
-    }
-    
-    return classes;
-  };
-
   const showError = touched && displayValue && !isValid;
   const showSuccess = touched && isValid;
 
   return (
-    <div className="relative">
-      <input
+    <Box>
+      <TextField
         type="tel"
         id={id}
         name={name}
+        label={label}
         value={displayValue}
         onChange={handleChange}
         onBlur={handleBlur}
@@ -107,34 +98,36 @@ export default function PhoneInput({
         placeholder={placeholder}
         required={required}
         disabled={disabled}
-        className={getInputClassName()}
-        maxLength={14} // (123) 456-7890 = 14 characters
-        inputMode="tel"
-        autoComplete="tel"
+        fullWidth={fullWidth}
+        size={size}
+        error={!!showError}
+        inputProps={{
+          maxLength: 14, // (123) 456-7890 = 14 characters
+          inputMode: 'tel',
+          autoComplete: 'tel',
+        }}
+        InputProps={{
+          endAdornment: showSuccess ? (
+            <InputAdornment position="end">
+              <Check color="success" fontSize="small" />
+            </InputAdornment>
+          ) : null,
+        }}
       />
-      
-      {/* Validation feedback */}
-      {showError}
-      
-      {showSuccess && (
-        <div className="absolute right-2 top-1/2 transform -translate-y-1/2">
-          <span className="text-green-500 text-sm">✓</span>
-        </div>
-      )}
       
       {/* Error message */}
       {showError && (
-        <p className="mt-1 text-sm text-red-600">
+        <FormHelperText error>
           Please enter a valid 10-digit phone number
-        </p>
+        </FormHelperText>
       )}
       
       {/* Help text */}
       {!touched && !displayValue && (
-        <p className="mt-1 text-xs text-gray-500">
+        <FormHelperText>
           Format: (123) 456-7890 - formatting applied automatically
-        </p>
+        </FormHelperText>
       )}
-    </div>
+    </Box>
   );
 }
