@@ -1,4 +1,4 @@
-import React from "react";
+import { Button } from "@mui/material";
 import { logout } from "../api/login";
 
 interface Props {
@@ -22,11 +22,18 @@ export default function LogoutButton({ onLogout }: Props) {
   };
 
   return (
-    <button
+    <Button
       onClick={handleLogout}
-      className="ml-auto bg-gray-800 hover:bg-red-600 text-white py-1 px-3 rounded"
+      variant="contained"
+      color="secondary"
+      sx={{ 
+        ml: 'auto',
+        '&:hover': {
+          backgroundColor: 'error.main'
+        }
+      }}
     >
       Logout
-    </button>
+    </Button>
   );
 }

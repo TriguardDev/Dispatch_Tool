@@ -1,3 +1,6 @@
+import { AppBar, Toolbar, Typography, Box, Avatar, IconButton } from '@mui/material';
+import { Brightness4, Brightness7 } from '@mui/icons-material';
+import { useTheme } from '../contexts/ThemeContext';
 import LogoutButton from "./LogoutButton";
 
 interface TopBarProps {
@@ -5,24 +8,43 @@ interface TopBarProps {
 }
 
 export default function TopBar({onLogOut}: TopBarProps) {
+  const { mode, toggleTheme } = useTheme();
+
   return (
-    <header className="sticky top-0 z-30 bg-gray-900   backdrop-blur border-b border-gray-700 ">
-      <div className="mx-auto max-w-7xl px-4 py-3 flex items-center gap-3">
-        <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-xl bg-blue-600 grid place-items-center text-white font-extrabold">
+    <AppBar position="sticky">
+      <Toolbar sx={{ maxWidth: '1280px', width: '100%', mx: 'auto', px: 2 }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+          <Avatar sx={{ 
+            width: 36, 
+            height: 36, 
+            bgcolor: 'primary.main',
+            fontWeight: 'bold',
+            fontSize: '0.875rem'
+          }}>
             TG
-          </div>
-          <div>
-            <h1 className="text-lg font-bold leading-5">Triguard Dispatch</h1>
-            <p className="text-xs text-gray-400  -mt-0.5">Prototype UI</p>
-          </div>
-        </div>
-        <div className="ml-auto flex items-center gap-2">
-          <div className="hidden sm:flex items-center gap-1 bg-gray-800  rounded-xl p-1">
+          </Avatar>
+          <Box>
+            <Typography variant="h6" sx={{ fontWeight: 'bold', lineHeight: 1.2 }}>
+              Triguard Dispatch
+            </Typography>
+            <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block', mt: -0.25 }}>
+              Prototype UI
+            </Typography>
+          </Box>
+        </Box>
+        <Box sx={{ ml: 'auto', display: 'flex', alignItems: 'center', gap: 1 }}>
+          <IconButton 
+            onClick={toggleTheme} 
+            color="inherit"
+            aria-label={`Switch to ${mode === 'light' ? 'dark' : 'light'} mode`}
+          >
+            {mode === 'light' ? <Brightness4 /> : <Brightness7 />}
+          </IconButton>
+          <Box sx={{ display: { xs: 'none', sm: 'block' } }}>
             <LogoutButton onLogout={onLogOut}/>
-          </div>
-        </div>
-      </div>
-    </header>
+          </Box>
+        </Box>
+      </Toolbar>
+    </AppBar>
   );
 }

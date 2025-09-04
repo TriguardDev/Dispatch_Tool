@@ -1,15 +1,18 @@
 import { useState, useEffect } from "react";
+import { ThemeProvider as MuiThemeProvider, CssBaseline, Box, CircularProgress, Typography } from "@mui/material";
+import { ThemeProvider, useTheme } from "./contexts/ThemeContext";
+import { lightTheme, darkTheme } from "./theme/theme";
 import LoginForm from "./components/LoginForm";
 import DispatcherScreen from "./screens/DispatcherScreen";
 import AgentScreen from "./screens/AgentScreen";
 import { verifyAuth, type LoginResponse } from "./api/login";
 
-export default function App() {
+function AppContent() {
+  const { mode } = useTheme();
   const [user, setUser] = useState<LoginResponse | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Check if user is already authenticated via cookie
     const checkAuth = async () => {
       try {
         const authResult = await verifyAuth();
@@ -39,9 +42,20 @@ export default function App() {
 
   if (loading) {
     return (
-      <div className="flex h-screen items-center justify-center bg-gray-800">
-        <div className="text-white">Loading...</div>
-      </div>
+      <Box
+        sx={{
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          height: '100vh',
+          backgroundColor: 'background.default',
+          gap: 2
+        }}
+      >
+        <CircularProgress />
+        <Typography color="text.primary">Loading...</Typography>
+      </Box>
     );
   }
 
@@ -58,4 +72,23 @@ export default function App() {
   }
 
   return null;
+}
+
+function AppWrapper() {
+  const { mode } = useTheme();
+  
+  return (
+    <MuiThemeProvider theme={mode === 'light' ? lightTheme : darkTheme}>
+      <CssBaseline />
+      <AppContent />
+    </MuiThemeProvider>
+  );
+}
+
+export default function App() {
+  return (
+    <ThemeProvider>
+      <AppWrapper />
+    </ThemeProvider>
+  );
 }

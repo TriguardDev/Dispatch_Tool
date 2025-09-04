@@ -1,5 +1,6 @@
-import { BASE_URL } from "../utils/constants";
 import { authenticatedFetch } from "./login";
+
+const BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
 export interface Booking {
   bookingId: number;

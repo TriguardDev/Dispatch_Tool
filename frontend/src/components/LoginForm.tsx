@@ -1,6 +1,6 @@
 import { useState } from "react";
+import { Box, Paper, TextField, Button, Typography, Alert } from "@mui/material";
 import { login, type LoginResponse } from "../api/login";
-import { setToken } from "../utils/session";
 
 interface Props {
   onLogin: (user: LoginResponse) => void;
@@ -17,7 +17,6 @@ export default function LoginForm({ onLogin }: Props) {
 
     try {
       const data = await login(email, password); // send password too
-      setToken(data.token)
       onLogin(data);
     } catch (err) {
       setError("Invalid email or password");
@@ -26,38 +25,69 @@ export default function LoginForm({ onLogin }: Props) {
   };
 
   return (
-    <div className="flex h-screen items-center justify-center bg-gray-800 ">
-      <form
+    <Box
+      sx={{
+        display: 'flex',
+        height: '100vh',
+        alignItems: 'center',
+        justifyContent: 'center',
+        backgroundColor: 'background.default',
+        p: 2
+      }}
+    >
+      <Paper
+        component="form"
         onSubmit={handleSubmit}
-        className="bg-gray-900  p-6 rounded-2xl shadow-lg w-80"
+        sx={{
+          p: 4,
+          width: '100%',
+          maxWidth: 400,
+          display: 'flex',
+          flexDirection: 'column',
+          gap: 3
+        }}
+        elevation={3}
       >
-        <h1 className="text-xl font-bold mb-4 text-center">Login</h1>
+        <Typography variant="h4" align="center" fontWeight="bold">
+          Login
+        </Typography>
 
-        <input
+        <TextField
           type="email"
+          label="Email"
           placeholder="Enter email"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
-          className="w-full border p-2 rounded mb-4"
+          required
+          fullWidth
         />
 
-        <input
+        <TextField
           type="password"
+          label="Password"
           placeholder="Enter password"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
-          className="w-full border p-2 rounded mb-4"
+          required
+          fullWidth
         />
 
-        {error && <p className="text-red-500 text-sm mb-2">{error}</p>}
+        {error && (
+          <Alert severity="error" sx={{ mt: 1 }}>
+            {error}
+          </Alert>
+        )}
 
-        <button
+        <Button
           type="submit"
-          className="w-full bg-blue-500 text-white py-2 rounded hover:bg-blue-600"
+          variant="contained"
+          size="large"
+          fullWidth
+          sx={{ mt: 2 }}
         >
           Login
-        </button>
-      </form>
-    </div>
+        </Button>
+      </Paper>
+    </Box>
   );
 }

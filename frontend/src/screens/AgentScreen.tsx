@@ -1,9 +1,12 @@
-import { useState, useEffect } from "react";
+import React from "react";
+import { Box, Typography, CircularProgress, Container, Select, MenuItem, FormControl } from "@mui/material";
 import TopBar from "../components/TopBar";
 import QueueCard from "../components/QueueCard";
 import AppointmentCard from "../components/AppointmentCard";
 import { type Booking, getAgentBookings, updateBookingStatus, saveDisposition } from "../api/crud";
 import { CompletedAppointmentCard } from "../components/CompletedAppointmentCard";
+import { useSmartPolling } from "../hooks/useSmartPolling";
+import { useUserActivity } from "../hooks/useUserActivity";
 
 interface AgentScreenProps {
   agentId: number; // passed from login
@@ -11,41 +14,40 @@ interface AgentScreenProps {
 }
 
 export default function AgentScreen({ agentId, onLogout }: AgentScreenProps) {
-  const [bookings, setBookings] = useState<Booking[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [refresh, setRefresh] = useState(0);
-
-  useEffect(() => {
-    async function fetchBookings() {
-      try {
-        console.log("fetching bookings for agent:", agentId);
-        setLoading(true);
-        const data: Booking[] = await getAgentBookings(agentId);
-        setBookings(data);
-      } catch (err: unknown) {
-        console.error("Error fetching bookings:", err);
-        const errorMessage = (err as Error).message || "Failed to fetch bookings";
-        setError(errorMessage);
-        
-        // If authentication error, might need to re-login
-        if (errorMessage.includes("Authentication required")) {
-          onLogout();
-        }
-      } finally {
-        setLoading(false);
-      }
-    }
-
-    fetchBookings();
-    const interval = setInterval(fetchBookings, 30000); // Poll every 30 seconds
-    return () => clearInterval(interval);
-  }, [agentId, refresh, onLogout]);
+  const { startActivity, endActivity } = useUserActivity();
+  
+  // Memoize the fetch function to prevent unnecessary re-renders
+  const fetchAgentBookings = React.useCallback(() => {
+    console.log("Fetching bookings for agent:", agentId);
+    return getAgentBookings(agentId);
+  }, [agentId]);
+  
+  const {
+    data: bookings,
+    loading,
+    error,
+    refetch,
+    pausePolling,
+    resumePolling,
+    optimisticUpdate
+  } = useSmartPolling({
+    fetchFunction: fetchAgentBookings,
+    onLogout
+  });
 
   const handleStatusChange = async (bookingId: number, status: string) => {
+    const activityId = `status-change-${bookingId}`;
+    startActivity(activityId);
+    
     try {
+      // Optimistic update - immediately update UI
+      optimisticUpdate(bookingId, { status: status as Booking['status'] });
+      
+      // Make API call
       await updateBookingStatus(bookingId, status);
-      setRefresh((prev) => prev + 1);
+      
+      // Refresh data to ensure consistency
+      await refetch();
     } catch (err) {
       console.error(err);
       const errorMessage = (err as Error).message || "Error updating booking status";
@@ -53,8 +55,12 @@ export default function AgentScreen({ agentId, onLogout }: AgentScreenProps) {
       if (errorMessage.includes("Authentication required")) {
         onLogout();
       } else {
+        // Revert optimistic update on error
+        await refetch();
         alert(errorMessage);
       }
+    } finally {
+      endActivity(activityId);
     }
   };
 
@@ -63,9 +69,18 @@ export default function AgentScreen({ agentId, onLogout }: AgentScreenProps) {
     dispositionType: string,
     note: string = ""
   ) => {
+    const activityId = `disposition-change-${bookingId}`;
+    startActivity(activityId);
+    
     try {
+      // Optimistic update
+      optimisticUpdate(bookingId, { 
+        disposition_code: dispositionType,
+        disposition_note: note 
+      });
+      
       await saveDisposition(bookingId, dispositionType, note);
-      setRefresh((prev) => prev + 1);
+      await refetch();
     } catch (err) {
       console.error(err);
       const errorMessage = (err as Error).message || "Error saving disposition";
@@ -73,8 +88,12 @@ export default function AgentScreen({ agentId, onLogout }: AgentScreenProps) {
       if (errorMessage.includes("Authentication required")) {
         onLogout();
       } else {
+        // Revert optimistic update on error
+        await refetch();
         alert(errorMessage);
       }
+    } finally {
+      endActivity(activityId);
     }
   };
 
@@ -89,13 +108,33 @@ export default function AgentScreen({ agentId, onLogout }: AgentScreenProps) {
     (b) => b.status.toLowerCase() === "completed"
   );
 
-  if (loading) return <p className="p-6 text-center">Loading bookings...</p>;
-  if (error) return <p className="p-6 text-center text-red-500">{error}</p>;
+  if (loading) {
+    return (
+      <Box sx={{ backgroundColor: 'background.default', minHeight: '100vh' }}>
+        <TopBar onLogOut={onLogout} />
+        <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '50vh', flexDirection: 'column', gap: 2 }}>
+          <CircularProgress />
+          <Typography color="text.primary">Loading bookings...</Typography>
+        </Box>
+      </Box>
+    );
+  }
+  
+  if (error) {
+    return (
+      <Box sx={{ backgroundColor: 'background.default', minHeight: '100vh' }}>
+        <TopBar onLogOut={onLogout} />
+        <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '50vh' }}>
+          <Typography color="error.main">{error}</Typography>
+        </Box>
+      </Box>
+    );
+  }
 
   return (
-    <div className="bg-gray-900 min-h-screen">
+    <Box sx={{ backgroundColor: 'background.default', minHeight: '100vh' }}>
       <TopBar onLogOut={onLogout} />
-      <main className="mx-auto max-w-7xl px-4 py-6">
+      <Container component="main" maxWidth="xl" sx={{ py: 3 }}>
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
           {/* Scheduled */}
           <QueueCard
@@ -110,23 +149,25 @@ export default function AgentScreen({ agentId, onLogout }: AgentScreenProps) {
                   : "Address hidden until on route";
 
               return (
-                <div key={appt.bookingId} className="mb-2">
+                <Box key={appt.bookingId} sx={{ mb: 2 }}>
                   <AppointmentCard
                     appt={appt}
                     addressText={addressText ?? ""}
                   />
-                  <select
-                    className="select mt-1 w-full"
-                    value={appt.status}
-                    onChange={(e) =>
-                      handleStatusChange(appt.bookingId, e.target.value)
-                    }
-                  >
-                    <option value="scheduled">Scheduled</option>
-                    <option value="in-progress">En Route / On Site</option>
-                    <option value="completed">Completed</option>
-                  </select>
-                </div>
+                  <FormControl fullWidth sx={{ mt: 1 }}>
+                    <Select
+                      value={appt.status}
+                      onChange={(e) =>
+                        handleStatusChange(appt.bookingId, e.target.value)
+                      }
+                      size="small"
+                    >
+                      <MenuItem value="scheduled">Scheduled</MenuItem>
+                      <MenuItem value="in-progress">En Route / On Site</MenuItem>
+                      <MenuItem value="completed">Completed</MenuItem>
+                    </Select>
+                  </FormControl>
+                </Box>
               );
             })}
           </QueueCard>
@@ -144,23 +185,25 @@ export default function AgentScreen({ agentId, onLogout }: AgentScreenProps) {
                   : "Address hidden until on route";
 
               return (
-                <div key={appt.bookingId} className="mb-2">
+                <Box key={appt.bookingId} sx={{ mb: 2 }}>
                   <AppointmentCard
                     appt={appt}
                     addressText={addressText ?? ""}
                   />
-                  <select
-                    className="select mt-1 w-full"
-                    value={appt.status}
-                    onChange={(e) =>
-                      handleStatusChange(appt.bookingId, e.target.value)
-                    }
-                  >
-                    <option value="scheduled">Scheduled</option>
-                    <option value="in-progress">En Route / On Site</option>
-                    <option value="completed">Completed</option>
-                  </select>
-                </div>
+                  <FormControl fullWidth sx={{ mt: 1 }}>
+                    <Select
+                      value={appt.status}
+                      onChange={(e) =>
+                        handleStatusChange(appt.bookingId, e.target.value)
+                      }
+                      size="small"
+                    >
+                      <MenuItem value="scheduled">Scheduled</MenuItem>
+                      <MenuItem value="in-progress">En Route / On Site</MenuItem>
+                      <MenuItem value="completed">Completed</MenuItem>
+                    </Select>
+                  </FormControl>
+                </Box>
               );
             })}
           </QueueCard>
@@ -180,7 +223,7 @@ export default function AgentScreen({ agentId, onLogout }: AgentScreenProps) {
             ))}
           </QueueCard>
         </div>
-      </main>
-    </div>
+      </Container>
+    </Box>
   );
 }

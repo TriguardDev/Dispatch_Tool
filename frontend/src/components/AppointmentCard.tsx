@@ -1,64 +1,63 @@
 import type { Booking } from "../api/crud";
+import { Card, CardContent, Typography, Chip, Box } from "@mui/material";
 
 interface Props {
   appt: Booking;
   addressText: string;
 }
 
-const statusColors: Record<Booking["status"], string> = {
-  "in-progress": "bg-blue-50 text-blue-700",
-  scheduled: "bg-amber-50 text-amber-700",
-  completed: "bg-green-50 text-green-700",
+const statusColors: Record<Booking["status"], "primary" | "warning" | "success"> = {
+  "in-progress": "primary",
+  scheduled: "warning", 
+  completed: "success",
 };
 
 export default function AppointmentCard({ appt, addressText }: Props) {
   return (
-    <div className="card p-3 bg-gray-900  rounded shadow-sm">
-      <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0">
-          {/* Customer Name and Status */}
-          <div className="flex items-center gap-2 flex-wrap">
-            <h4 className="font-semibold truncate max-w-[20ch]">
-              {appt.customer_name}
-            </h4>
-            <span className={`badge ${statusColors[appt.status]}`}>
-              {appt.status}
-            </span>
-          </div>
-          <div className="text-xs text-gray-400  mt-1">
-            {addressText}
-          </div>
+    <Card variant="outlined" sx={{ mb: 1 }}>
+      <CardContent sx={{ p: 2, '&:last-child': { pb: 2 } }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap', mb: 1 }}>
+          <Typography variant="subtitle1" fontWeight="600" noWrap sx={{ maxWidth: '20ch' }}>
+            {appt.customer_name}
+          </Typography>
+          <Chip 
+            label={appt.status} 
+            color={statusColors[appt.status]}
+            size="small"
+            variant="filled"
+          />
+        </Box>
+        
+        <Typography variant="caption" color="text.secondary" display="block">
+          {addressText}
+        </Typography>
 
-          {/* Booking Date and Time */}
-          <div className="text-xs text-gray-400  mt-1">
-            {appt.booking_date} · {appt.booking_time}
-          </div>
+        <Typography variant="caption" color="text.secondary" display="block" sx={{ mt: 0.5 }}>
+          {appt.booking_date} · {appt.booking_time}
+        </Typography>
 
-          {/* Agent Name */}
-          {appt.agent_name && (
-            <div className="text-sm text-gray-200  mt-1">
-              Assigned to: {appt.agent_name}
-            </div>
-          )}
+        {appt.agent_name && (
+          <Typography variant="body2" color="text.primary" sx={{ mt: 0.5 }}>
+            Assigned to: {appt.agent_name}
+          </Typography>
+        )}
 
-          {/* Disposition info */}
-          {appt.disposition_description ? (
-            <p className="text-sm text-green-700 font-medium">
-              Disposition: {appt.disposition_description}
-            </p>
-          ) : (
-            <p className="text-sm text-gray-400 italic">
-              No disposition yet
-            </p>
-          )}
+        {appt.disposition_description ? (
+          <Typography variant="body2" color="success.main" fontWeight="500" sx={{ mt: 1 }}>
+            Disposition: {appt.disposition_description}
+          </Typography>
+        ) : (
+          <Typography variant="body2" color="text.secondary" fontStyle="italic" sx={{ mt: 1 }}>
+            No disposition yet
+          </Typography>
+        )}
 
-          {appt.disposition_note && (
-            <p className="mt-2 text-sm text-gray-200 ">
-              <span className="font-semibold">Note:</span> {appt.disposition_note}
-            </p>
-          )}
-        </div>
-      </div>
-    </div>
+        {appt.disposition_note && (
+          <Typography variant="body2" color="text.primary" sx={{ mt: 1 }}>
+            <Typography component="span" fontWeight="600">Note:</Typography> {appt.disposition_note}
+          </Typography>
+        )}
+      </CardContent>
+    </Card>
   );
 }

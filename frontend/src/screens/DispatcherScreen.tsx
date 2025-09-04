@@ -1,61 +1,89 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
+import { Box, Typography, CircularProgress, Container } from "@mui/material";
 import TopBar from "../components/TopBar";
 import Filters from "../components/Filters";
 import QueueCard from "../components/QueueCard";
 import AppointmentCard from "../components/AppointmentCard";
 import NewAppointmentModal from "../components/NewAppointmentModal";
 import { getAllBookings, type Booking } from "../api/crud";
+import { useSmartPolling } from "../hooks/useSmartPolling";
+import { useUserActivity } from "../hooks/useUserActivity";
 
 interface DispatcherScreenProps {
   onLogout: () => void;
 }
 
 export default function DispatcherScreen({ onLogout }: DispatcherScreenProps) {
-  const [bookings, setBookings] = useState<Booking[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [refreshBookings, setRefreshBookings] = useState(0);
+  const { startActivity, endActivity } = useUserActivity();
+  
+  const {
+    data: bookings,
+    loading,
+    error,
+    refetch,
+    pausePolling,
+    resumePolling
+  } = useSmartPolling({
+    fetchFunction: getAllBookings,
+    onLogout
+  });
 
-  useEffect(() => {
-    async function fetchBookings() {
-      try {
-        setLoading(true);
-        const data = await getAllBookings();
-        setBookings(data);
-        setLoading(false);
-      } catch (err: unknown) {
-        console.error("Error fetching bookings:", err);
-        const errorMessage = (err as Error).message || "Failed to fetch bookings";
-        setError(errorMessage);
-        setLoading(false);
-        
-        // If authentication error, might need to re-login
-        if (errorMessage.includes("Authentication required")) {
-          onLogout();
-        }
-      }
-    }
+  // Handle modal state changes to pause/resume polling
+  const handleModalOpen = () => {
+    setIsModalOpen(true);
+    startActivity('new-appointment-modal');
+    pausePolling();
+  };
 
-    fetchBookings();
+  const handleModalClose = () => {
+    setIsModalOpen(false);
+    endActivity('new-appointment-modal');
+    resumePolling();
+  };
 
-    const interval = setInterval(fetchBookings, 30000); // Poll every 30 seconds
-    return () => clearInterval(interval);
-  }, [refreshBookings, onLogout]);
+  const handleModalSave = () => {
+    handleModalClose();
+    refetch(); // Refresh data after saving
+  };
 
   // Categorize bookings by status
   const scheduled = bookings.filter((b) => ["scheduled"].includes(b.status.toLowerCase()));
   const active = bookings.filter((b) => ["in-progress"].includes(b.status.toLowerCase()));
   const completed = bookings.filter((b) => ["completed"].includes(b.status.toLowerCase()));
 
-  if (loading) return <p className="p-6 text-center">Loading bookings...</p>;
-  if (error) return <p className="p-6 text-center text-red-500">{error}</p>;
+  if (loading) {
+    return (
+      <Box sx={{ backgroundColor: 'background.default', minHeight: '100vh' }}>
+        <TopBar onLogOut={onLogout} />
+        <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '50vh', flexDirection: 'column', gap: 2 }}>
+          <CircularProgress />
+          <Typography color="text.primary">Loading bookings...</Typography>
+        </Box>
+      </Box>
+    );
+  }
+  
+  if (error) {
+    return (
+      <Box sx={{ backgroundColor: 'background.default', minHeight: '100vh' }}>
+        <TopBar onLogOut={onLogout} />
+        <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '50vh' }}>
+          <Typography color="error.main">{error}</Typography>
+        </Box>
+      </Box>
+    );
+  }
 
   return (
-    <div className="bg-gray-900 min-h-screen">
+    <Box sx={{ backgroundColor: 'background.default', minHeight: '100vh' }}>
       <TopBar onLogOut={onLogout} />
-      <main className="mx-auto max-w-7xl px-4 py-6">
-        <Filters onNewAppt={() => setIsModalOpen(true)} />
+      <Container component="main" maxWidth="xl" sx={{ py: 3 }}>
+        <Filters 
+          onNewAppt={handleModalOpen} 
+          onRefresh={refetch}
+          refreshing={loading}
+        />
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
           <QueueCard
@@ -97,14 +125,14 @@ export default function DispatcherScreen({ onLogout }: DispatcherScreenProps) {
             ))}
           </QueueCard>
         </div>
-      </main>
+      </Container>
 
       <NewAppointmentModal
         isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
-        onSave={() => setRefreshBookings((prev) => prev + 1)}
+        onClose={handleModalClose}
+        onSave={handleModalSave}
         onLogout={onLogout}
       />
-    </div>
+    </Box>
   );
 }
