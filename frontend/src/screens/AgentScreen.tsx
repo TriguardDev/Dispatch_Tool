@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { Box, Typography, CircularProgress, Container, Select, MenuItem, FormControl } from "@mui/material";
 import TopBar from "../components/TopBar";
 import QueueCard from "../components/QueueCard";
 import AppointmentCard from "../components/AppointmentCard";
@@ -89,13 +90,33 @@ export default function AgentScreen({ agentId, onLogout }: AgentScreenProps) {
     (b) => b.status.toLowerCase() === "completed"
   );
 
-  if (loading) return <p className="p-6 text-center">Loading bookings...</p>;
-  if (error) return <p className="p-6 text-center text-red-500">{error}</p>;
+  if (loading) {
+    return (
+      <Box sx={{ backgroundColor: 'background.default', minHeight: '100vh' }}>
+        <TopBar onLogOut={onLogout} />
+        <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '50vh', flexDirection: 'column', gap: 2 }}>
+          <CircularProgress />
+          <Typography color="text.primary">Loading bookings...</Typography>
+        </Box>
+      </Box>
+    );
+  }
+  
+  if (error) {
+    return (
+      <Box sx={{ backgroundColor: 'background.default', minHeight: '100vh' }}>
+        <TopBar onLogOut={onLogout} />
+        <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '50vh' }}>
+          <Typography color="error.main">{error}</Typography>
+        </Box>
+      </Box>
+    );
+  }
 
   return (
-    <div className="bg-gray-900 min-h-screen">
+    <Box sx={{ backgroundColor: 'background.default', minHeight: '100vh' }}>
       <TopBar onLogOut={onLogout} />
-      <main className="mx-auto max-w-7xl px-4 py-6">
+      <Container component="main" maxWidth="xl" sx={{ py: 3 }}>
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
           {/* Scheduled */}
           <QueueCard
@@ -110,23 +131,25 @@ export default function AgentScreen({ agentId, onLogout }: AgentScreenProps) {
                   : "Address hidden until on route";
 
               return (
-                <div key={appt.bookingId} className="mb-2">
+                <Box key={appt.bookingId} sx={{ mb: 2 }}>
                   <AppointmentCard
                     appt={appt}
                     addressText={addressText ?? ""}
                   />
-                  <select
-                    className="select mt-1 w-full"
-                    value={appt.status}
-                    onChange={(e) =>
-                      handleStatusChange(appt.bookingId, e.target.value)
-                    }
-                  >
-                    <option value="scheduled">Scheduled</option>
-                    <option value="in-progress">En Route / On Site</option>
-                    <option value="completed">Completed</option>
-                  </select>
-                </div>
+                  <FormControl fullWidth sx={{ mt: 1 }}>
+                    <Select
+                      value={appt.status}
+                      onChange={(e) =>
+                        handleStatusChange(appt.bookingId, e.target.value)
+                      }
+                      size="small"
+                    >
+                      <MenuItem value="scheduled">Scheduled</MenuItem>
+                      <MenuItem value="in-progress">En Route / On Site</MenuItem>
+                      <MenuItem value="completed">Completed</MenuItem>
+                    </Select>
+                  </FormControl>
+                </Box>
               );
             })}
           </QueueCard>
@@ -144,23 +167,25 @@ export default function AgentScreen({ agentId, onLogout }: AgentScreenProps) {
                   : "Address hidden until on route";
 
               return (
-                <div key={appt.bookingId} className="mb-2">
+                <Box key={appt.bookingId} sx={{ mb: 2 }}>
                   <AppointmentCard
                     appt={appt}
                     addressText={addressText ?? ""}
                   />
-                  <select
-                    className="select mt-1 w-full"
-                    value={appt.status}
-                    onChange={(e) =>
-                      handleStatusChange(appt.bookingId, e.target.value)
-                    }
-                  >
-                    <option value="scheduled">Scheduled</option>
-                    <option value="in-progress">En Route / On Site</option>
-                    <option value="completed">Completed</option>
-                  </select>
-                </div>
+                  <FormControl fullWidth sx={{ mt: 1 }}>
+                    <Select
+                      value={appt.status}
+                      onChange={(e) =>
+                        handleStatusChange(appt.bookingId, e.target.value)
+                      }
+                      size="small"
+                    >
+                      <MenuItem value="scheduled">Scheduled</MenuItem>
+                      <MenuItem value="in-progress">En Route / On Site</MenuItem>
+                      <MenuItem value="completed">Completed</MenuItem>
+                    </Select>
+                  </FormControl>
+                </Box>
               );
             })}
           </QueueCard>
@@ -180,7 +205,7 @@ export default function AgentScreen({ agentId, onLogout }: AgentScreenProps) {
             ))}
           </QueueCard>
         </div>
-      </main>
-    </div>
+      </Container>
+    </Box>
   );
 }

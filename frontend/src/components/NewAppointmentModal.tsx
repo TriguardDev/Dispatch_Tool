@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useTheme } from "@mui/material/styles";
 import { findLatLong } from "../api/location_conversion";
 import { createBooking, searchAgents } from "../api/crud";
 import AgentSelector from "./AgentSelector";
@@ -18,6 +19,7 @@ interface Agent {
 }
 
 export default function NewAppointmentModal({ isOpen, onClose, onSave, onLogout }: Props) {
+  const theme = useTheme();
   const [form, setForm] = useState({
     name: "",
     email: "",
@@ -150,7 +152,8 @@ export default function NewAppointmentModal({ isOpen, onClose, onSave, onLogout 
     <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
       <form
         onSubmit={handleSave}
-        className="card bg-gray-900  w-[min(680px,95vw)] max-h-[90vh] overflow-y-auto"
+        className="card w-[min(680px,95vw)] max-h-[90vh] overflow-y-auto"
+        style={{ backgroundColor: theme.palette.background.paper }}
       >
         {/* Header */}
         <header className="px-4 py-3 border-b border-gray-100 flex items-center justify-between">

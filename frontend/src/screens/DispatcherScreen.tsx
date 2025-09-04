@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { Box, Typography, CircularProgress, Container } from "@mui/material";
 import TopBar from "../components/TopBar";
 import Filters from "../components/Filters";
 import QueueCard from "../components/QueueCard";
@@ -48,13 +49,33 @@ export default function DispatcherScreen({ onLogout }: DispatcherScreenProps) {
   const active = bookings.filter((b) => ["in-progress"].includes(b.status.toLowerCase()));
   const completed = bookings.filter((b) => ["completed"].includes(b.status.toLowerCase()));
 
-  if (loading) return <p className="p-6 text-center">Loading bookings...</p>;
-  if (error) return <p className="p-6 text-center text-red-500">{error}</p>;
+  if (loading) {
+    return (
+      <Box sx={{ backgroundColor: 'background.default', minHeight: '100vh' }}>
+        <TopBar onLogOut={onLogout} />
+        <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '50vh', flexDirection: 'column', gap: 2 }}>
+          <CircularProgress />
+          <Typography color="text.primary">Loading bookings...</Typography>
+        </Box>
+      </Box>
+    );
+  }
+  
+  if (error) {
+    return (
+      <Box sx={{ backgroundColor: 'background.default', minHeight: '100vh' }}>
+        <TopBar onLogOut={onLogout} />
+        <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '50vh' }}>
+          <Typography color="error.main">{error}</Typography>
+        </Box>
+      </Box>
+    );
+  }
 
   return (
-    <div className="bg-gray-900 min-h-screen">
+    <Box sx={{ backgroundColor: 'background.default', minHeight: '100vh' }}>
       <TopBar onLogOut={onLogout} />
-      <main className="mx-auto max-w-7xl px-4 py-6">
+      <Container component="main" maxWidth="xl" sx={{ py: 3 }}>
         <Filters onNewAppt={() => setIsModalOpen(true)} />
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
@@ -97,7 +118,7 @@ export default function DispatcherScreen({ onLogout }: DispatcherScreenProps) {
             ))}
           </QueueCard>
         </div>
-      </main>
+      </Container>
 
       <NewAppointmentModal
         isOpen={isModalOpen}
@@ -105,6 +126,6 @@ export default function DispatcherScreen({ onLogout }: DispatcherScreenProps) {
         onSave={() => setRefreshBookings((prev) => prev + 1)}
         onLogout={onLogout}
       />
-    </div>
+    </Box>
   );
 }
