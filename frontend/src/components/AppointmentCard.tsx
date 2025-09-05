@@ -1,11 +1,13 @@
+import { useState } from "react";
 import type { Booking } from "../api/crud";
-import { Card, CardContent, Typography, Chip, Box, Divider, Select, MenuItem, FormControl } from "@mui/material";
+import { Card, CardContent, Typography, Chip, Box, Divider, Select, MenuItem, FormControl, TextField, Button, InputLabel } from "@mui/material";
 import { AccessTime, LocationOn, Person, Assignment } from "@mui/icons-material";
 
 interface Props {
   appt: Booking;
   addressText: string;
   onStatusChange?: (bookingId: number, status: string) => void;
+  onDispositionSave?: (bookingId: number, dispositionType: string, note: string) => void;
 }
 
 const statusColors: Record<Booking["status"], "primary" | "warning" | "success"> = {
@@ -20,7 +22,8 @@ const statusLabels: Record<Booking["status"], string> = {
   completed: "Completed",
 };
 
-export default function AppointmentCard({ appt, addressText, onStatusChange }: Props) {
+export default function AppointmentCard({ appt, addressText, onStatusChange, onDispositionSave }: Props) {
+  const [note, setNote] = useState("");
   return (
     <Card 
       variant="outlined" 
@@ -155,7 +158,7 @@ export default function AppointmentCard({ appt, addressText, onStatusChange }: P
         )}
 
         {/* Status Change Form */}
-        {onStatusChange && (
+        {onStatusChange && appt.status !== 'completed' && (
           <>
             <Divider sx={{ my: 1.5 }} />
             <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1 }}>
@@ -205,6 +208,76 @@ export default function AppointmentCard({ appt, addressText, onStatusChange }: P
                     </MenuItem>
                   </Select>
                 </FormControl>
+              </Box>
+            </Box>
+          </>
+        )}
+
+        {/* Disposition Form for Completed Appointments */}
+        {appt.status === 'completed' && onDispositionSave && (
+          <>
+            <Divider sx={{ my: 1.5 }} />
+            <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1 }}>
+              <Assignment sx={{ fontSize: 16, color: 'success.main', mt: 0.1 }} />
+              <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 2 }}>
+                <Typography variant="body2" color="text.secondary" fontWeight="600">
+                  Disposition & Note
+                </Typography>
+                
+                <FormControl fullWidth size="small">
+                  <InputLabel id="disposition-label">Disposition</InputLabel>
+                  <Select
+                    labelId="disposition-label"
+                    label="Disposition"
+                    value={appt.disposition_code || ""}
+                    onChange={(e) => onDispositionSave(appt.bookingId, e.target.value, note)}
+                    sx={{
+                      '& .MuiSelect-select': {
+                        py: 1,
+                        fontSize: '0.875rem',
+                      },
+                    }}
+                  >
+                    <MenuItem value="">Select Disposition</MenuItem>
+                    <MenuItem value="SOLD_CASH_PIF">Sold – Cash Deal (Paid in Full)</MenuItem>
+                    <MenuItem value="SOLD_CHECK_COLLECTED">Sold – Check Collected</MenuItem>
+                    <MenuItem value="SOLD_CARD_ACH_SUBMITTED">Sold – Card/ACH Payment Submitted</MenuItem>
+                    <MenuItem value="SOLD_DEPOSIT_COLLECTED">Sold – Deposit Collected (Balance Due)</MenuItem>
+                    <MenuItem value="SOLD_LENDER_SUBMITTED">Sold – Lender Financing Submitted</MenuItem>
+                    <MenuItem value="SOLD_LENDER_APPROVED_DOCS">Sold – Lender Approved (Docs Signed)</MenuItem>
+                    <MenuItem value="SOLD_FUNDED">Sold – Funded (Lender Disbursed)</MenuItem>
+                    <MenuItem value="SOLD_LENDER_DECLINED">Sold – Lender Declined</MenuItem>
+                    <MenuItem value="SOLD_IN_HOUSE_PLAN">Sold – Payment Plan (In-House)</MenuItem>
+                    <MenuItem value="SOLD_FINAL_PAYMENT">Sold – Balance Paid (Final Payment)</MenuItem>
+                    <MenuItem value="SOLD_RESCINDED_REVERSED">Sale Rescinded / Payment Reversed</MenuItem>
+                  </Select>
+                </FormControl>
+
+                <TextField
+                  multiline
+                  rows={3}
+                  placeholder="Add a note (optional)..."
+                  value={note}
+                  onChange={(e) => setNote(e.target.value)}
+                  variant="outlined"
+                  size="small"
+                  fullWidth
+                  label="Note"
+                  sx={{
+                    '& .MuiInputBase-root': {
+                      fontSize: '0.875rem',
+                    },
+                  }}
+                />
+
+                <Button
+                  variant="contained"
+                  size="small"
+                  onClick={() => onDispositionSave(appt.bookingId, appt.disposition_code || "", note)}
+                  sx={{ alignSelf: 'flex-start', px: 3 }}
+                >
+                  Save Disposition + Note
+                </Button>
               </Box>
             </Box>
           </>

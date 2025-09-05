@@ -4,7 +4,6 @@ import TopBar from "../components/TopBar";
 import QueueCard from "../components/QueueCard";
 import AppointmentCard from "../components/AppointmentCard";
 import { type Booking, getAgentBookings, updateBookingStatus, saveDisposition } from "../api/crud";
-import { CompletedAppointmentCard } from "../components/CompletedAppointmentCard";
 import { useSmartPolling } from "../hooks/useSmartPolling";
 
 interface AgentScreenProps {
@@ -177,10 +176,11 @@ export default function AgentScreen({ agentId, onLogout }: AgentScreenProps) {
             count={completed.length}
           >
             {completed.map((appt) => (
-              <CompletedAppointmentCard
+              <AppointmentCard
                 key={appt.bookingId}
                 appt={appt}
-                onSave={handleDispositionChange}
+                addressText={appt.customer_address ?? ""}
+                onDispositionSave={handleDispositionChange}
               />
             ))}
           </QueueCard>
