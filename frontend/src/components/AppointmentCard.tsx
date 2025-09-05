@@ -24,6 +24,18 @@ const statusLabels: Record<Booking["status"], string> = {
 
 export default function AppointmentCard({ appt, addressText, onStatusChange, onDispositionSave }: Props) {
   const [note, setNote] = useState("");
+  const [selectedDisposition, setSelectedDisposition] = useState(appt.disposition_code || "");
+  const [dispositionSaved, setDispositionSaved] = useState(false);
+
+  // Check if disposition already exists (already saved)
+  const hasExistingDisposition = appt.disposition_code && appt.disposition_code !== "";
+
+  const handleDispositionSave = () => {
+    if (onDispositionSave) {
+      onDispositionSave(appt.bookingId, selectedDisposition, note);
+      setDispositionSaved(true);
+    }
+  };
   return (
     <Card 
       variant="outlined" 
@@ -214,7 +226,7 @@ export default function AppointmentCard({ appt, addressText, onStatusChange, onD
         )}
 
         {/* Disposition Form for Completed Appointments */}
-        {appt.status === 'completed' && onDispositionSave && (
+        {appt.status === 'completed' && onDispositionSave && !dispositionSaved && !hasExistingDisposition && (
           <>
             <Divider sx={{ my: 1.5 }} />
             <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1 }}>
@@ -229,8 +241,8 @@ export default function AppointmentCard({ appt, addressText, onStatusChange, onD
                   <Select
                     labelId="disposition-label"
                     label="Disposition"
-                    value={appt.disposition_code || ""}
-                    onChange={(e) => onDispositionSave(appt.bookingId, e.target.value, note)}
+                    value={selectedDisposition}
+                    onChange={(e) => setSelectedDisposition(e.target.value)}
                     sx={{
                       '& .MuiSelect-select': {
                         py: 1,
@@ -273,7 +285,7 @@ export default function AppointmentCard({ appt, addressText, onStatusChange, onD
                 <Button
                   variant="contained"
                   size="small"
-                  onClick={() => onDispositionSave(appt.bookingId, appt.disposition_code || "", note)}
+                  onClick={handleDispositionSave}
                   sx={{ alignSelf: 'flex-start', px: 3 }}
                 >
                   Save Disposition + Note
