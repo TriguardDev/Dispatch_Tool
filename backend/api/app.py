@@ -6,6 +6,7 @@ from routes.disposition import disposition_bp
 from routes.search import search_bp
 from routes.auth import auth_bp
 from routes.admin import admin_bp
+from routes.dispatcher import dispatcher_bp
 from config import Config
 from extensions import mail
 
@@ -32,6 +33,7 @@ def create_app():
     app.register_blueprint(search_bp)
     app.register_blueprint(auth_bp)
     app.register_blueprint(admin_bp)
+    app.register_blueprint(dispatcher_bp)
     
     app.config["MAIL_SERVER"] = Config.MAIL_SERVER
     app.config["MAIL_PORT"] = Config.MAIL_PORT

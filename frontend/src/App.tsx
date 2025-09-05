@@ -5,6 +5,7 @@ import { lightTheme, darkTheme } from "./theme/theme";
 import LoginForm from "./components/LoginForm";
 import DispatcherScreen from "./screens/DispatcherScreen";
 import AgentScreen from "./screens/AgentScreen";
+import AdminScreen from "./screens/AdminScreen";
 import { verifyAuth, type LoginResponse } from "./api/login";
 
 function AppContent() {
@@ -71,7 +72,7 @@ function AppContent() {
   }
 
   if (user.role === "admin") {
-    return <DispatcherScreen onLogout={handleLogout} />; // For now, admins see the dispatcher screen
+    return <AdminScreen onLogout={handleLogout} />;
   }
 
   return null;
