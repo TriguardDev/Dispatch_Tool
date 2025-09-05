@@ -6,7 +6,6 @@ import AppointmentCard from "../components/AppointmentCard";
 import { type Booking, getAgentBookings, updateBookingStatus, saveDisposition } from "../api/crud";
 import { CompletedAppointmentCard } from "../components/CompletedAppointmentCard";
 import { useSmartPolling } from "../hooks/useSmartPolling";
-import { useUserActivity } from "../hooks/useUserActivity";
 
 interface AgentScreenProps {
   agentId: number; // passed from login
@@ -14,7 +13,6 @@ interface AgentScreenProps {
 }
 
 export default function AgentScreen({ agentId, onLogout }: AgentScreenProps) {
-  const { startActivity, endActivity } = useUserActivity();
   
   // Memoize the fetch function to prevent unnecessary re-renders
   const fetchAgentBookings = React.useCallback(() => {
@@ -36,9 +34,6 @@ export default function AgentScreen({ agentId, onLogout }: AgentScreenProps) {
   });
 
   const handleStatusChange = async (bookingId: number, status: string) => {
-    const activityId = `status-change-${bookingId}`;
-    startActivity(activityId);
-    
     try {
       // Optimistic update - immediately update UI
       optimisticUpdate(bookingId, { status: status as Booking['status'] });
@@ -59,8 +54,6 @@ export default function AgentScreen({ agentId, onLogout }: AgentScreenProps) {
         await refetch();
         alert(errorMessage);
       }
-    } finally {
-      endActivity(activityId);
     }
   };
 
@@ -69,9 +62,6 @@ export default function AgentScreen({ agentId, onLogout }: AgentScreenProps) {
     dispositionType: string,
     note: string = ""
   ) => {
-    const activityId = `disposition-change-${bookingId}`;
-    startActivity(activityId);
-    
     try {
       // Optimistic update
       optimisticUpdate(bookingId, { 
@@ -92,8 +82,6 @@ export default function AgentScreen({ agentId, onLogout }: AgentScreenProps) {
         await refetch();
         alert(errorMessage);
       }
-    } finally {
-      endActivity(activityId);
     }
   };
 

@@ -7,7 +7,6 @@ import AppointmentCard from "../components/AppointmentCard";
 import NewAppointmentModal from "../components/NewAppointmentModal";
 import { getAllBookings, type Booking } from "../api/crud";
 import { useSmartPolling } from "../hooks/useSmartPolling";
-import { useUserActivity } from "../hooks/useUserActivity";
 
 interface DispatcherScreenProps {
   onLogout: () => void;
@@ -15,7 +14,6 @@ interface DispatcherScreenProps {
 
 export default function DispatcherScreen({ onLogout }: DispatcherScreenProps) {
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const { startActivity, endActivity } = useUserActivity();
   
   const {
     data: bookings,
@@ -32,13 +30,11 @@ export default function DispatcherScreen({ onLogout }: DispatcherScreenProps) {
   // Handle modal state changes to pause/resume polling
   const handleModalOpen = () => {
     setIsModalOpen(true);
-    startActivity('new-appointment-modal');
     pausePolling();
   };
 
   const handleModalClose = () => {
     setIsModalOpen(false);
-    endActivity('new-appointment-modal');
     resumePolling();
   };
 

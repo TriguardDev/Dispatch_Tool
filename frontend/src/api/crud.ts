@@ -17,7 +17,7 @@ export interface Booking {
 }
 
 export async function getAllBookings(): Promise<Booking[]> {
-  const res = await authenticatedFetch(`${BASE_URL}/booking`);
+  const res = await authenticatedFetch(`${BASE_URL}/bookings`);
 
   if (!res.ok) {
     if (res.status === 401) {
@@ -26,20 +26,28 @@ export async function getAllBookings(): Promise<Booking[]> {
     throw new Error("Failed to fetch bookings");
   }
 
-  return res.json();
+  const result = await res.json();
+  return result.success ? result.data : [];
 }
 
 export async function getAgentBookings(agentId: number): Promise<Booking[]> {
-  const res = await authenticatedFetch(`${BASE_URL}/booking?agentId=${agentId}`);
+  const res = await authenticatedFetch(`${BASE_URL}/agents/${agentId}/bookings`);
 
   if (!res.ok) {
     if (res.status === 401) {
       throw new Error("Authentication required");
     }
+    if (res.status === 403) {
+      throw new Error("Access denied");
+    }
+    if (res.status === 404) {
+      throw new Error("Agent not found");
+    }
     throw new Error("Failed to fetch bookings");
   }
 
-  return res.json();
+  const result = await res.json();
+  return result.success ? result.data : [];
 }
 
 export async function updateBookingStatus(bookingId: number, status: string): Promise<void> {
@@ -61,7 +69,7 @@ export async function updateBookingStatus(bookingId: number, status: string): Pr
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export async function createBooking(bookingData: any): Promise<any> {
-  const res = await authenticatedFetch(`${BASE_URL}/booking`, {
+  const res = await authenticatedFetch(`${BASE_URL}/bookings`, {
     method: "POST",
     body: JSON.stringify(bookingData),
   });
@@ -76,7 +84,8 @@ export async function createBooking(bookingData: any): Promise<any> {
     throw new Error("Failed to create booking");
   }
 
-  return res.json();
+  const result = await res.json();
+  return result.success ? result.data : result;
 }
 
 export async function saveDisposition(
@@ -118,5 +127,6 @@ export async function searchAgents(params: {
     throw new Error("Failed to search agents");
   }
 
-  return res.json();
+  const result = await res.json();
+  return result.success ? result.data : result;
 }

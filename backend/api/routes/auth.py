@@ -17,11 +17,11 @@ def verify_password(password: str, hashed: str) -> bool:
     """Verify a password against its hash"""
     return bcrypt.checkpw(password.encode('utf-8'), hashed.encode('utf-8'))
 
-def generate_jwt_token(user_id: int, user_type: str) -> str:
+def generate_jwt_token(user_id: int, role: str) -> str:
     """Generate a JWT token for a user"""
     payload = {
         'user_id': user_id,
-        'user_type': user_type,
+        'role': role,
         'exp': datetime.utcnow() + timedelta(hours=24),  # Token expires in 24 hours
         'iat': datetime.utcnow()  # Issued at time
     }
@@ -40,30 +40,45 @@ def verify_jwt_token(token: str) -> dict:
 @auth_bp.route("/login", methods=["POST"])
 def login():
     """
-    Authenticate a dispatcher or agent using email/password.
+    Authenticate a user based on role using email/password.
     Returns JWT token in HTTP-only cookie.
     """
     try:
         data = request.get_json()
         email = data.get("email")
         password = data.get("password")
+        role = data.get("role")
 
-        if not email or not password:
-            return jsonify({"success": False, "error": "Missing email or password"}), 400
+        if not email or not password or not role:
+            return jsonify({"success": False, "error": "Missing email, password, or role"}), 400
+
+        if role not in ['dispatcher', 'field_agent', 'admin']:
+            return jsonify({"success": False, "error": "Invalid role"}), 400
 
         conn = get_connection()
         cursor = conn.cursor(dictionary=True)
 
-        # Check dispatchers first
-        cursor.execute("SELECT dispatcherId, password FROM dispatchers WHERE email = %s", (email,))
-        dispatcher = cursor.fetchone()
+        # Define table and ID column mapping based on role
+        role_config = {
+            'dispatcher': {'table': 'dispatchers', 'id_column': 'dispatcherId'},
+            'field_agent': {'table': 'field_agents', 'id_column': 'agentId'},
+            'admin': {'table': 'admins', 'id_column': 'adminId'}
+        }
+
+        config = role_config[role]
         
-        if dispatcher and verify_password(password, dispatcher['password']):
-            token = generate_jwt_token(dispatcher['dispatcherId'], 'dispatcher')
+        # Query the appropriate table based on role
+        query = f"SELECT {config['id_column']}, password FROM {config['table']} WHERE email = %s"
+        cursor.execute(query, (email,))
+        user = cursor.fetchone()
+        
+        if user and verify_password(password, user['password']):
+            user_id = user[config['id_column']]
+            token = generate_jwt_token(user_id, role)
             response = make_response(jsonify({
                 "success": True,
-                "id": dispatcher['dispatcherId'],
-                "user_type": "dispatcher"
+                "id": user_id,
+                "role": role
             }))
             # Set HTTP-only cookie with JWT token
             response.set_cookie(
@@ -71,33 +86,12 @@ def login():
                 token,
                 max_age=24*60*60,  # 24 hours
                 httponly=True,     # Can't be accessed by JavaScript
-                secure=False,       # Only sent over HTTPS
+                secure=False,      # Only sent over HTTPS in production
                 samesite='Lax'     # CSRF protection
             )
             return response, 200
 
-        # Check agents
-        cursor.execute("SELECT agentId, password FROM field_agents WHERE email = %s", (email,))
-        agent = cursor.fetchone()
-        
-        if agent and verify_password(password, agent['password']):
-            token = generate_jwt_token(agent['agentId'], 'agent')
-            response = make_response(jsonify({
-                "success": True,
-                "id": agent['agentId'],
-                "user_type": "agent"
-            }))
-            response.set_cookie(
-                'auth_token', 
-                token,
-                max_age=24*60*60,
-                httponly=True,
-                secure=False,
-                samesite='Lax'
-            )
-            return response, 200
-
-        return jsonify({"success": False, "error": "Invalid email or password"}), 401
+        return jsonify({"success": False, "error": f"Invalid credentials for {role}"}), 401
 
     except Exception as e:
         return jsonify({"success": False, "error": str(e)}), 500
@@ -128,7 +122,7 @@ def verify_token():
         return jsonify({
             "success": True,
             "user_id": payload['user_id'],
-            "user_type": payload['user_type']
+            "role": payload['role']
         }), 200
     
     except Exception as e:
@@ -177,6 +171,21 @@ def hash_existing_passwords():
                     "UPDATE field_agents SET password = %s WHERE agentId = %s",
                     (hashed_pwd, agent['agentId'])
                 )
+
+        # Hash admin passwords (if admin table exists)
+        try:
+            cursor.execute("SELECT adminId, password FROM admins")
+            admins = cursor.fetchall()
+            
+            for admin in admins:
+                if len(admin['password']) < 50:  # Assume it's not hashed if less than 50 chars
+                    hashed_pwd = hash_password(admin['password'])
+                    cursor.execute(
+                        "UPDATE admins SET password = %s WHERE adminId = %s",
+                        (hashed_pwd, admin['adminId'])
+                    )
+        except Exception as e:
+            print(f"Admin table may not exist: {e}")
 
         conn.commit()
         return jsonify({"success": True, "message": "Passwords hashed successfully"}), 200
