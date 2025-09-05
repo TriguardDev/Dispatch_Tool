@@ -1,6 +1,6 @@
 from flask import Blueprint, request, jsonify
 from db import get_connection
-from utils.middleware import require_auth
+from utils.middleware import require_auth, require_admin
 import bcrypt
 
 dispatcher_bp = Blueprint("dispatcher", __name__, url_prefix="/api")
@@ -311,12 +311,10 @@ def update_dispatcher(dispatcher_id):
 
 
 @dispatcher_bp.route("/dispatchers/<int:dispatcher_id>", methods=["DELETE"])
-@require_auth
+@require_admin
 def delete_dispatcher(dispatcher_id):
     """Delete a dispatcher (admin access only)"""
     try:
-        if request.role != 'admin':
-            return jsonify({"success": False, "error": "Admin access required"}), 403
 
         conn = get_connection()
         cursor = conn.cursor(dictionary=True)

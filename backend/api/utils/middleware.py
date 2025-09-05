@@ -94,3 +94,28 @@ def require_agent(f):
             return jsonify({"success": False, "error": str(e)}), 401
     
     return decorated_function
+
+def require_admin(f):
+    """Decorator to require admin role"""
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        try:
+            token = request.cookies.get('auth_token')
+            
+            if not token:
+                return jsonify({"success": False, "error": "Authentication required"}), 401
+            
+            payload = verify_jwt_token(token)
+            
+            if payload['role'] != 'admin':
+                return jsonify({"success": False, "error": "Admin access required"}), 403
+            
+            request.user_id = payload['user_id']
+            request.role = payload['role']
+            
+            return f(*args, **kwargs)
+            
+        except Exception as e:
+            return jsonify({"success": False, "error": str(e)}), 401
+    
+    return decorated_function

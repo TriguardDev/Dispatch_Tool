@@ -1,6 +1,6 @@
 from flask import Blueprint, request, jsonify
 from db import get_connection
-from utils.middleware import require_auth, require_dispatcher
+from utils.middleware import require_auth, require_dispatcher, require_admin
 import bcrypt
 
 agent_bp = Blueprint("agent", __name__, url_prefix="/api")
@@ -247,9 +247,9 @@ def update_agent(agent_id):
 
 
 @agent_bp.route("/agents/<int:agent_id>", methods=["DELETE"])
-@require_dispatcher  # Only dispatchers can delete agents
+@require_admin
 def delete_agent(agent_id):
-    """Delete an agent (dispatcher access only)"""
+    """Delete an agent (admin access only)"""
     try:
         conn = get_connection()
         cursor = conn.cursor(dictionary=True)
