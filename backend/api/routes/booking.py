@@ -1,6 +1,6 @@
 from flask import Blueprint, request, jsonify
 from db import get_connection
-from utils.notifier import send_sms, send_email
+from utils.async_notifier import send_notifications_async, prepare_booking_notifications
 from utils.middleware import require_auth, require_dispatcher
 import datetime
 
@@ -67,43 +67,22 @@ def update_booking_status():
         conn.commit()
 
         # -------------------- Notifications -------------------- #
-        # Customer notification
-        customer_message = (
-            f"Hi {res['customer_name']}, the status of your booking on "
-            f"{res['booking_date']} at {res['booking_time']} has been updated to '{new_status}'."
-        )
-
-        # Send Email
-        if res.get("customer_email"):
-          send_email(
-              to_email=res['customer_email'],
-              subject="Booking Status Updated",
-              html_body=f"<p>{customer_message}</p>",
-          )
-
-        # Send SMS
-        if res.get("customer_phone"):
-            send_sms(res['customer_phone'], customer_message)
-
-        # Agent notification
-        if res.get("agent_name"):
-            agent_message = (
-                f"Hi {res['agent_name']}, the status of booking with "
-                f"{res['customer_name']} on {res['booking_date']} at {res['booking_time']} "
-                f"has been updated to '{new_status}'."
-            )
-
-            # Send SMS
-            if res.get("agent_phone"):
-                send_sms(res['agent_phone'], agent_message)
-
-            # Send Email
-            if res.get("agent_email"):
-                send_email(
-                    to_email=res['agent_email'],
-                    subject="Booking Status Updated",
-                    html_body=f"<p>{agent_message}</p>"
-                )
+        # Prepare notification data
+        notification_data = {
+            'customer_name': res['customer_name'],
+            'customer_email': res.get('customer_email'),
+            'customer_phone': res.get('customer_phone'),
+            'agent_name': res.get('agent_name'),
+            'agent_email': res.get('agent_email'),
+            'agent_phone': res.get('agent_phone'),
+            'booking_date': res['booking_date'],
+            'booking_time': res['booking_time'],
+            'status': new_status
+        }
+        
+        # Send notifications asynchronously
+        notifications = prepare_booking_notifications(notification_data, is_update=True)
+        send_notifications_async(notifications)
 
         # TODO: send survey link if completed
         return jsonify({"success": True, "message": "Booking updated"}), 200
@@ -427,39 +406,21 @@ def create_booking():
         conn.commit()
 
         # -------------------- Notifications -------------------- #
-        # Customer notification
-        customer_message = (
-            f"Hi {data['customer']['name']}, your booking with {agent['name']} "
-            f"on {data['booking']['booking_date']} at {data['booking']['booking_time']} has been confirmed."
-        )
+        # Prepare notification data
+        notification_data = {
+            'customer_name': data['customer']['name'],
+            'customer_email': data['customer'].get('email'),
+            'customer_phone': data['customer'].get('phone'),
+            'agent_name': agent['name'],
+            'agent_email': agent.get('email'),
+            'agent_phone': agent.get('phone'),
+            'booking_date': data['booking']['booking_date'],
+            'booking_time': data['booking']['booking_time']
+        }
         
-        # Send SMS
-        if data['customer'].get("phone"):
-            send_sms(data['customer']['phone'], customer_message)
-        # Send Email
-        if data['customer'].get("email"):
-            send_email(
-                to_email=data['customer']['email'],
-                subject="Booking Confirmation",
-                html_body=f"<p>{customer_message}</p>"
-            )
-
-        # Agent notification
-        agent_message = (
-            f"Hi {agent['name']}, you have a new booking with {data['customer']['name']} "
-            f"on {data['booking']['booking_date']} at {data['booking']['booking_time']}."
-        )
-
-        # Send SMS
-        if agent.get("phone"):
-            send_sms(agent['phone'], agent_message)
-        # Send Email
-        if agent.get("email"):
-            send_email(
-                to_email=agent['email'],
-                subject="New Booking Assigned",
-                html_body=f"<p>{agent_message}</p>"
-            )
+        # Send notifications asynchronously
+        notifications = prepare_booking_notifications(notification_data, is_update=False)
+        send_notifications_async(notifications)
 
         # Fetch the created booking with full details
         cursor.execute("""
