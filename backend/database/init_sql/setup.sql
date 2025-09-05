@@ -26,8 +26,11 @@ CREATE TABLE IF NOT EXISTS dispatchers (
     `name` VARCHAR(100) NOT NULL,
     email VARCHAR(100) UNIQUE NOT NULL,
     password VARCHAR(255) NOT NULL,
+    phone VARCHAR(15),
+    location_id INT,
     created_time TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_time TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+    updated_time TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (location_id) REFERENCES locations(id) ON DELETE SET NULL
 );
 
 -- Field Agent Table
@@ -107,9 +110,9 @@ VALUES
 (33.1811789, -96.6291685, '75069', 'McKinney', 'Texas', 'USA', 'Bay Street', '100');
 
 -- Sample Dispatchers
-INSERT INTO dispatchers (`name`, email, password)
+INSERT INTO dispatchers (`name`, email, password, phone, location_id)
 VALUES
-('Pete Stathopoulos', 'pete@triguardroofing.com', 'pete');
+('Pete Stathopoulos', 'pete@triguardroofing.com', 'pete', '555-0001', 1);
 
 -- Sample Field Agents
 INSERT INTO field_agents (`name`, email, password, phone, `status`, location_id)
