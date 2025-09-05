@@ -1,5 +1,5 @@
 import React from "react";
-import { Box, Typography, CircularProgress, Container, Select, MenuItem, FormControl } from "@mui/material";
+import { Box, Typography, CircularProgress, Container } from "@mui/material";
 import TopBar from "../components/TopBar";
 import QueueCard from "../components/QueueCard";
 import AppointmentCard from "../components/AppointmentCard";
@@ -137,25 +137,12 @@ export default function AgentScreen({ agentId, onLogout }: AgentScreenProps) {
                   : "Address hidden until on route";
 
               return (
-                <Box key={appt.bookingId} sx={{ mb: 2 }}>
-                  <AppointmentCard
-                    appt={appt}
-                    addressText={addressText ?? ""}
-                  />
-                  <FormControl fullWidth sx={{ mt: 1 }}>
-                    <Select
-                      value={appt.status}
-                      onChange={(e) =>
-                        handleStatusChange(appt.bookingId, e.target.value)
-                      }
-                      size="small"
-                    >
-                      <MenuItem value="scheduled">Scheduled</MenuItem>
-                      <MenuItem value="in-progress">En Route / On Site</MenuItem>
-                      <MenuItem value="completed">Completed</MenuItem>
-                    </Select>
-                  </FormControl>
-                </Box>
+                <AppointmentCard
+                  key={appt.bookingId}
+                  appt={appt}
+                  addressText={addressText ?? ""}
+                  onStatusChange={handleStatusChange}
+                />
               );
             })}
           </QueueCard>
@@ -173,25 +160,12 @@ export default function AgentScreen({ agentId, onLogout }: AgentScreenProps) {
                   : "Address hidden until on route";
 
               return (
-                <Box key={appt.bookingId} sx={{ mb: 2 }}>
-                  <AppointmentCard
-                    appt={appt}
-                    addressText={addressText ?? ""}
-                  />
-                  <FormControl fullWidth sx={{ mt: 1 }}>
-                    <Select
-                      value={appt.status}
-                      onChange={(e) =>
-                        handleStatusChange(appt.bookingId, e.target.value)
-                      }
-                      size="small"
-                    >
-                      <MenuItem value="scheduled">Scheduled</MenuItem>
-                      <MenuItem value="in-progress">En Route / On Site</MenuItem>
-                      <MenuItem value="completed">Completed</MenuItem>
-                    </Select>
-                  </FormControl>
-                </Box>
+                <AppointmentCard
+                  key={appt.bookingId}
+                  appt={appt}
+                  addressText={addressText ?? ""}
+                  onStatusChange={handleStatusChange}
+                />
               );
             })}
           </QueueCard>

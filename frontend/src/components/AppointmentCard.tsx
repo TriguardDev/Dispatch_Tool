@@ -1,10 +1,11 @@
 import type { Booking } from "../api/crud";
-import { Card, CardContent, Typography, Chip, Box, Divider } from "@mui/material";
+import { Card, CardContent, Typography, Chip, Box, Divider, Select, MenuItem, FormControl } from "@mui/material";
 import { AccessTime, LocationOn, Person, Assignment } from "@mui/icons-material";
 
 interface Props {
   appt: Booking;
   addressText: string;
+  onStatusChange?: (bookingId: number, status: string) => void;
 }
 
 const statusColors: Record<Booking["status"], "primary" | "warning" | "success"> = {
@@ -19,7 +20,7 @@ const statusLabels: Record<Booking["status"], string> = {
   completed: "Completed",
 };
 
-export default function AppointmentCard({ appt, addressText }: Props) {
+export default function AppointmentCard({ appt, addressText, onStatusChange }: Props) {
   return (
     <Card 
       variant="outlined" 
@@ -148,6 +149,62 @@ export default function AppointmentCard({ appt, addressText }: Props) {
                     {appt.disposition_note}
                   </Typography>
                 )}
+              </Box>
+            </Box>
+          </>
+        )}
+
+        {/* Status Change Form */}
+        {onStatusChange && (
+          <>
+            <Divider sx={{ my: 1.5 }} />
+            <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1 }}>
+              <Assignment sx={{ fontSize: 16, color: 'text.secondary', mt: 0.1 }} />
+              <Box sx={{ flex: 1 }}>
+                <Typography variant="body2" color="text.secondary" fontWeight="600" sx={{ mb: 1 }}>
+                  Update Status
+                </Typography>
+                <FormControl fullWidth size="small">
+                  <Select
+                    value={appt.status}
+                    onChange={(e) => onStatusChange(appt.bookingId, e.target.value)}
+                    sx={{
+                      '& .MuiSelect-select': {
+                        py: 1,
+                        fontSize: '0.875rem',
+                        fontWeight: 500,
+                      },
+                      '& .MuiOutlinedInput-notchedOutline': {
+                        borderColor: 'divider',
+                      },
+                      '&:hover .MuiOutlinedInput-notchedOutline': {
+                        borderColor: 'primary.main',
+                      },
+                      '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                        borderWidth: 1,
+                      }
+                    }}
+                  >
+                    <MenuItem value="scheduled">
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <Box sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: 'warning.main' }} />
+                        <Typography variant="body2" fontWeight="500">Scheduled</Typography>
+                      </Box>
+                    </MenuItem>
+                    <MenuItem value="in-progress">
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <Box sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: 'primary.main' }} />
+                        <Typography variant="body2" fontWeight="500">En Route / On Site</Typography>
+                      </Box>
+                    </MenuItem>
+                    <MenuItem value="completed">
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <Box sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: 'success.main' }} />
+                        <Typography variant="body2" fontWeight="500">Completed</Typography>
+                      </Box>
+                    </MenuItem>
+                  </Select>
+                </FormControl>
               </Box>
             </Box>
           </>
