@@ -1,7 +1,7 @@
-import { useState } from "react";
+import { useState, useMemo, useCallback, memo } from "react";
 import type { Booking } from "../api/crud";
-import { Card, CardContent, Typography, Chip, Box, Divider, Select, MenuItem, FormControl, TextField, Button, InputLabel } from "@mui/material";
-import { AccessTime, LocationOn, Person, Assignment } from "@mui/icons-material";
+import { Card, CardContent, Typography, Chip, Box, Divider, Select, MenuItem, FormControl, TextField, Button, InputLabel, IconButton, Collapse } from "@mui/material";
+import { AccessTime, LocationOn, Person, Assignment, Add, Remove } from "@mui/icons-material";
 
 interface Props {
   appt: Booking;
@@ -10,32 +10,220 @@ interface Props {
   onDispositionSave?: (bookingId: number, dispositionType: string, note: string) => void;
 }
 
-const statusColors: Record<Booking["status"], "primary" | "warning" | "success"> = {
-  "in-progress": "primary",
-  scheduled: "warning", 
-  completed: "success",
+// Constants
+const STATUS_CONFIG: Record<Booking["status"], { color: "primary" | "warning" | "success"; label: string }> = {
+  "in-progress": { color: "primary", label: "En Route / On Site" },
+  scheduled: { color: "warning", label: "Scheduled" },
+  completed: { color: "success", label: "Completed" },
 };
 
-const statusLabels: Record<Booking["status"], string> = {
-  "in-progress": "En Route / On Site",
-  scheduled: "Scheduled",
-  completed: "Completed",
-};
+const DISPOSITION_OPTIONS = [
+  { value: "SOLD_CASH_PIF", label: "Sold – Cash Deal (Paid in Full)" },
+  { value: "SOLD_CHECK_COLLECTED", label: "Sold – Check Collected" },
+  { value: "SOLD_CARD_ACH_SUBMITTED", label: "Sold – Card/ACH Payment Submitted" },
+  { value: "SOLD_DEPOSIT_COLLECTED", label: "Sold – Deposit Collected (Balance Due)" },
+  { value: "SOLD_LENDER_SUBMITTED", label: "Sold – Lender Financing Submitted" },
+  { value: "SOLD_LENDER_APPROVED_DOCS", label: "Sold – Lender Approved (Docs Signed)" },
+  { value: "SOLD_FUNDED", label: "Sold – Funded (Lender Disbursed)" },
+  { value: "SOLD_LENDER_DECLINED", label: "Sold – Lender Declined" },
+  { value: "SOLD_IN_HOUSE_PLAN", label: "Sold – Payment Plan (In-House)" },
+  { value: "SOLD_FINAL_PAYMENT", label: "Sold – Balance Paid (Final Payment)" },
+  { value: "SOLD_RESCINDED_REVERSED", label: "Sale Rescinded / Payment Reversed" },
+];
 
-export default function AppointmentCard({ appt, addressText, onStatusChange, onDispositionSave }: Props) {
+// Helper Components
+const InfoRow = memo(({ icon, children }: { icon: React.ReactElement; children: React.ReactNode }) => (
+  <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1, mb: 1.5 }}>
+    {icon}
+    {children}
+  </Box>
+));
+
+const StatusChip = memo(({ status }: { status: Booking["status"] }) => {
+  const config = STATUS_CONFIG[status];
+  return (
+    <Chip 
+      label={config.label}
+      color={config.color}
+      size="small"
+      variant="filled"
+      sx={{
+        fontWeight: 500,
+        fontSize: '0.75rem',
+        height: 24
+      }}
+    />
+  );
+});
+
+const DispositionNote = memo(({ note, expanded }: { note: string; expanded: boolean }) => (
+  <Collapse in={expanded}>
+    <Box sx={{ mt: 1 }}>
+      <Typography 
+        variant="body2" 
+        sx={{ 
+          p: 1.5,
+          borderRadius: 1,
+          fontSize: '0.875rem',
+          lineHeight: 1.4,
+          border: '1px solid',
+          borderColor: 'divider'
+        }}
+      >
+        <Typography component="span" fontWeight="600" color="text.secondary" sx={{ fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+          Note:
+        </Typography>
+        <br />
+        <Typography component="span" color="text.primary">
+          {note}
+        </Typography>
+      </Typography>
+    </Box>
+  </Collapse>
+));
+
+const AppointmentCard = memo(function AppointmentCard({ appt, addressText, onStatusChange, onDispositionSave }: Props) {
+  // State management
   const [note, setNote] = useState("");
   const [selectedDisposition, setSelectedDisposition] = useState(appt.disposition_code || "");
   const [dispositionSaved, setDispositionSaved] = useState(false);
+  const [noteExpanded, setNoteExpanded] = useState(false);
 
-  // Check if disposition already exists (already saved)
-  const hasExistingDisposition = appt.disposition_code && appt.disposition_code !== "";
+  // Computed values
+  const hasExistingDisposition = useMemo(() => 
+    appt.disposition_code && appt.disposition_code !== "", 
+    [appt.disposition_code]
+  );
 
-  const handleDispositionSave = () => {
+  const showDispositionForm = appt.status === 'completed' && onDispositionSave && !dispositionSaved && !hasExistingDisposition;
+  const showStatusChangeForm = onStatusChange && appt.status !== 'completed';
+
+  // Event handlers
+  const handleDispositionSave = useCallback(() => {
     if (onDispositionSave) {
       onDispositionSave(appt.bookingId, selectedDisposition, note);
       setDispositionSaved(true);
     }
-  };
+  }, [onDispositionSave, appt.bookingId, selectedDisposition, note]);
+
+  const handleStatusChange = useCallback((newStatus: string) => {
+    if (onStatusChange) {
+      onStatusChange(appt.bookingId, newStatus);
+    }
+  }, [onStatusChange, appt.bookingId]);
+
+  const toggleNoteExpansion = useCallback(() => setNoteExpanded(!noteExpanded), [noteExpanded]);
+
+  // Render sections
+  const renderHeader = () => (
+    <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
+      <Typography 
+        variant="h6" 
+        fontWeight="600" 
+        color="text.primary"
+        sx={{ 
+          fontSize: '1.1rem',
+          overflow: 'hidden',
+          textOverflow: 'ellipsis',
+          whiteSpace: 'nowrap',
+          maxWidth: '70%'
+        }}
+      >
+        {appt.customer_name}
+      </Typography>
+      <StatusChip status={appt.status} />
+    </Box>
+  );
+
+  const renderBasicInfo = () => (
+    <>
+      {appt.agent_name && (
+        <InfoRow icon={<Person sx={{ fontSize: 16, color: 'text.secondary' }} />}>
+          <Typography variant="body2" color="text.secondary">
+            <Typography component="span" fontWeight="600">
+              Assigned to:
+            </Typography>{' '}
+            <Typography component="span" color="text.primary" fontWeight="500">
+              {appt.agent_name}
+            </Typography>
+          </Typography>
+        </InfoRow>
+      )}
+
+      <InfoRow icon={<LocationOn sx={{ fontSize: 16, color: 'text.secondary', mt: 0.1 }} />}>
+        <Typography 
+          variant="body2" 
+          color="text.secondary"
+          sx={{ 
+            lineHeight: 1.4,
+            wordBreak: 'break-word'
+          }}
+        >
+          {addressText}
+        </Typography>
+      </InfoRow>
+
+      <InfoRow icon={<AccessTime sx={{ fontSize: 16, color: 'text.secondary' }} />}>
+        <Typography variant="body2" color="text.secondary" fontWeight="500">
+          {appt.booking_date} at {appt.booking_time}
+        </Typography>
+      </InfoRow>
+    </>
+  );
+
+  const renderDisposition = () => (
+    <>
+      <Divider sx={{ my: 1.5 }} />
+      <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1 }}>
+        <Assignment sx={{ fontSize: 16, color: 'success.main', mt: 0.1 }} />
+        <Box sx={{ flex: 1 }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            {appt.disposition_description ? (
+              <Typography 
+                variant="body2" 
+                color="success.main" 
+                fontWeight="600" 
+                sx={{ mb: 0.5 }}
+              >
+                {appt.disposition_description}
+              </Typography>
+            ) : (
+              <Typography 
+                variant="body2" 
+                color="text.secondary" 
+                fontStyle="italic"
+                sx={{ mb: 0.5 }}
+              >
+                No disposition yet
+              </Typography>
+            )}
+            
+            {appt.disposition_note && (
+              <IconButton
+                size="small"
+                onClick={toggleNoteExpansion}
+                sx={{ ml: 1, p: 0.5 }}
+              >
+                {noteExpanded ? (
+                  <Remove sx={{ fontSize: 16, color: 'text.secondary' }} />
+                ) : (
+                  <Add sx={{ fontSize: 16, color: 'text.secondary' }} />
+                )}
+              </IconButton>
+            )}
+          </Box>
+          
+          {appt.disposition_note && (
+            <DispositionNote 
+              note={appt.disposition_note}
+              expanded={noteExpanded}
+            />
+          )}
+        </Box>
+      </Box>
+    </>
+  );
+
   return (
     <Card 
       variant="outlined" 
@@ -51,126 +239,14 @@ export default function AppointmentCard({ appt, addressText, onStatusChange, onD
       }}
     >
       <CardContent sx={{ p: 2.5, '&:last-child': { pb: 2.5 } }}>
-        {/* Header with name and status */}
-        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
-          <Typography 
-            variant="h6" 
-            fontWeight="600" 
-            color="text.primary"
-            sx={{ 
-              fontSize: '1.1rem',
-              overflow: 'hidden',
-              textOverflow: 'ellipsis',
-              whiteSpace: 'nowrap',
-              maxWidth: '70%'
-            }}
-          >
-            {appt.customer_name}
-          </Typography>
-          <Chip 
-            label={statusLabels[appt.status]} 
-            color={statusColors[appt.status]}
-            size="small"
-            variant="filled"
-            sx={{
-              fontWeight: 500,
-              fontSize: '0.75rem',
-              height: 24
-            }}
-          />
-        </Box>
-
-        {/* Agent assignment */}
-        {appt.agent_name && (
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1.5 }}>
-            <Person sx={{ fontSize: 16, color: 'text.secondary' }} />
-            <Typography variant="body2" color="text.secondary">
-              <Typography component="span" fontWeight="600">
-                Assigned to:
-              </Typography>{' '}
-              <Typography component="span" color="text.primary" fontWeight="500">
-                {appt.agent_name}
-              </Typography>
-            </Typography>
-          </Box>
-        )}
-
-        {/* Address section */}
-        <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1, mb: 1.5 }}>
-          <LocationOn sx={{ fontSize: 16, color: 'text.secondary', mt: 0.1 }} />
-          <Typography 
-            variant="body2" 
-            color="text.secondary"
-            sx={{ 
-              lineHeight: 1.4,
-              wordBreak: 'break-word'
-            }}
-          >
-            {addressText}
-          </Typography>
-        </Box>
-
-        {/* Date and time section */}
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1.5 }}>
-          <AccessTime sx={{ fontSize: 16, color: 'text.secondary' }} />
-          <Typography variant="body2" color="text.secondary" fontWeight="500">
-            {appt.booking_date} at {appt.booking_time}
-          </Typography>
-        </Box>
-
+        {renderHeader()}
+        {renderBasicInfo()}
+        
         {/* Disposition section */}
-        {(appt.disposition_description || appt.disposition_note) && (
-          <>
-            <Divider sx={{ my: 1.5 }} />
-            <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1 }}>
-              <Assignment sx={{ fontSize: 16, color: 'success.main', mt: 0.1 }} />
-              <Box sx={{ flex: 1 }}>
-                {appt.disposition_description ? (
-                  <Typography 
-                    variant="body2" 
-                    color="success.main" 
-                    fontWeight="600" 
-                    sx={{ mb: 0.5 }}
-                  >
-                    {appt.disposition_description}
-                  </Typography>
-                ) : (
-                  <Typography 
-                    variant="body2" 
-                    color="text.secondary" 
-                    fontStyle="italic"
-                    sx={{ mb: 0.5 }}
-                  >
-                    No disposition yet
-                  </Typography>
-                )}
-                
-                {appt.disposition_note && (
-                  <Typography 
-                    variant="body2" 
-                    color="text.primary"
-                    sx={{ 
-                      mt: 0.5,
-                      p: 1,
-                      backgroundColor: 'grey.50',
-                      borderRadius: 1,
-                      fontSize: '0.85rem',
-                      lineHeight: 1.4
-                    }}
-                  >
-                    <Typography component="span" fontWeight="600" color="text.secondary">
-                      Note:
-                    </Typography>{' '}
-                    {appt.disposition_note}
-                  </Typography>
-                )}
-              </Box>
-            </Box>
-          </>
-        )}
+        {(appt.disposition_description || appt.disposition_note) && renderDisposition()}
 
         {/* Status Change Form */}
-        {onStatusChange && appt.status !== 'completed' && (
+        {showStatusChangeForm && (
           <>
             <Divider sx={{ my: 1.5 }} />
             <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1 }}>
@@ -226,7 +302,7 @@ export default function AppointmentCard({ appt, addressText, onStatusChange, onD
         )}
 
         {/* Disposition Form for Completed Appointments */}
-        {appt.status === 'completed' && onDispositionSave && !dispositionSaved && !hasExistingDisposition && (
+        {showDispositionForm && (
           <>
             <Divider sx={{ my: 1.5 }} />
             <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1 }}>
@@ -251,17 +327,11 @@ export default function AppointmentCard({ appt, addressText, onStatusChange, onD
                     }}
                   >
                     <MenuItem value="">Select Disposition</MenuItem>
-                    <MenuItem value="SOLD_CASH_PIF">Sold – Cash Deal (Paid in Full)</MenuItem>
-                    <MenuItem value="SOLD_CHECK_COLLECTED">Sold – Check Collected</MenuItem>
-                    <MenuItem value="SOLD_CARD_ACH_SUBMITTED">Sold – Card/ACH Payment Submitted</MenuItem>
-                    <MenuItem value="SOLD_DEPOSIT_COLLECTED">Sold – Deposit Collected (Balance Due)</MenuItem>
-                    <MenuItem value="SOLD_LENDER_SUBMITTED">Sold – Lender Financing Submitted</MenuItem>
-                    <MenuItem value="SOLD_LENDER_APPROVED_DOCS">Sold – Lender Approved (Docs Signed)</MenuItem>
-                    <MenuItem value="SOLD_FUNDED">Sold – Funded (Lender Disbursed)</MenuItem>
-                    <MenuItem value="SOLD_LENDER_DECLINED">Sold – Lender Declined</MenuItem>
-                    <MenuItem value="SOLD_IN_HOUSE_PLAN">Sold – Payment Plan (In-House)</MenuItem>
-                    <MenuItem value="SOLD_FINAL_PAYMENT">Sold – Balance Paid (Final Payment)</MenuItem>
-                    <MenuItem value="SOLD_RESCINDED_REVERSED">Sale Rescinded / Payment Reversed</MenuItem>
+                    {DISPOSITION_OPTIONS.map((option) => (
+                      <MenuItem key={option.value} value={option.value}>
+                        {option.label}
+                      </MenuItem>
+                    ))}
                   </Select>
                 </FormControl>
 
@@ -297,4 +367,6 @@ export default function AppointmentCard({ appt, addressText, onStatusChange, onD
       </CardContent>
     </Card>
   );
-}
+});
+
+export default AppointmentCard;
