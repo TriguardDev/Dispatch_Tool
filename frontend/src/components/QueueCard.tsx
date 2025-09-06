@@ -35,8 +35,7 @@ export default function QueueCard({ title, badgeColor, count, children }: QueueC
         
         <Box 
           sx={{ 
-            maxHeight: '60vh', 
-            overflowY: 'auto',
+            minHeight: '80vh',
             display: 'flex',
             flexDirection: 'column',
             gap: 1
