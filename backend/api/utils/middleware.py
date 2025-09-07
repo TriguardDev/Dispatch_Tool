@@ -46,7 +46,7 @@ def require_auth(f):
     return decorated_function
 
 def require_dispatcher(f):
-    """Decorator to require dispatcher role"""
+    """Decorator to require dispatcher role (admin can also access)"""
     @wraps(f)
     def decorated_function(*args, **kwargs):
         try:
@@ -57,7 +57,7 @@ def require_dispatcher(f):
             
             payload = verify_jwt_token(token)
             
-            if payload['role'] != 'dispatcher':
+            if payload['role'] not in ['dispatcher', 'admin']:
                 return jsonify({"success": False, "error": "Dispatcher access required"}), 403
             
             request.user_id = payload['user_id']
@@ -71,7 +71,7 @@ def require_dispatcher(f):
     return decorated_function
 
 def require_agent(f):
-    """Decorator to require agent role"""
+    """Decorator to require agent role (admin can also access)"""
     @wraps(f)
     def decorated_function(*args, **kwargs):
         try:
@@ -82,7 +82,7 @@ def require_agent(f):
             
             payload = verify_jwt_token(token)
             
-            if payload['role'] != 'field_agent':
+            if payload['role'] not in ['field_agent', 'admin']:
                 return jsonify({"success": False, "error": "Agent access required"}), 403
             
             request.user_id = payload['user_id']

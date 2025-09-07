@@ -35,7 +35,7 @@ def update_booking_status():
         conn = get_connection()
         cursor = conn.cursor(dictionary=True)
 
-        # Verify user has access to this booking
+        # Verify user has access to this booking (admins can access all bookings)
         if request.role == 'field_agent':
             cursor.execute("""
                 SELECT bookingId FROM bookings 
