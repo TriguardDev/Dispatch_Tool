@@ -1,27 +1,39 @@
-import React from "react";
-import { clearToken } from "../utils/session";
+import { Button } from "@mui/material";
+import { logout } from "../api/login";
 
 interface Props {
   onLogout?: () => void;
 }
 
 export default function LogoutButton({ onLogout }: Props) {
-  const handleLogout = () => {
-    clearToken();
-    localStorage.removeItem("user"); // clear saved user
-    if (onLogout) {
-      onLogout();
-    } else {
-      window.location.reload(); // fallback: reload page to show login form
+  const handleLogout = async () => {
+    try {
+      await logout(); // Call backend logout endpoint
+      if (onLogout) {
+        onLogout();
+      }
+    } catch (error) {
+      console.error("Logout failed:", error);
+      // Even if logout fails, clear frontend state
+      if (onLogout) {
+        onLogout();
+      }
     }
   };
 
   return (
-    <button
+    <Button
       onClick={handleLogout}
-      className="ml-auto bg-gray-800 hover:bg-red-600 text-white py-1 px-3 rounded"
+      variant="contained"
+      color="secondary"
+      sx={{ 
+        ml: 'auto',
+        '&:hover': {
+          backgroundColor: 'error.main'
+        }
+      }}
     >
       Logout
-    </button>
+    </Button>
   );
 }

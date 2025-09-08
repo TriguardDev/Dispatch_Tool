@@ -1,14 +1,17 @@
 import { useState } from "react";
+import { Box, Paper, TextField, Button, Typography, Alert, Select, MenuItem, FormControl, InputLabel } from "@mui/material";
 import { login, type LoginResponse } from "../api/login";
-import { setToken } from "../utils/session";
 
 interface Props {
   onLogin: (user: LoginResponse) => void;
 }
 
+type UserRole = "dispatcher" | "field_agent" | "admin";
+
 export default function LoginForm({ onLogin }: Props) {
   const [email, setEmail] = useState("");
-  const [password, setPassword] = useState(""); // added
+  const [password, setPassword] = useState("");
+  const [role, setRole] = useState<UserRole>("field_agent");
   const [error, setError] = useState("");
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -16,48 +19,93 @@ export default function LoginForm({ onLogin }: Props) {
     setError("");
 
     try {
-      const data = await login(email, password); // send password too
-      setToken(data.token)
+      const data = await login(email, password, role);
       onLogin(data);
     } catch (err) {
-      setError("Invalid email or password");
+      setError("Invalid email, password, or role");
       console.error(err);
     }
   };
 
   return (
-    <div className="flex h-screen items-center justify-center bg-gray-800 ">
-      <form
+    <Box
+      sx={{
+        display: 'flex',
+        height: '100vh',
+        alignItems: 'center',
+        justifyContent: 'center',
+        backgroundColor: 'background.default',
+        p: 2
+      }}
+    >
+      <Paper
+        component="form"
         onSubmit={handleSubmit}
-        className="bg-gray-900  p-6 rounded-2xl shadow-lg w-80"
+        sx={{
+          p: 4,
+          width: '100%',
+          maxWidth: 400,
+          display: 'flex',
+          flexDirection: 'column',
+          gap: 3
+        }}
+        elevation={3}
       >
-        <h1 className="text-xl font-bold mb-4 text-center">Login</h1>
+        <Typography variant="h4" align="center" fontWeight="bold">
+          Login
+        </Typography>
+        
+        <FormControl fullWidth>
+          <InputLabel id="role-label">Role</InputLabel>
+          <Select
+            labelId="role-label"
+            id="role-select"
+            value={role}
+            label="Role"
+            onChange={(e) => setRole(e.target.value as UserRole)}
+          >
+            <MenuItem value="admin">Admin</MenuItem>
+            <MenuItem value="dispatcher">Dispatcher</MenuItem>
+            <MenuItem value="field_agent">Field Agent</MenuItem>
+          </Select>
+        </FormControl>
 
-        <input
+        <TextField
           type="email"
+          label="Email"
           placeholder="Enter email"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
-          className="w-full border p-2 rounded mb-4"
+          required
+          fullWidth
         />
 
-        <input
+        <TextField
           type="password"
+          label="Password"
           placeholder="Enter password"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
-          className="w-full border p-2 rounded mb-4"
+          required
+          fullWidth
         />
 
-        {error && <p className="text-red-500 text-sm mb-2">{error}</p>}
+        {error && (
+          <Alert severity="error" sx={{ mt: 1 }}>
+            {error}
+          </Alert>
+        )}
 
-        <button
+        <Button
           type="submit"
-          className="w-full bg-blue-500 text-white py-2 rounded hover:bg-blue-600"
+          variant="contained"
+          size="large"
+          fullWidth
+          sx={{ mt: 2 }}
         >
           Login
-        </button>
-      </form>
-    </div>
+        </Button>
+      </Paper>
+    </Box>
   );
 }

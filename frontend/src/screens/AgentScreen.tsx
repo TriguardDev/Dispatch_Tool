@@ -1,168 +1,191 @@
-import { useState, useEffect } from "react";
+import React from "react";
+import { Box, Typography, CircularProgress, Container } from "@mui/material";
 import TopBar from "../components/TopBar";
 import QueueCard from "../components/QueueCard";
 import AppointmentCard from "../components/AppointmentCard";
-import { type Booking } from "../api/crud";
-import { CompletedAppointmentCard } from "../components/CompletedAppointmentCard";
-import { BASE_URL } from "../utils/constants";
+import { type Booking, getAgentBookings, updateBookingStatus, saveDisposition } from "../api/crud";
+import { useSmartPolling } from "../hooks/useSmartPolling";
 
 interface AgentScreenProps {
   agentId: number; // passed from login
+  onLogout: () => void;
 }
 
-export default function AgentScreen({ agentId }: AgentScreenProps) {
-  const [bookings, setBookings] = useState<Booking[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [refresh, setRefresh] = useState(0);
-
-  useEffect(() => {
-    async function fetchBookings() {
-      try {
-        setLoading(true);
-        const res = await fetch(`${BASE_URL}:8000/booking?agentId=${agentId}`, {
-          method: "GET",
-          headers: { "Content-Type": "application/json" },
-        });
-
-        if (!res.ok) throw new Error("Failed to fetch bookings");
-        const data: Booking[] = await res.json();
-        setBookings(data);
-      } catch (err: unknown) {
-        setError((err as Error).message || "Failed to fetch bookings");
-      } finally {
-        setLoading(false);
-      }
-    }
-
-    fetchBookings();
-    const interval = setInterval(fetchBookings, 1000000)
-    return () => clearInterval(interval);
-  }, [agentId, refresh]);
+export default function AgentScreen({ agentId, onLogout }: AgentScreenProps) {
+  
+  // Memoize the fetch function to prevent unnecessary re-renders
+  const fetchAgentBookings = React.useCallback(() => {
+    console.log("Fetching bookings for agent:", agentId);
+    return getAgentBookings(agentId);
+  }, [agentId]);
+  
+  const {
+    data: bookings,
+    loading,
+    error,
+    refetch,
+    pausePolling,
+    resumePolling,
+    optimisticUpdate
+  } = useSmartPolling({
+    fetchFunction: fetchAgentBookings,
+    onLogout
+  });
 
   const handleStatusChange = async (bookingId: number, status: string) => {
     try {
-      const res = await fetch(`${BASE_URL}:8000/booking`, {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({"booking_id": bookingId, "status": status }),
-      });
-
-      if (!res.ok) throw new Error("Failed to update booking status");
-      setRefresh((prev) => prev + 1);
+      // Optimistic update - immediately update UI
+      optimisticUpdate(bookingId, { status: status as Booking['status'] });
+      
+      // Make API call
+      await updateBookingStatus(bookingId, status);
+      
+      // Refresh data to ensure consistency
+      await refetch();
     } catch (err) {
       console.error(err);
-      alert("Error updating booking status");
+      const errorMessage = (err as Error).message || "Error updating booking status";
+      
+      if (errorMessage.includes("Authentication required")) {
+        onLogout();
+      } else {
+        // Revert optimistic update on error
+        await refetch();
+        alert(errorMessage);
+      }
     }
   };
 
-  const handleDispositionChange = async (bookingId: number, dispositionType: string, note: string = "") => {
+  const handleDispositionChange = async (
+    bookingId: number,
+    dispositionType: string,
+    note: string = ""
+  ) => {
     try {
-      const res = await fetch(`${BASE_URL}:8000/disposition`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          bookingId: bookingId,
-          dispositionType: dispositionType,
-          note: note
-        }),
+      // Optimistic update
+      optimisticUpdate(bookingId, { 
+        disposition_code: dispositionType,
+        disposition_note: note 
       });
-
-      if (!res.ok) throw new Error("Failed to save disposition");
-      setRefresh((prev) => prev + 1);
+      
+      await saveDisposition(bookingId, dispositionType, note);
+      await refetch();
     } catch (err) {
       console.error(err);
-      alert("Error saving disposition");
+      const errorMessage = (err as Error).message || "Error saving disposition";
+      
+      if (errorMessage.includes("Authentication required")) {
+        onLogout();
+      } else {
+        // Revert optimistic update on error
+        await refetch();
+        alert(errorMessage);
+      }
     }
   };
 
   // Categorize bookings
-  const scheduled = bookings.filter((b) => b.status.toLowerCase() === "scheduled");
-  const active = bookings.filter((b) => b.status.toLowerCase() === "in-progress");
-  const completed = bookings.filter((b) => b.status.toLowerCase() === "completed");
+  const scheduled = bookings.filter(
+    (b) => b.status.toLowerCase() === "scheduled"
+  );
+  const active = bookings.filter(
+    (b) => b.status.toLowerCase() === "in-progress"
+  );
+  const completed = bookings.filter(
+    (b) => b.status.toLowerCase() === "completed"
+  );
 
-  if (loading) return <p className="p-6 text-center">Loading bookings...</p>;
-  if (error) return <p className="p-6 text-center text-red-500">{error}</p>;
+  if (loading) {
+    return (
+      <Box sx={{ backgroundColor: 'background.default', minHeight: '100vh' }}>
+        <TopBar onLogOut={onLogout} />
+        <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '50vh', flexDirection: 'column', gap: 2 }}>
+          <CircularProgress />
+          <Typography color="text.primary">Loading bookings...</Typography>
+        </Box>
+      </Box>
+    );
+  }
+  
+  if (error) {
+    return (
+      <Box sx={{ backgroundColor: 'background.default', minHeight: '100vh' }}>
+        <TopBar onLogOut={onLogout} />
+        <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '50vh' }}>
+          <Typography color="error.main">{error}</Typography>
+        </Box>
+      </Box>
+    );
+  }
 
   return (
-    <div className="bg-gray-900 min-h-screen">
-      <TopBar />
-      <main className="mx-auto max-w-7xl px-4 py-6">
+    <Box sx={{ backgroundColor: 'background.default', minHeight: '100vh' }}>
+      <TopBar onLogOut={onLogout} />
+      <Container component="main" maxWidth="xl" sx={{ py: 3 }}>
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+          {/* Scheduled */}
           <QueueCard
             title="Scheduled"
             badgeColor="bg-blue-50 text-blue-700"
             count={scheduled.length}
           >
-            {scheduled.map((appt) => (
-              <div key={appt.bookingId} className="mb-2">
-                {bookings.map((appt) => {
-                  const addressText =
-                    appt.status === "in-progress"
-                      ? appt.customer_address
-                      : "Address hidden until on route";
+            {scheduled.map((appt) => {
+              const addressText =
+                appt.status === "in-progress"
+                  ? appt.customer_address
+                  : "Address hidden until on route";
 
-                  return <AppointmentCard key={appt.bookingId} appt={appt} addressText={addressText ?? ""} />;
-                })}
-                <select
-                  className="select mt-1 w-full"
-                  value={appt.status}
-                  onChange={(e) => handleStatusChange(appt.bookingId, e.target.value)}
-                >
-                  <option value="scheduled">Scheduled</option>
-                  <option value="in-progress">En Route / On Site</option>
-                  <option value="completed">Completed</option>
-                </select>
-              </div>
-            ))}
+              return (
+                <AppointmentCard
+                  key={appt.bookingId}
+                  appt={appt}
+                  addressText={addressText ?? ""}
+                  onStatusChange={handleStatusChange}
+                />
+              );
+            })}
           </QueueCard>
 
+          {/* En Route / On Site */}
           <QueueCard
             title="En Route / On Site"
             badgeColor="bg-yellow-50 text-yellow-700"
             count={active.length}
           >
-            {active.map((appt) => (
-              <div key={appt.bookingId} className="mb-2">
-                {bookings.map((appt) => {
-                  const addressText =
-                    appt.status === "in-progress"
-                      ? appt.customer_address
-                      : "Address hidden until on route";
+            {active.map((appt) => {
+              const addressText =
+                appt.status === "in-progress"
+                  ? appt.customer_address
+                  : "Address hidden until on route";
 
-                  return <AppointmentCard key={appt.bookingId} appt={appt} addressText={addressText ?? ""} />;
-                })}
-                <select
-                  className="select mt-1 w-full"
-                  value={appt.status}
-                  onChange={(e) => handleStatusChange(appt.bookingId, e.target.value)}
-                >
-                  <option value="scheduled">Scheduled</option>
-                  <option value="in-progress">En Route / On Site</option>
-                  <option value="completed">Completed</option>
-                </select>
-              </div>
-            ))}
+              return (
+                <AppointmentCard
+                  key={appt.bookingId}
+                  appt={appt}
+                  addressText={addressText ?? ""}
+                  onStatusChange={handleStatusChange}
+                />
+              );
+            })}
           </QueueCard>
 
+          {/* Completed */}
           <QueueCard
             title="Completed"
             badgeColor="bg-emerald-50 text-emerald-700"
             count={completed.length}
           >
             {completed.map((appt) => (
-              <CompletedAppointmentCard
+              <AppointmentCard
                 key={appt.bookingId}
                 appt={appt}
-                onSave={handleDispositionChange}
+                addressText={appt.customer_address ?? ""}
+                onDispositionSave={handleDispositionChange}
               />
             ))}
           </QueueCard>
-
         </div>
-      </main>
-    </div>
+      </Container>
+    </Box>
   );
 }

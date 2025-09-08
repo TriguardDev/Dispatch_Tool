@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { useTheme } from "@mui/material/styles";
 
 interface Agent {
   agentId: string;
@@ -23,6 +24,7 @@ export default function AgentSelector({
   onSearch,
   disabledSearch,
 }: AgentSelectorProps) {
+  const theme = useTheme();
   const [isOpen, setIsOpen] = useState(false);
 
   const getDistanceColor = (distance: number) => {
@@ -55,20 +57,39 @@ export default function AgentSelector({
         </div>
 
         {isOpen && agents.length > 0 && (
-          <div className="absolute mt-1 w-full max-h-60 overflow-y-auto border border-gray-700 bg-gray-900  rounded-lg shadow-lg z-50">
+          <div 
+            className="absolute mt-1 w-full max-h-60 overflow-y-auto border rounded-lg shadow-lg z-50"
+            style={{ 
+              backgroundColor: theme.palette.background.paper,
+              borderColor: theme.palette.divider 
+            }}
+          >
             {agents.map((agent) => {
               const distance = Math.ceil(Number(agent.distance));
               const color = getDistanceColor(distance);
               return (
                 <div
                   key={agent.agentId}
-                  className={`px-3 py-2 cursor-pointer hover:bg-gray-800  flex justify-between ${selectedRep === agent.agentId ? "bg-gray-800 " : ""}`}
+                  className="px-3 py-2 cursor-pointer flex justify-between"
+                  style={{ 
+                    backgroundColor: selectedRep === agent.agentId ? theme.palette.action.selected : 'transparent'
+                  }}
+                  onMouseEnter={(e) => {
+                    if (selectedRep !== agent.agentId) {
+                      e.currentTarget.style.backgroundColor = theme.palette.action.hover;
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    if (selectedRep !== agent.agentId) {
+                      e.currentTarget.style.backgroundColor = 'transparent';
+                    }
+                  }}
                   onClick={() => {
                     onChange(agent.agentId);
                     setIsOpen(false);
                   }}
                 >
-                  <span>{agent.name}</span>
+                  <span style={{ color: theme.palette.text.primary }}>{agent.name}</span>
                   <span className={`${color} font-semibold`}>{distance} km</span>
                 </div>
               );
