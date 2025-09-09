@@ -21,7 +21,7 @@ services:
     build: ./backend/api
     container_name: api-service
     env_file:
-      - .env
+      - ./backend/.env
     environment:
       MYSQL_HOST: dev-database
       MYSQL_PORT: 3306
