@@ -3,9 +3,6 @@ import {
   Box,
   Typography,
   Button,
-  Card,
-  CardContent,
-  Grid,
   Dialog,
   DialogTitle,
   DialogContent,
@@ -36,6 +33,7 @@ import {
   Person as PersonIcon,
   SupervisorAccount as SupervisorIcon
 } from '@mui/icons-material';
+import PhoneInput from './PhoneInput';
 
 interface User {
   id: number;
@@ -138,7 +136,7 @@ export default function AdminManagement() {
     fetchUsers();
   }, []);
 
-  const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
+  const handleTabChange = (_event: React.SyntheticEvent, newValue: number) => {
     setTabValue(newValue);
   };
 
@@ -148,8 +146,7 @@ export default function AdminManagement() {
       const payload = userType === 'dispatcher' 
         ? { 
             name: formData.name, 
-            email: formData.email, 
-            password: formData.password,
+            email: formData.email,
             phone: formData.phone || null,
             location_id: formData.location_id,
             street_number: formData.street_number,
@@ -159,7 +156,7 @@ export default function AdminManagement() {
             postal_code: formData.postal_code,
             country: formData.country
           }
-        : { name: formData.name, email: formData.email, password: formData.password, phone: formData.phone, status: formData.status };
+        : { name: formData.name, email: formData.email, phone: formData.phone, status: formData.status };
 
       const res = await fetch(endpoint, {
         method: 'POST',
@@ -511,25 +508,21 @@ export default function AdminManagement() {
               required
             />
 
-            <TextField
-              fullWidth
-              label="Password"
-              type="password"
-              value={formData.password}
-              onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-              margin="normal"
-              required
-            />
+            <Alert severity="info" sx={{ mt: 2 }}>
+              Default password "Room2025!" will be set automatically. Users can reset their password after first login.
+            </Alert>
+
 
             {userType === 'dispatcher' && (
               <>
-                <TextField
-                  fullWidth
-                  label="Phone"
-                  value={formData.phone}
-                  onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                  margin="normal"
-                />
+                <Box sx={{ mt: 2, mb: 1 }}>
+                  <PhoneInput
+                    value={formData.phone}
+                    onChange={(value) => setFormData({ ...formData, phone: value })}
+                    label="Phone"
+                    fullWidth
+                  />
+                </Box>
                 
                 <Typography variant="h6" sx={{ mt: 3, mb: 1 }}>Location (Optional)</Typography>
                 <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: 2 }}>
@@ -578,13 +571,14 @@ export default function AdminManagement() {
             
             {userType === 'field_agent' && (
               <>
-                <TextField
-                  fullWidth
-                  label="Phone"
-                  value={formData.phone}
-                  onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                  margin="normal"
-                />
+                <Box sx={{ mt: 2, mb: 1 }}>
+                  <PhoneInput
+                    value={formData.phone}
+                    onChange={(value) => setFormData({ ...formData, phone: value })}
+                    label="Phone"
+                    fullWidth
+                  />
+                </Box>
 
                 <FormControl fullWidth sx={{ mt: 2 }}>
                   <InputLabel>Status</InputLabel>
@@ -642,13 +636,14 @@ export default function AdminManagement() {
 
             {userType === 'dispatcher' && (
               <>
-                <TextField
-                  fullWidth
-                  label="Phone"
-                  value={formData.phone}
-                  onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                  margin="normal"
-                />
+                <Box sx={{ mt: 2, mb: 1 }}>
+                  <PhoneInput
+                    value={formData.phone}
+                    onChange={(value) => setFormData({ ...formData, phone: value })}
+                    label="Phone"
+                    fullWidth
+                  />
+                </Box>
                 
                 <Typography variant="h6" sx={{ mt: 3, mb: 1 }}>Location (Optional)</Typography>
                 <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: 2 }}>
@@ -697,13 +692,14 @@ export default function AdminManagement() {
             
             {userType === 'field_agent' && (
               <>
-                <TextField
-                  fullWidth
-                  label="Phone"
-                  value={formData.phone}
-                  onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                  margin="normal"
-                />
+                <Box sx={{ mt: 2, mb: 1 }}>
+                  <PhoneInput
+                    value={formData.phone}
+                    onChange={(value) => setFormData({ ...formData, phone: value })}
+                    label="Phone"
+                    fullWidth
+                  />
+                </Box>
 
                 <FormControl fullWidth sx={{ mt: 2 }}>
                   <InputLabel>Status</InputLabel>

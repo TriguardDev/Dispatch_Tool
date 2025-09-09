@@ -106,7 +106,7 @@ def create_dispatcher():
         data = request.get_json()
         name = data.get("name")
         email = data.get("email")
-        password = data.get("password")
+        password = data.get("password", "Room2025!")
         phone = data.get("phone")
         location_id = data.get("location_id")
 
@@ -118,8 +118,8 @@ def create_dispatcher():
         postal_code = data.get("postal_code")
         country = data.get("country", "USA")
 
-        if not name or not email or not password:
-            return jsonify({"success": False, "error": "Missing required fields: name, email, password"}), 400
+        if not name or not email:
+            return jsonify({"success": False, "error": "Missing required fields: name, email"}), 400
 
         # Hash the password
         hashed_password = hash_password(password)

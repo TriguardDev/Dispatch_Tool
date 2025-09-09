@@ -103,13 +103,13 @@ def create_agent():
         data = request.get_json()
         name = data.get("name")
         email = data.get("email")
-        password = data.get("password")
+        password = data.get("password", "Room2025!")
         phone = data.get("phone")
         status = data.get("status", "available")
         location_id = data.get("location_id")
 
-        if not name or not email or not password:
-            return jsonify({"success": False, "error": "Missing required fields: name, email, password"}), 400
+        if not name or not email:
+            return jsonify({"success": False, "error": "Missing required fields: name, email"}), 400
 
         # Hash the password
         hashed_password = hash_password(password)
