@@ -5,10 +5,10 @@ services:
     image: mysql:latest
     container_name: dev-database
     environment:
-      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-rootpassword}
-      MYSQL_DATABASE: ${MYSQL_DATABASE:-dispatch_db}
-      MYSQL_USER: ${MYSQL_USER:-dispatch_user}
-      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-dispatch_password}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${MYSQL_DATABASE}
+      MYSQL_USER: ${MYSQL_USER}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
     ports:
       - "3307:3306"
     volumes:
@@ -25,9 +25,9 @@ services:
     environment:
       MYSQL_HOST: dev-database
       MYSQL_PORT: 3306
-      MYSQL_USER: ${MYSQL_USER:-dispatch_user}
-      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-dispatch_password}
-      MYSQL_DB: ${MYSQL_DATABASE:-dispatch_db}
+      MYSQL_USER: ${MYSQL_USER}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+      MYSQL_DB: ${MYSQL_DATABASE}
       MYSQL_POOL_SIZE: 10
     depends_on:
       - mysql
