@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Box, Paper, TextField, Button, Typography, Alert, Select, MenuItem, FormControl, InputLabel } from "@mui/material";
 import { login, type LoginResponse } from "../api/login";
+import PasswordResetModal from "./PasswordResetModal";
 
 interface Props {
   onLogin: (user: LoginResponse) => void;
@@ -13,6 +14,7 @@ export default function LoginForm({ onLogin }: Props) {
   const [password, setPassword] = useState("");
   const [role, setRole] = useState<UserRole>("field_agent");
   const [error, setError] = useState("");
+  const [showPasswordReset, setShowPasswordReset] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -105,7 +107,26 @@ export default function LoginForm({ onLogin }: Props) {
         >
           Login
         </Button>
+
+        <Button
+          variant="text"
+          size="small"
+          fullWidth
+          onClick={() => setShowPasswordReset(true)}
+          sx={{ mt: 1 }}
+        >
+          Reset Password
+        </Button>
       </Paper>
+
+      <PasswordResetModal
+        open={showPasswordReset}
+        onClose={() => setShowPasswordReset(false)}
+        onSuccess={() => {
+          setError("");
+          console.log("Password reset successfully!");
+        }}
+      />
     </Box>
   );
 }

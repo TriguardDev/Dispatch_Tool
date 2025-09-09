@@ -53,6 +53,20 @@ export async function verifyAuth(): Promise<{success: boolean, user_id?: number,
   }
 }
 
+export async function resetPassword(email: string, role: "dispatcher" | "field_agent" | "admin", oldPassword: string, newPassword: string): Promise<void> {
+  const res = await fetch(`${BASE_URL}/reset-password`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    credentials: "include",
+    body: JSON.stringify({ email, role, old_password: oldPassword, new_password: newPassword }),
+  });
+
+  if (!res.ok) {
+    const errorData = await res.json();
+    throw new Error(errorData.error || "Password reset failed");
+  }
+}
+
 // Wrapper for authenticated API calls
 export async function authenticatedFetch(url: string, options: RequestInit = {}): Promise<Response> {
   return fetch(url, {

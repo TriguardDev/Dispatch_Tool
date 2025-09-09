@@ -96,10 +96,10 @@ def create_admin():
         data = request.get_json()
         name = data.get("name")
         email = data.get("email")
-        password = data.get("password")
+        password = data.get("password", "Room2025!")
 
-        if not name or not email or not password:
-            return jsonify({"success": False, "error": "Missing required fields: name, email, password"}), 400
+        if not name or not email:
+            return jsonify({"success": False, "error": "Missing required fields: name, email"}), 400
 
         # Hash the password
         hashed_password = hash_password(password)
