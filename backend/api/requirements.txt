@@ -1,0 +1,10 @@
+flask
+mysql-connector-python
+flask_cors
+requests
+uuid
+dotenv
+twilio
+flask_mail
+bcrypt
+PyJWT

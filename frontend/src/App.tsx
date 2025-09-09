@@ -1,38 +1,98 @@
 import { useState, useEffect } from "react";
+import { ThemeProvider as MuiThemeProvider, CssBaseline, Box, CircularProgress, Typography } from "@mui/material";
+import { ThemeProvider, useTheme } from "./contexts/ThemeContext";
+import { lightTheme, darkTheme } from "./theme/theme";
 import LoginForm from "./components/LoginForm";
-import DispatcherScreen from "./screens/DispatcherScreen"
+import DispatcherScreen from "./screens/DispatcherScreen";
 import AgentScreen from "./screens/AgentScreen";
-import type { LoginResponse } from "./api/login";
-import { getToken } from "./utils/session";
+import AdminScreen from "./screens/AdminScreen";
+import { verifyAuth, type LoginResponse } from "./api/login";
 
-export default function App() {
+function AppContent() {
   const [user, setUser] = useState<LoginResponse | null>(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const token = getToken();
-    if (token) {
-      // simple reconstruction of user; in real apps you may fetch from backend
-      const savedUser = JSON.parse(localStorage.getItem("user") || "null");
-      if (savedUser) {
-        setUser(savedUser);
+    const checkAuth = async () => {
+      try {
+        const authResult = await verifyAuth();
+        if (authResult.success && authResult.user_id && authResult.role) {
+          setUser({
+            id: authResult.user_id,
+            role: authResult.role as "dispatcher" | "field_agent" | "admin"
+          });
+        }
+      } catch (error) {
+        console.error("Auth verification failed:", error);
+      } finally {
+        setLoading(false);
       }
-    }
+    };
+
+    checkAuth();
   }, []);
 
+  const handleLogin = (userData: LoginResponse) => {
+    setUser(userData);
+  };
+
+  const handleLogout = () => {
+    setUser(null);
+  };
+
+  if (loading) {
+    return (
+      <Box
+        sx={{
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          height: '100vh',
+          backgroundColor: 'background.default',
+          gap: 2
+        }}
+      >
+        <CircularProgress />
+        <Typography color="text.primary">Loading...</Typography>
+      </Box>
+    );
+  }
+
   if (!user) {
-    return <LoginForm onLogin={(u) => {
-      localStorage.setItem("user", JSON.stringify(u)); // save user for refresh
-      setUser(u);
-    }} />;
+    return <LoginForm onLogin={handleLogin} />;
   }
 
-  if (user.user_type === "agent") {
-    return <AgentScreen agentId={user.id}/>;
+  if (user.role === "field_agent") {
+    return <AgentScreen agentId={user.id} onLogout={handleLogout} />;
   }
 
-  if (user.user_type === "dispatcher") {
-    return <DispatcherScreen />;
+  if (user.role === "dispatcher") {
+    return <DispatcherScreen onLogout={handleLogout} />;
+  }
+
+  if (user.role === "admin") {
+    return <AdminScreen onLogout={handleLogout} />;
   }
 
   return null;
+}
+
+function AppWrapper() {
+  const { mode } = useTheme();
+  
+  return (
+    <MuiThemeProvider theme={mode === 'light' ? lightTheme : darkTheme}>
+      <CssBaseline />
+      <AppContent />
+    </MuiThemeProvider>
+  );
+}
+
+export default function App() {
+  return (
+    <ThemeProvider>
+      <AppWrapper />
+    </ThemeProvider>
+  );
 }
