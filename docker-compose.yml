@@ -4,8 +4,11 @@ services:
   mysql:
     image: mysql:latest
     container_name: dev-database
-    env_file:
-      - ./backend/.env
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${MYSQL_DATABASE}
+      MYSQL_USER: ${MYSQL_USER}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
     ports:
       - "3307:3306"
     volumes:
@@ -18,11 +21,14 @@ services:
     build: ./backend/api
     container_name: api-service
     env_file:
-      - ./backend/.env
+      - .env
     environment:
-      MYSQL_HOST: dev-database
-      MYSQL_PORT: 3306
-      MYSQL_POOL_SIZE: 10
+      MYSQL_HOST: ${MYSQL_HOST}
+      MYSQL_PORT: ${MYSQL_HOST}
+      MYSQL_USER: ${MYSQL_USER}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+      MYSQL_DB: ${MYSQL_DATABASE}
+      MYSQL_POOL_SIZE: ${MYSQL_POOL_SIZE}
     depends_on:
       - mysql
     ports:
