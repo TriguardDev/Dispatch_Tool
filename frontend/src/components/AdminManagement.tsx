@@ -156,7 +156,19 @@ export default function AdminManagement() {
             postal_code: formData.postal_code,
             country: formData.country
           }
-        : { name: formData.name, email: formData.email, phone: formData.phone, status: formData.status };
+        : { 
+            name: formData.name, 
+            email: formData.email, 
+            phone: formData.phone, 
+            status: formData.status,
+            location_id: formData.location_id,
+            street_number: formData.street_number,
+            street_name: formData.street_name,
+            city: formData.city,
+            state_province: formData.state_province,
+            postal_code: formData.postal_code,
+            country: formData.country
+          };
 
       const res = await fetch(endpoint, {
         method: 'POST',
@@ -214,6 +226,13 @@ export default function AdminManagement() {
       if (userType === 'field_agent') {
         if (formData.phone) payload.phone = formData.phone;
         if (formData.status) payload.status = formData.status;
+        payload.location_id = formData.location_id;
+        payload.street_number = formData.street_number;
+        payload.street_name = formData.street_name;
+        payload.city = formData.city;
+        payload.state_province = formData.state_province;
+        payload.postal_code = formData.postal_code;
+        payload.country = formData.country;
       } else if (userType === 'dispatcher') {
         payload.phone = formData.phone || null;
         payload.location_id = formData.location_id;
@@ -591,6 +610,49 @@ export default function AdminManagement() {
                     <MenuItem value="unavailable">Unavailable</MenuItem>
                   </Select>
                 </FormControl>
+
+                <Typography variant="h6" sx={{ mt: 3, mb: 1 }}>Location (Optional)</Typography>
+                <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: 2 }}>
+                  <TextField
+                    label="Street Number"
+                    value={formData.street_number}
+                    onChange={(e) => setFormData({ ...formData, street_number: e.target.value })}
+                    margin="normal"
+                  />
+                  <TextField
+                    label="Street Name"
+                    value={formData.street_name}
+                    onChange={(e) => setFormData({ ...formData, street_name: e.target.value })}
+                    margin="normal"
+                  />
+                </Box>
+                <Box sx={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr', gap: 2 }}>
+                  <TextField
+                    label="City"
+                    value={formData.city}
+                    onChange={(e) => setFormData({ ...formData, city: e.target.value })}
+                    margin="normal"
+                  />
+                  <TextField
+                    label="State/Province"
+                    value={formData.state_province}
+                    onChange={(e) => setFormData({ ...formData, state_province: e.target.value })}
+                    margin="normal"
+                  />
+                  <TextField
+                    label="Postal Code"
+                    value={formData.postal_code}
+                    onChange={(e) => setFormData({ ...formData, postal_code: e.target.value })}
+                    margin="normal"
+                  />
+                </Box>
+                <TextField
+                  fullWidth
+                  label="Country"
+                  value={formData.country}
+                  onChange={(e) => setFormData({ ...formData, country: e.target.value })}
+                  margin="normal"
+                />
               </>
             )}
           </Box>
@@ -715,6 +777,49 @@ export default function AdminManagement() {
                     <MenuItem value="enroute">En Route</MenuItem>
                   </Select>
                 </FormControl>
+
+                <Typography variant="h6" sx={{ mt: 3, mb: 1 }}>Location (Optional)</Typography>
+                <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: 2 }}>
+                  <TextField
+                    label="Street Number"
+                    value={formData.street_number}
+                    onChange={(e) => setFormData({ ...formData, street_number: e.target.value })}
+                    margin="normal"
+                  />
+                  <TextField
+                    label="Street Name"
+                    value={formData.street_name}
+                    onChange={(e) => setFormData({ ...formData, street_name: e.target.value })}
+                    margin="normal"
+                  />
+                </Box>
+                <Box sx={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr', gap: 2 }}>
+                  <TextField
+                    label="City"
+                    value={formData.city}
+                    onChange={(e) => setFormData({ ...formData, city: e.target.value })}
+                    margin="normal"
+                  />
+                  <TextField
+                    label="State/Province"
+                    value={formData.state_province}
+                    onChange={(e) => setFormData({ ...formData, state_province: e.target.value })}
+                    margin="normal"
+                  />
+                  <TextField
+                    label="Postal Code"
+                    value={formData.postal_code}
+                    onChange={(e) => setFormData({ ...formData, postal_code: e.target.value })}
+                    margin="normal"
+                  />
+                </Box>
+                <TextField
+                  fullWidth
+                  label="Country"
+                  value={formData.country}
+                  onChange={(e) => setFormData({ ...formData, country: e.target.value })}
+                  margin="normal"
+                />
               </>
             )}
           </Box>

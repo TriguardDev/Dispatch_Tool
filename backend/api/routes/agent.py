@@ -108,6 +108,14 @@ def create_agent():
         status = data.get("status", "available")
         location_id = data.get("location_id")
 
+        # Location fields for creating new location if needed
+        street_number = data.get("street_number")
+        street_name = data.get("street_name")
+        city = data.get("city")
+        state_province = data.get("state_province")
+        postal_code = data.get("postal_code")
+        country = data.get("country", "USA")
+
         if not name or not email:
             return jsonify({"success": False, "error": "Missing required fields: name, email"}), 400
 
@@ -121,6 +129,26 @@ def create_agent():
         cursor.execute("SELECT agentId FROM field_agents WHERE email = %s", (email,))
         if cursor.fetchone():
             return jsonify({"success": False, "error": "Email already exists"}), 409
+
+        # Handle location creation if location data is provided
+        if not location_id and street_number and street_name and city and state_province and postal_code:
+            # Check if location already exists
+            cursor.execute("""
+                SELECT id FROM locations 
+                WHERE street_number=%s AND street_name=%s AND postal_code=%s 
+                  AND city=%s AND state_province=%s
+            """, (street_number, street_name, postal_code, city, state_province))
+            
+            existing_location = cursor.fetchone()
+            if existing_location:
+                location_id = existing_location['id']
+            else:
+                # Create new location (using default lat/lng for now)
+                cursor.execute("""
+                    INSERT INTO locations (latitude, longitude, postal_code, city, state_province, country, street_name, street_number)
+                    VALUES (0, 0, %s, %s, %s, %s, %s, %s)
+                """, (postal_code, city, state_province, country, street_name, street_number))
+                location_id = cursor.lastrowid
 
         # Insert new agent
         cursor.execute("""
@@ -175,6 +203,34 @@ def update_agent(agent_id):
         if not cursor.fetchone():
             return jsonify({"success": False, "error": "Agent not found"}), 404
 
+        # Handle location creation/update if location data is provided
+        location_id = data.get("location_id")
+        street_number = data.get("street_number")
+        street_name = data.get("street_name")
+        city = data.get("city")
+        state_province = data.get("state_province")
+        postal_code = data.get("postal_code")
+        country = data.get("country", "USA")
+
+        if not location_id and street_number and street_name and city and state_province and postal_code:
+            # Check if location already exists
+            cursor.execute("""
+                SELECT id FROM locations 
+                WHERE street_number=%s AND street_name=%s AND postal_code=%s 
+                  AND city=%s AND state_province=%s
+            """, (street_number, street_name, postal_code, city, state_province))
+            
+            existing_location = cursor.fetchone()
+            if existing_location:
+                location_id = existing_location['id']
+            else:
+                # Create new location (using default lat/lng for now)
+                cursor.execute("""
+                    INSERT INTO locations (latitude, longitude, postal_code, city, state_province, country, street_name, street_number)
+                    VALUES (0, 0, %s, %s, %s, %s, %s, %s)
+                """, (postal_code, city, state_province, country, street_name, street_number))
+                location_id = cursor.lastrowid
+
         # Build dynamic update query
         update_fields = []
         update_values = []
@@ -205,10 +261,10 @@ def update_agent(agent_id):
             update_fields.append("password = %s")
             update_values.append(hashed_password)
 
-        # Only dispatchers/admins can update location
-        if data.get("location_id") is not None and request.role != 'field_agent':
+        # Update location_id if it was set or created
+        if "location_id" in data or location_id is not None:
             update_fields.append("location_id = %s")
-            update_values.append(data["location_id"])
+            update_values.append(location_id)
 
         if not update_fields:
             return jsonify({"success": False, "error": "No valid fields to update"}), 400
