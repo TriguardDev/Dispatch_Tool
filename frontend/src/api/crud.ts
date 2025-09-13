@@ -70,7 +70,7 @@ export async function updateBookingStatus(bookingId: number, status: string): Pr
 }
 
 export async function updateBooking(bookingId: number, updates: { 
-  agentId?: number; 
+  agentId?: number | null; 
   booking_date?: string; 
   booking_time?: string; 
   status?: string; 
@@ -155,5 +155,6 @@ export async function searchAgents(params: {
   }
 
   const result = await res.json();
-  return result.success ? result.data : result;
+  // The search endpoint returns agents array directly, not wrapped in success/data
+  return Array.isArray(result) ? result : (result.success ? result.data : []);
 }

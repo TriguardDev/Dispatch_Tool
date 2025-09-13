@@ -99,6 +99,7 @@ const AppointmentCard = memo(function AppointmentCard({ appt, addressText, onSta
   const [agents, setAgents] = useState<Agent[]>([]);
   const [loadingAgents, setLoadingAgents] = useState(false);
   const [agentDropdownOpen, setAgentDropdownOpen] = useState(false);
+  const [agentsLoaded, setAgentsLoaded] = useState(false); // Track if agents have been loaded
 
   // Computed values
   const hasExistingDisposition = useMemo(() => 
@@ -127,7 +128,7 @@ const AppointmentCard = memo(function AppointmentCard({ appt, addressText, onSta
 
   const handleSearchAgents = useCallback(async () => {
     if (!appt.customer_latitude || !appt.customer_longitude) {
-      alert("Customer location not available for agent search");
+      console.warn("Customer location not available for agent search");
       return;
     }
     
@@ -140,19 +141,21 @@ const AppointmentCard = memo(function AppointmentCard({ appt, addressText, onSta
         booking_time: appt.booking_time,
       });
       setAgents(data);
+      setAgentsLoaded(true);
     } catch (err) {
       console.error("Error fetching agents:", err);
-      alert("Error fetching nearby agents");
     } finally {
       setLoadingAgents(false);
     }
-  }, [appt.customer_latitude, appt.customer_longitude, appt.booking_date, appt.booking_time]);
+  }, [appt.bookingId, appt.customer_latitude, appt.customer_longitude, appt.booking_date, appt.booking_time]);
 
   const handleAgentChange = useCallback(async (newAgentId: string) => {
     try {
-      await updateBooking(appt.bookingId, {
-        agentId: parseInt(newAgentId)
-      });
+      const agentUpdate = newAgentId === "unassigned" 
+        ? { agentId: null } 
+        : { agentId: parseInt(newAgentId) };
+      
+      await updateBooking(appt.bookingId, agentUpdate);
       setAgentDropdownOpen(false);
       if (onAgentChange) {
         onAgentChange(); // Refresh the booking data
@@ -197,8 +200,8 @@ const AppointmentCard = memo(function AppointmentCard({ appt, addressText, onSta
               open={agentDropdownOpen}
               onOpen={() => {
                 setAgentDropdownOpen(true);
-                if (agents.length === 0) {
-                  handleSearchAgents();
+                if (!agentsLoaded && !loadingAgents) {
+                  handleSearchAgents(); // Only search if not already loaded
                 }
               }}
               onClose={() => setAgentDropdownOpen(false)}
@@ -231,37 +234,76 @@ const AppointmentCard = memo(function AppointmentCard({ appt, addressText, onSta
                 }
               }}
             >
-              {loadingAgents ? (
-                <MenuItem disabled>
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                    <CircularProgress size={16} />
-                    <Typography variant="body2">Searching for nearby agents...</Typography>
-                  </Box>
-                </MenuItem>
-              ) : agents.length === 0 ? (
-                <MenuItem disabled>
-                  <Typography variant="body2" color="text.secondary">
-                    No available agents found
+              {[
+                // Unassigned option
+                <MenuItem 
+                  key="unassigned" 
+                  value="unassigned"
+                  onClick={() => handleAgentChange("unassigned")}
+                  sx={{ borderBottom: '1px solid', borderColor: 'divider' }}
+                >
+                  <Typography variant="body2" fontWeight="500" color="text.secondary" sx={{ fontStyle: 'italic' }}>
+                    Unassigned
                   </Typography>
-                </MenuItem>
-              ) : (
-                agents.map((agent) => (
+                </MenuItem>,
+                
+                // Refresh agents option (only show if agents are loaded)
+                ...(agentsLoaded ? [
                   <MenuItem 
-                    key={agent.agentId} 
-                    value={agent.agentId}
-                    onClick={() => handleAgentChange(agent.agentId)}
+                    key="refresh" 
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleSearchAgents();
+                    }}
+                    sx={{ borderBottom: '1px solid', borderColor: 'divider' }}
+                    disabled={loadingAgents}
                   >
-                    <Box sx={{ display: 'flex', justifyContent: 'space-between', width: '100%' }}>
-                      <Typography variant="body2" fontWeight="500">
-                        {agent.name}
-                      </Typography>
-                      <Typography variant="body2" color="text.secondary">
-                        {Math.ceil(Number(agent.distance))} km
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      {loadingAgents && <CircularProgress size={14} />}
+                      <Typography variant="body2" color="primary.main" sx={{ fontStyle: 'italic' }}>
+                        {loadingAgents ? 'Refreshing...' : 'Refresh agents'}
                       </Typography>
                     </Box>
                   </MenuItem>
-                ))
-              )}
+                ] : []),
+                
+                // Available agents or loading state
+                ...(loadingAgents && !agentsLoaded ? [
+                  <MenuItem key="loading" disabled>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      <CircularProgress size={16} />
+                      <Typography variant="body2">Searching for nearby agents...</Typography>
+                    </Box>
+                  </MenuItem>
+                ] : [
+                  // Available agents
+                  ...agents.map((agent) => (
+                    <MenuItem 
+                      key={agent.agentId} 
+                      value={agent.agentId}
+                      onClick={() => handleAgentChange(agent.agentId)}
+                    >
+                      <Box sx={{ display: 'flex', justifyContent: 'space-between', width: '100%' }}>
+                        <Typography variant="body2" fontWeight="500">
+                          {agent.name}
+                        </Typography>
+                        <Typography variant="body2" color="text.secondary">
+                          {Math.ceil(Number(agent.distance))} km
+                        </Typography>
+                      </Box>
+                    </MenuItem>
+                  )),
+                  
+                  // Show message if no agents found (only if agents have been loaded)
+                  ...(agents.length === 0 && agentsLoaded && !loadingAgents ? [
+                    <MenuItem key="no-agents" disabled>
+                      <Typography variant="body2" color="text.secondary" sx={{ fontStyle: 'italic' }}>
+                        No nearby agents available
+                      </Typography>
+                    </MenuItem>
+                  ] : [])
+                ])
+              ]}
             </Select>
           </FormControl>
         </Box>

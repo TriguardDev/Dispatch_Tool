@@ -514,7 +514,7 @@ def update_booking(booking_id):
             update_fields.append("status = %s")
             update_values.append(data["status"])
 
-        if data.get("agentId") and request.role != 'field_agent':  # Only dispatchers/admins can reassign
+        if "agentId" in data and request.role != 'field_agent':  # Only dispatchers/admins can reassign
             update_fields.append("agentId = %s")
             update_values.append(data["agentId"])
 

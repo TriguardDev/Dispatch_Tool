@@ -21,25 +21,45 @@ def search_agents():
         conn = get_connection()
         cursor = conn.cursor(dictionary=True)
 
+        # Optimized query with less restrictive availability check (1 hour buffer instead of 2)
+        booking_period = "01:00:00"  # Reduced from 2 hours to 1 hour
+        
         query = """
             SELECT fa.name, fa.agentId,
-                (6371 * ACOS(
+                ROUND((6371 * ACOS(
                     COS(RADIANS(%s)) * COS(RADIANS(l.latitude)) *
                     COS(RADIANS(l.longitude) - RADIANS(%s)) +
                     SIN(RADIANS(%s)) * SIN(RADIANS(l.latitude))
-                )) AS distance
+                )), 1) AS distance
             FROM field_agents fa
             INNER JOIN locations l ON fa.location_id = l.id
             WHERE fa.agentId NOT IN (
-                SELECT b.agentId
+                SELECT COALESCE(b.agentId, 0)
                 FROM bookings b
                 WHERE b.booking_date = %s
                   AND b.booking_time BETWEEN SUBTIME(%s, %s) AND ADDTIME(%s, %s)
+                  AND b.agentId IS NOT NULL
             )
             ORDER BY distance ASC;
         """
         cursor.execute(query, (lat, lon, lat, booking_date, booking_time, booking_period, booking_time, booking_period))
         agents = cursor.fetchall()
+        
+        # If no agents available with time conflict check, return all agents with distance
+        if len(agents) == 0:
+            fallback_query = """
+                SELECT fa.name, fa.agentId,
+                    ROUND((6371 * ACOS(
+                        COS(RADIANS(%s)) * COS(RADIANS(l.latitude)) *
+                        COS(RADIANS(l.longitude) - RADIANS(%s)) +
+                        SIN(RADIANS(%s)) * SIN(RADIANS(l.latitude))
+                    )), 1) AS distance
+                FROM field_agents fa
+                INNER JOIN locations l ON fa.location_id = l.id
+                ORDER BY distance ASC;
+            """
+            cursor.execute(fallback_query, (lat, lon, lat))
+            agents = cursor.fetchall()
 
         return jsonify(agents), 200
 
