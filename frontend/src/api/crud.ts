@@ -7,6 +7,8 @@ export interface Booking {
   booking_date: string; // YYYY-MM-DD
   booking_time: string; // HH:MM:SS
   customer_address: string | null;
+  customer_latitude: number | null;
+  customer_longitude: number | null;
   status: string;
   customer_name: string;
   agent_name: string | null;
@@ -64,6 +66,31 @@ export async function updateBookingStatus(bookingId: number, status: string): Pr
       throw new Error("Access denied");
     }
     throw new Error("Failed to update booking status");
+  }
+}
+
+export async function updateBooking(bookingId: number, updates: { 
+  agentId?: number; 
+  booking_date?: string; 
+  booking_time?: string; 
+  status?: string; 
+}): Promise<void> {
+  const res = await authenticatedFetch(`${BASE_URL}/bookings/${bookingId}`, {
+    method: "PUT",
+    body: JSON.stringify(updates),
+  });
+
+  if (!res.ok) {
+    if (res.status === 401) {
+      throw new Error("Authentication required");
+    }
+    if (res.status === 403) {
+      throw new Error("Access denied");
+    }
+    if (res.status === 404) {
+      throw new Error("Booking not found");
+    }
+    throw new Error("Failed to update booking");
   }
 }
 

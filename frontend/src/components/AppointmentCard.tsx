@@ -1,13 +1,21 @@
 import { useState, useMemo, useCallback, memo } from "react";
 import type { Booking } from "../api/crud";
-import { Card, CardContent, Typography, Chip, Box, Divider, Select, MenuItem, FormControl, TextField, Button, InputLabel, IconButton, Collapse } from "@mui/material";
+import { Card, CardContent, Typography, Chip, Box, Divider, Select, MenuItem, FormControl, TextField, Button, InputLabel, IconButton, Collapse, CircularProgress } from "@mui/material";
 import { AccessTime, LocationOn, Person, Assignment, Add, Remove } from "@mui/icons-material";
+import { searchAgents, updateBooking } from "../api/crud";
 
 interface Props {
   appt: Booking;
   addressText: string;
   onStatusChange?: (bookingId: number, status: string) => void;
   onDispositionSave?: (bookingId: number, dispositionType: string, note: string) => void;
+  onAgentChange?: () => void; // Callback to refresh data after agent assignment
+}
+
+interface Agent {
+  distance: string;
+  agentId: string;
+  name: string;
 }
 
 // Constants
@@ -82,12 +90,15 @@ const DispositionNote = memo(({ note, expanded }: { note: string; expanded: bool
   </Collapse>
 ));
 
-const AppointmentCard = memo(function AppointmentCard({ appt, addressText, onStatusChange, onDispositionSave }: Props) {
+const AppointmentCard = memo(function AppointmentCard({ appt, addressText, onStatusChange, onDispositionSave, onAgentChange }: Props) {
   // State management
   const [note, setNote] = useState("");
   const [selectedDisposition, setSelectedDisposition] = useState(appt.disposition_code || "");
   const [dispositionSaved, setDispositionSaved] = useState(false);
   const [noteExpanded, setNoteExpanded] = useState(false);
+  const [agents, setAgents] = useState<Agent[]>([]);
+  const [loadingAgents, setLoadingAgents] = useState(false);
+  const [agentDropdownOpen, setAgentDropdownOpen] = useState(false);
 
   // Computed values
   const hasExistingDisposition = useMemo(() => 
@@ -114,6 +125,44 @@ const AppointmentCard = memo(function AppointmentCard({ appt, addressText, onSta
 
   const toggleNoteExpansion = useCallback(() => setNoteExpanded(!noteExpanded), [noteExpanded]);
 
+  const handleSearchAgents = useCallback(async () => {
+    if (!appt.customer_latitude || !appt.customer_longitude) {
+      alert("Customer location not available for agent search");
+      return;
+    }
+    
+    setLoadingAgents(true);
+    try {
+      const data = await searchAgents({
+        latitude: appt.customer_latitude.toString(),
+        longitude: appt.customer_longitude.toString(),
+        booking_date: appt.booking_date,
+        booking_time: appt.booking_time,
+      });
+      setAgents(data);
+    } catch (err) {
+      console.error("Error fetching agents:", err);
+      alert("Error fetching nearby agents");
+    } finally {
+      setLoadingAgents(false);
+    }
+  }, [appt.customer_latitude, appt.customer_longitude, appt.booking_date, appt.booking_time]);
+
+  const handleAgentChange = useCallback(async (newAgentId: string) => {
+    try {
+      await updateBooking(appt.bookingId, {
+        agentId: parseInt(newAgentId)
+      });
+      setAgentDropdownOpen(false);
+      if (onAgentChange) {
+        onAgentChange(); // Refresh the booking data
+      }
+    } catch (err) {
+      console.error("Error updating agent:", err);
+      alert("Error updating assigned agent");
+    }
+  }, [appt.bookingId, onAgentChange]);
+
   // Render sections
   const renderHeader = () => (
     <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
@@ -137,18 +186,86 @@ const AppointmentCard = memo(function AppointmentCard({ appt, addressText, onSta
 
   const renderBasicInfo = () => (
     <>
-      {appt.agent_name && (
-        <InfoRow icon={<Person sx={{ fontSize: 16, color: 'text.secondary' }} />}>
-          <Typography variant="body2" color="text.secondary">
-            <Typography component="span" fontWeight="600">
-              Assigned to:
-            </Typography>{' '}
-            <Typography component="span" color="text.primary" fontWeight="500">
-              {appt.agent_name}
-            </Typography>
+      <InfoRow icon={<Person sx={{ fontSize: 16, color: 'text.secondary' }} />}>
+        <Box sx={{ flex: 1 }}>
+          <Typography variant="body2" color="text.secondary" fontWeight="600" sx={{ mb: 0.5 }}>
+            Assigned to:
           </Typography>
-        </InfoRow>
-      )}
+          <FormControl fullWidth size="small" variant="outlined">
+            <Select
+              value={agentDropdownOpen ? "" : (appt.agent_name || "")}
+              open={agentDropdownOpen}
+              onOpen={() => {
+                setAgentDropdownOpen(true);
+                if (agents.length === 0) {
+                  handleSearchAgents();
+                }
+              }}
+              onClose={() => setAgentDropdownOpen(false)}
+              displayEmpty
+              renderValue={(selected) => {
+                if (loadingAgents) {
+                  return (
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      <CircularProgress size={14} />
+                      <Typography variant="body2">Loading agents...</Typography>
+                    </Box>
+                  );
+                }
+                return selected || appt.agent_name || "No agent assigned";
+              }}
+              sx={{
+                '& .MuiSelect-select': {
+                  py: 1,
+                  fontSize: '0.875rem',
+                  fontWeight: 500,
+                },
+                '& .MuiOutlinedInput-notchedOutline': {
+                  borderColor: 'divider',
+                },
+                '&:hover .MuiOutlinedInput-notchedOutline': {
+                  borderColor: 'primary.main',
+                },
+                '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                  borderWidth: 1,
+                }
+              }}
+            >
+              {loadingAgents ? (
+                <MenuItem disabled>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <CircularProgress size={16} />
+                    <Typography variant="body2">Searching for nearby agents...</Typography>
+                  </Box>
+                </MenuItem>
+              ) : agents.length === 0 ? (
+                <MenuItem disabled>
+                  <Typography variant="body2" color="text.secondary">
+                    No available agents found
+                  </Typography>
+                </MenuItem>
+              ) : (
+                agents.map((agent) => (
+                  <MenuItem 
+                    key={agent.agentId} 
+                    value={agent.agentId}
+                    onClick={() => handleAgentChange(agent.agentId)}
+                  >
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', width: '100%' }}>
+                      <Typography variant="body2" fontWeight="500">
+                        {agent.name}
+                      </Typography>
+                      <Typography variant="body2" color="text.secondary">
+                        {Math.ceil(Number(agent.distance))} km
+                      </Typography>
+                    </Box>
+                  </MenuItem>
+                ))
+              )}
+            </Select>
+          </FormControl>
+        </Box>
+      </InfoRow>
 
       <InfoRow icon={<LocationOn sx={{ fontSize: 16, color: 'text.secondary', mt: 0.1 }} />}>
         <Typography 

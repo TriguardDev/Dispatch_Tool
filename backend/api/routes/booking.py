@@ -119,6 +119,8 @@ def get_all_bookings():
             d.typeCode AS disposition_code,
             d.note AS disposition_note,
             dt.description AS disposition_description,
+            l.latitude AS customer_latitude,
+            l.longitude AS customer_longitude,
             CONCAT(
                 l.street_number, ' ', 
                 l.street_name, ', ', 
@@ -185,6 +187,8 @@ def get_agent_bookings(agent_id):
               d.typeCode AS disposition_code,
               d.note AS disposition_note,
               dt.description AS disposition_description,
+              l.latitude AS customer_latitude,
+              l.longitude AS customer_longitude,
               CONCAT(
                   l.street_number, ' ', 
                   l.street_name, ', ', 
@@ -253,6 +257,8 @@ def get_booking(booking_id):
                     d.typeCode AS disposition_code,
                     d.note AS disposition_note,
                     dt.description AS disposition_description,
+                    l.latitude AS customer_latitude,
+                    l.longitude AS customer_longitude,
                     CONCAT(
                         l.street_number, ' ', 
                         l.street_name, ', ', 
@@ -291,6 +297,8 @@ def get_booking(booking_id):
                     d.typeCode AS disposition_code,
                     d.note AS disposition_note,
                     dt.description AS disposition_description,
+                    l.latitude AS customer_latitude,
+                    l.longitude AS customer_longitude,
                     CONCAT(
                         l.street_number, ' ', 
                         l.street_name, ', ', 
