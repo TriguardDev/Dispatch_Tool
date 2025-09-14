@@ -1,7 +1,7 @@
 from flask import Blueprint, request, jsonify
 from db import get_connection
 from utils.async_notifier import send_notifications_async, prepare_booking_notifications
-from utils.middleware import require_auth, require_dispatcher
+from utils.middleware import require_auth, require_dispatcher, require_any_role
 import datetime
 import os
 
