@@ -3,8 +3,28 @@ from db import get_connection
 from utils.async_notifier import send_notifications_async, prepare_booking_notifications
 from utils.middleware import require_auth, require_dispatcher
 import datetime
+import os
 
 booking_bp = Blueprint("booking", __name__, url_prefix="/api")
+
+# Call Center API Key (should be set in environment variables)
+CALL_CENTER_API_KEY = os.getenv('CALL_CENTER_API_KEY', 'cc_api_key_change_this_in_production')
+
+def require_call_center_auth(f):
+    """Middleware to authenticate call center API requests"""
+    from functools import wraps
+    
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        api_key = request.headers.get('X-API-Key') or request.headers.get('X-Api-Key')
+        if not api_key:
+            return jsonify({"success": False, "error": "API key required"}), 401
+        
+        if api_key != CALL_CENTER_API_KEY:
+            return jsonify({"success": False, "error": "Invalid API key"}), 401
+        
+        return f(*args, **kwargs)
+    return decorated_function
 
 def serialize_booking_timestamps(booking):
     """Convert booking timestamps to ISO format for JSON serialization"""
@@ -604,6 +624,153 @@ def delete_booking(booking_id):
             "success": True,
             "message": f"Booking for {booking['customer_name']} on {booking['booking_date']} deleted successfully"
         }), 200
+
+    except Exception as e:
+        if 'conn' in locals():
+            conn.rollback()
+        return jsonify({"success": False, "error": str(e)}), 500
+
+    finally:
+        if 'cursor' in locals():
+            cursor.close()
+        if 'conn' in locals():
+            conn.close()
+
+
+@booking_bp.route("/call-center/booking", methods=["POST"])
+@require_call_center_auth
+def create_call_center_booking():
+    """
+    Create a new booking from call center with call center agent tracking.
+    Always creates unassigned bookings (agentId = NULL).
+    """
+    try:
+        data = request.get_json()
+        
+        # Validate required call center agent info
+        if not data.get("call_center_agent"):
+            return jsonify({"success": False, "error": "Call center agent information is required"}), 400
+        
+        call_center_agent = data["call_center_agent"]
+        if not call_center_agent.get("name") or not call_center_agent.get("email"):
+            return jsonify({"success": False, "error": "Call center agent name and email are required"}), 400
+
+        conn = get_connection()
+        cursor = conn.cursor(dictionary=True)
+
+        # Location lookup/insert (same logic as regular booking creation)
+        cursor.execute("""
+            SELECT id FROM locations 
+            WHERE street_number=%s AND street_name=%s AND postal_code=%s 
+              AND city=%s AND state_province=%s
+        """, (
+            data["location"]["street_number"],
+            data["location"]["street_name"],
+            data["location"]["postal_code"],
+            data["location"]["city"],
+            data["location"]["state_province"]
+        ))
+        existing_location = cursor.fetchone()
+        location_id = existing_location["id"] if existing_location else None
+
+        if not location_id:
+            cursor.execute("""
+                INSERT INTO locations (latitude, longitude, postal_code, city, state_province, country, street_name, street_number)
+                VALUES (%s,%s,%s,%s,%s,%s,%s,%s)
+            """, (
+                data["location"]["latitude"],
+                data["location"]["longitude"],
+                data["location"]["postal_code"],
+                data["location"]["city"],
+                data["location"]["state_province"],
+                data["location"]["country"],
+                data["location"]["street_name"],
+                data["location"]["street_number"]
+            ))
+            location_id = cursor.lastrowid
+
+        # Customer lookup/insert (same logic as regular booking creation)
+        cursor.execute("SELECT customerId FROM customers WHERE email = %s", (data["customer"]["email"],))
+        existing_customer = cursor.fetchone()
+        customer_id = existing_customer["customerId"] if existing_customer else None
+
+        if not customer_id:
+            cursor.execute("""
+                INSERT INTO customers (name, email, phone, location_id)
+                VALUES (%s,%s,%s,%s)
+            """, (
+                data["customer"]["name"],
+                data["customer"]["email"],
+                data["customer"]["phone"],
+                location_id
+            ))
+            customer_id = cursor.lastrowid
+
+        # Create booking with agentId=NULL (unassigned)
+        cursor.execute("""
+            INSERT INTO bookings (agentId, customerId, booking_date, booking_time, status)
+            VALUES (%s,%s,%s,%s,%s)
+        """, (
+            None,  # Always unassigned from call center
+            customer_id,
+            data["booking"]["booking_date"],
+            data["booking"]["booking_time"],
+            "scheduled"  # Default status
+        ))
+        booking_id = cursor.lastrowid
+
+        conn.commit()
+
+        # Fetch the created booking with full details
+        cursor.execute("""
+            SELECT 
+                b.bookingId, 
+                b.booking_date, 
+                b.booking_time, 
+                b.status,
+                c.name AS customer_name,
+                fa.name AS agent_name,
+                CONCAT(
+                    l.street_number, ' ', 
+                    l.street_name, ', ', 
+                    l.postal_code, ' ', 
+                    l.city
+                ) AS customer_address
+            FROM bookings b
+            JOIN customers c ON b.customerId = c.customerId
+            LEFT JOIN field_agents fa ON b.agentId = fa.agentId
+            LEFT JOIN locations l ON c.location_id = l.id
+            WHERE b.bookingId = %s
+        """, (booking_id,))
+        
+        created_booking = cursor.fetchone()
+        serialize_booking_timestamps(created_booking)
+
+        # Prepare notification data (no agent notifications since unassigned)
+        notification_data = {
+            'customer_name': data['customer']['name'],
+            'customer_email': data['customer'].get('email'),
+            'customer_phone': data['customer'].get('phone'),
+            'agent_name': None,  # No agent assigned
+            'agent_email': None,
+            'agent_phone': None,
+            'booking_date': data['booking']['booking_date'],
+            'booking_time': data['booking']['booking_time']
+        }
+        
+        # Send customer notification only (no agent since unassigned)
+        notifications = prepare_booking_notifications(notification_data, is_update=False)
+        # Filter to only customer notifications
+        customer_notifications = [n for n in notifications if 'customer' in n.get('type', '')]
+        if customer_notifications:
+            send_notifications_async(customer_notifications)
+
+        return jsonify({
+            "success": True,
+            "message": f"Booking created successfully by {call_center_agent['name']} - unassigned, ready for dispatcher assignment",
+            "data": created_booking,
+            "call_center_agent": call_center_agent['name']
+        }), 201
 
     except Exception as e:
         if 'conn' in locals():
