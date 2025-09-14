@@ -1,7 +1,7 @@
 from flask import Blueprint, request, jsonify
 from db import get_connection
 from utils.async_notifier import send_notifications_async, prepare_booking_notifications
-from utils.middleware import require_auth, require_dispatcher, require_any_role
+from utils.middleware import require_any_role
 import datetime
 import os
 
@@ -39,7 +39,7 @@ def serialize_booking_timestamps(booking):
     return booking
 
 @booking_bp.route("/booking", methods=["PUT"])
-@require_auth
+@require_any_role('admin', 'dispatcher', 'field_agent')
 def update_booking_status():
     """
     Update booking status. If completed, trigger survey notifications.
@@ -118,7 +118,7 @@ def update_booking_status():
 
 
 @booking_bp.route("/bookings", methods=["GET"])
-@require_auth
+@require_any_role('admin', 'dispatcher')
 def get_all_bookings():
     """
     Get all bookings (dispatcher/admin access only).
@@ -176,7 +176,7 @@ def get_all_bookings():
 
 
 @booking_bp.route("/agents/<int:agent_id>/bookings", methods=["GET"])
-@require_auth
+@require_any_role('admin', 'dispatcher', 'field_agent')
 def get_agent_bookings(agent_id):
     """
     Get all bookings for a specific agent. Agents can only see their own bookings.
@@ -250,7 +250,7 @@ def get_agent_bookings(agent_id):
 
 
 @booking_bp.route("/bookings/<int:booking_id>", methods=["GET"])
-@require_auth
+@require_any_role('admin', 'dispatcher', 'field_agent')
 def get_booking(booking_id):
     """
     Get a specific booking by ID.
@@ -356,7 +356,7 @@ def get_booking(booking_id):
 
 
 @booking_bp.route("/bookings", methods=["POST"])
-@require_dispatcher  # Only dispatchers can create bookings
+@require_any_role('admin', 'dispatcher')  # Only admins and dispatchers can create bookings
 def create_booking():
     """
     Create a new booking, inserting location + customer if new.
@@ -494,10 +494,10 @@ def create_booking():
 
 
 @booking_bp.route("/bookings/<int:booking_id>", methods=["PUT"])
-@require_auth
+@require_any_role('admin', 'dispatcher')
 def update_booking(booking_id):
     """
-    Update a booking. Agents can only update their own bookings.
+    Update a booking (admin and dispatcher access only).
     """
     try:
         data = request.get_json()
@@ -595,10 +595,10 @@ def update_booking(booking_id):
 
 
 @booking_bp.route("/bookings/<int:booking_id>", methods=["DELETE"])
-@require_dispatcher  # Only dispatchers can delete bookings
+@require_any_role('admin')  # Only admins can delete bookings
 def delete_booking(booking_id):
     """
-    Delete a booking (dispatcher access only).
+    Delete a booking (admin access only).
     """
     try:
         conn = get_connection()
