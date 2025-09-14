@@ -3,7 +3,7 @@ import { Box, Typography, CircularProgress, Container } from "@mui/material";
 import TopBar from "../components/TopBar";
 import QueueCard from "../components/QueueCard";
 import AppointmentCard from "../components/AppointmentCard";
-import { type Booking, getAgentBookings, updateBookingStatus, saveDisposition } from "../api/crud";
+import { type Booking, getAgentBookings, updateBooking, saveDisposition } from "../api/crud";
 import { useSmartPolling } from "../hooks/useSmartPolling";
 
 interface AgentScreenProps {
@@ -38,7 +38,7 @@ export default function AgentScreen({ agentId, onLogout }: AgentScreenProps) {
       optimisticUpdate(bookingId, { status: status as Booking['status'] });
       
       // Make API call
-      await updateBookingStatus(bookingId, status);
+      await updateBooking(bookingId, { status });
       
       // Refresh data to ensure consistency
       await refetch();

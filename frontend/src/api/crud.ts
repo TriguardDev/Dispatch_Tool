@@ -52,22 +52,6 @@ export async function getAgentBookings(agentId: number): Promise<Booking[]> {
   return result.success ? result.data : [];
 }
 
-export async function updateBookingStatus(bookingId: number, status: string): Promise<void> {
-  const res = await authenticatedFetch(`${BASE_URL}/booking`, {
-    method: "PUT",
-    body: JSON.stringify({ booking_id: bookingId, status }),
-  });
-
-  if (!res.ok) {
-    if (res.status === 401) {
-      throw new Error("Authentication required");
-    }
-    if (res.status === 403) {
-      throw new Error("Access denied");
-    }
-    throw new Error("Failed to update booking status");
-  }
-}
 
 export async function updateBooking(bookingId: number, updates: { 
   agentId?: number | null; 

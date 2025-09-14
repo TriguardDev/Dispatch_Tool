@@ -38,84 +38,6 @@ def serialize_booking_timestamps(booking):
         booking["booking_time"] = f"{hours:02}:{minutes:02}:{seconds:02}"
     return booking
 
-@booking_bp.route("/booking", methods=["PUT"])
-@require_any_role('admin', 'dispatcher', 'field_agent')
-def update_booking_status():
-    """
-    Update booking status. If completed, trigger survey notifications.
-    """
-    try:
-        data = request.get_json()
-        booking_id = data.get("booking_id")
-        new_status = data.get("status")
-
-        if not booking_id or not new_status:
-            return jsonify({"success": False, "error": "Missing fields"}), 400
-
-        conn = get_connection()
-        cursor = conn.cursor(dictionary=True)
-
-        # Verify user has access to this booking (admins can access all bookings)
-        if request.role == 'field_agent':
-            cursor.execute("""
-                SELECT bookingId FROM bookings 
-                WHERE bookingId = %s AND agentId = %s
-            """, (booking_id, request.user_id))
-            if not cursor.fetchone():
-                return jsonify({"success": False, "error": "Access denied"}), 403
-
-        cursor.execute("""
-            UPDATE bookings
-            SET status = %s
-            WHERE bookingId = %s
-        """, (new_status, booking_id))
-
-        cursor.execute("""
-            SELECT c.email AS customer_email, c.phone AS customer_phone, c.name AS customer_name,
-                   fa.email AS agent_email, fa.phone AS agent_phone, fa.name AS agent_name,
-                   b.booking_date, b.booking_time
-            FROM bookings b
-            JOIN customers c ON b.customerId = c.customerId
-            LEFT JOIN field_agents fa ON b.agentId = fa.agentId
-            WHERE b.bookingId = %s
-        """, (booking_id,))
-        res = cursor.fetchone()
-
-        if not res:
-            return jsonify({"success": False, "error": "Booking not found"}), 404
-
-        conn.commit()
-
-        # -------------------- Notifications -------------------- #
-        # Prepare notification data
-        notification_data = {
-            'customer_name': res['customer_name'],
-            'customer_email': res.get('customer_email'),
-            'customer_phone': res.get('customer_phone'),
-            'agent_name': res.get('agent_name'),
-            'agent_email': res.get('agent_email'),
-            'agent_phone': res.get('agent_phone'),
-            'booking_date': res['booking_date'],
-            'booking_time': res['booking_time'],
-            'status': new_status
-        }
-        
-        # Send notifications asynchronously
-        notifications = prepare_booking_notifications(notification_data, is_update=True)
-        send_notifications_async(notifications)
-
-        # TODO: send survey link if completed
-        return jsonify({"success": True, "message": "Booking updated"}), 200
-
-    except Exception as e:
-        return jsonify({"success": False, "error": str(e)}), 500
-
-    finally:
-        if 'cursor' in locals():
-            cursor.close()
-        if 'conn' in locals():
-            conn.close()
-
 
 @booking_bp.route("/bookings", methods=["GET"])
 @require_any_role('admin', 'dispatcher')
@@ -494,10 +416,10 @@ def create_booking():
 
 
 @booking_bp.route("/bookings/<int:booking_id>", methods=["PUT"])
-@require_any_role('admin', 'dispatcher')
+@require_any_role('admin', 'dispatcher', 'field_agent')
 def update_booking(booking_id):
     """
-    Update a booking (admin and dispatcher access only).
+    Update a booking (admin, dispatcher, and field agent access).
     """
     try:
         data = request.get_json()
