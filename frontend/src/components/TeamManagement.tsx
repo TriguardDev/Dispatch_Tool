@@ -346,7 +346,7 @@ export default function TeamManagement() {
       {/* Teams Grid */}
       <Grid container spacing={3}>
         {teams.map((team) => (
-          <Grid item xs={12} md={6} lg={4} key={team.teamId}>
+          <Grid key={team.teamId} size={{xs: 12, md: 6, lg: 4}}>
             <Card sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
               <CardContent sx={{ flexGrow: 1 }}>
                 <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
@@ -480,7 +480,7 @@ export default function TeamManagement() {
         ))}
 
         {teams.length === 0 && (
-          <Grid item xs={12}>
+          <Grid size={{xs: 12}}>
             <Box sx={{ textAlign: 'center', py: 4 }}>
               <Typography variant="h6" color="textSecondary">
                 No teams found
