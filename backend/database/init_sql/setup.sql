@@ -20,6 +20,15 @@ CREATE TABLE IF NOT EXISTS locations (
     )
 );
 
+-- Teams Table
+CREATE TABLE IF NOT EXISTS teams (
+    teamId INT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(100) NOT NULL UNIQUE,
+    description TEXT,
+    created_time TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_time TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);
+
 -- Dispatcher Table
 CREATE TABLE IF NOT EXISTS dispatchers (
     dispatcherId INT AUTO_INCREMENT PRIMARY KEY,
@@ -28,9 +37,11 @@ CREATE TABLE IF NOT EXISTS dispatchers (
     password VARCHAR(255) NOT NULL,
     phone VARCHAR(15),
     location_id INT,
+    team_id INT,
     created_time TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_time TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    FOREIGN KEY (location_id) REFERENCES locations(id) ON DELETE SET NULL
+    FOREIGN KEY (location_id) REFERENCES locations(id) ON DELETE SET NULL,
+    FOREIGN KEY (team_id) REFERENCES teams(teamId) ON DELETE SET NULL
 );
 
 -- Field Agent Table
@@ -42,9 +53,11 @@ CREATE TABLE IF NOT EXISTS field_agents (
     phone VARCHAR(15),
     `status` ENUM('available', 'unavailable', 'accepted', 'declined', 'enroute') DEFAULT 'available',
     location_id INT,
+    team_id INT,
     created_time TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_time TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    FOREIGN KEY (location_id) REFERENCES locations(id) ON DELETE SET NULL
+    FOREIGN KEY (location_id) REFERENCES locations(id) ON DELETE SET NULL,
+    FOREIGN KEY (team_id) REFERENCES teams(teamId) ON DELETE SET NULL
 );
 
 -- Admin Table
@@ -109,19 +122,25 @@ VALUES
 (26.3237612, -98.1369012, '78542', 'Edinburg', 'Texas', 'USA', 'Sunset Blvd', '101'),
 (33.1811789, -96.6291685, '75069', 'McKinney', 'Texas', 'USA', 'Bay Street', '100');
 
+-- Sample Teams
+INSERT INTO teams (name, description) VALUES
+('Team Alpha', 'Primary response team for McAllen area'),
+('Team Beta', 'Specialized team for Edinburg region'),
+('Team Gamma', 'McKinney area coverage team');
+
 -- Sample Dispatchers
-INSERT INTO dispatchers (`name`, email, password, phone, location_id)
+INSERT INTO dispatchers (`name`, email, password, phone, location_id, team_id)
 VALUES
-('Pete Stathopoulos', 'pete@triguardroofing.com', 'pete', '555-0001', 1);
+('Pete Stathopoulos', 'pete@triguardroofing.com', 'pete', '555-0001', 1, 1);
 
 -- Sample Field Agents
-INSERT INTO field_agents (`name`, email, password, phone, `status`, location_id)
+INSERT INTO field_agents (`name`, email, password, phone, `status`, location_id, team_id)
 VALUES
-('Larey Farias', 'larey@triguardroofing.com', "larey", '555-1111', 'available', 1),
-('Arthur Garica', 'arthur@triguardroofing.com', 'arthur', '555-1111', 'available', 1),
-('Jeremy Moreno', 'jeremy@triguardroofing.com', 'jeremy', '555-2222', 'available', 2),
-('rebecca steward', 'rebecca@triguardroofing.com', 'rebecca', '555-2222', 'available', 3),
-('tester', 'test@example.com', 'tester', '555-6666', 'available', 3);
+('Larey Farias', 'larey@triguardroofing.com', "larey", '555-1111', 'available', 1, 1),
+('Arthur Garica', 'arthur@triguardroofing.com', 'arthur', '555-1111', 'available', 1, 1),
+('Jeremy Moreno', 'jeremy@triguardroofing.com', 'jeremy', '555-2222', 'available', 2, 2),
+('rebecca steward', 'rebecca@triguardroofing.com', 'rebecca', '555-2222', 'available', 3, 3),
+('tester', 'test@example.com', 'tester', '555-6666', 'available', 3, 3);
 
 -- Sample Admin
 INSERT INTO admins (`name`, email, password)
