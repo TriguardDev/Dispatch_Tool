@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback, memo } from "react";
+import { useState, useMemo, useCallback, memo, useEffect } from "react";
 import type { Booking } from "../api/crud";
 import { Card, CardContent, Typography, Chip, Box, Divider, Select, MenuItem, FormControl, TextField, Button, InputLabel, IconButton, Collapse, CircularProgress } from "@mui/material";
 import { AccessTime, LocationOn, Person, Assignment, Add, Remove } from "@mui/icons-material";
@@ -25,19 +25,7 @@ const STATUS_CONFIG: Record<Booking["status"], { color: "primary" | "warning" | 
   completed: { color: "success", label: "Completed" },
 };
 
-const DISPOSITION_OPTIONS = [
-  { value: "SOLD_CASH_PIF", label: "Sold – Cash Deal (Paid in Full)" },
-  { value: "SOLD_CHECK_COLLECTED", label: "Sold – Check Collected" },
-  { value: "SOLD_CARD_ACH_SUBMITTED", label: "Sold – Card/ACH Payment Submitted" },
-  { value: "SOLD_DEPOSIT_COLLECTED", label: "Sold – Deposit Collected (Balance Due)" },
-  { value: "SOLD_LENDER_SUBMITTED", label: "Sold – Lender Financing Submitted" },
-  { value: "SOLD_LENDER_APPROVED_DOCS", label: "Sold – Lender Approved (Docs Signed)" },
-  { value: "SOLD_FUNDED", label: "Sold – Funded (Lender Disbursed)" },
-  { value: "SOLD_LENDER_DECLINED", label: "Sold – Lender Declined" },
-  { value: "SOLD_IN_HOUSE_PLAN", label: "Sold – Payment Plan (In-House)" },
-  { value: "SOLD_FINAL_PAYMENT", label: "Sold – Balance Paid (Final Payment)" },
-  { value: "SOLD_RESCINDED_REVERSED", label: "Sale Rescinded / Payment Reversed" },
-];
+const BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
 // Helper Components
 const InfoRow = memo(({ icon, children }: { icon: React.ReactElement; children: React.ReactNode }) => (
@@ -100,6 +88,8 @@ const AppointmentCard = memo(function AppointmentCard({ appt, addressText, onSta
   const [loadingAgents, setLoadingAgents] = useState(false);
   const [agentDropdownOpen, setAgentDropdownOpen] = useState(false);
   const [agentsLoaded, setAgentsLoaded] = useState(false); // Track if agents have been loaded
+  const [dispositionOptions, setDispositionOptions] = useState<Array<{value: string, label: string}>>([]);
+  const [loadingDispositions, setLoadingDispositions] = useState(false);
 
   // Computed values
   const hasExistingDisposition = useMemo(() => 
@@ -109,6 +99,40 @@ const AppointmentCard = memo(function AppointmentCard({ appt, addressText, onSta
 
   const showDispositionForm = appt.status === 'completed' && onDispositionSave && !dispositionSaved && !hasExistingDisposition;
   const showStatusChangeForm = onStatusChange && appt.status !== 'completed';
+
+  // Fetch disposition types
+  const fetchDispositionTypes = useCallback(async () => {
+    if (dispositionOptions.length > 0) return; // Already loaded
+    
+    setLoadingDispositions(true);
+    try {
+      const response = await fetch(`${BASE_URL}/disposition-types`, {
+        credentials: 'include'
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success) {
+          const options = data.data.map((type: any) => ({
+            value: type.typeCode,
+            label: type.description
+          }));
+          setDispositionOptions(options);
+        }
+      }
+    } catch (err) {
+      console.error('Error fetching disposition types:', err);
+    } finally {
+      setLoadingDispositions(false);
+    }
+  }, [dispositionOptions.length]);
+
+  // Load disposition types when component mounts or when disposition form is shown
+  useEffect(() => {
+    if (showDispositionForm) {
+      fetchDispositionTypes();
+    }
+  }, [showDispositionForm, fetchDispositionTypes]);
 
   // Event handlers
   const handleDispositionSave = useCallback(() => {
@@ -485,8 +509,10 @@ const AppointmentCard = memo(function AppointmentCard({ appt, addressText, onSta
                       },
                     }}
                   >
-                    <MenuItem value="">Select Disposition</MenuItem>
-                    {DISPOSITION_OPTIONS.map((option) => (
+                    <MenuItem value="">
+                      {loadingDispositions ? "Loading..." : "Select Disposition"}
+                    </MenuItem>
+                    {dispositionOptions.map((option) => (
                       <MenuItem key={option.value} value={option.value}>
                         {option.label}
                       </MenuItem>

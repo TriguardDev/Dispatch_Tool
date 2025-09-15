@@ -32,10 +32,12 @@ import {
   Delete as DeleteIcon,
   Person as PersonIcon,
   SupervisorAccount as SupervisorIcon,
-  Group as GroupIcon
+  Group as GroupIcon,
+  Assignment as AssignmentIcon
 } from '@mui/icons-material';
 import PhoneInput from './PhoneInput';
 import TeamManagement from './TeamManagement';
+import DispositionManagement from './DispositionManagement';
 
 interface User {
   id: number;
@@ -379,6 +381,14 @@ export default function AdminManagement() {
               </Box>
             } 
           />
+          <Tab 
+            label={
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                <AssignmentIcon />
+                <span>Dispositions</span>
+              </Box>
+            } 
+          />
         </Tabs>
       </Box>
 
@@ -504,6 +514,11 @@ export default function AdminManagement() {
       {/* Teams Tab */}
       <TabPanel value={tabValue} index={2}>
         <TeamManagement />
+      </TabPanel>
+
+      {/* Dispositions Tab */}
+      <TabPanel value={tabValue} index={3}>
+        <DispositionManagement />
       </TabPanel>
 
       {/* Create User Modal */}
