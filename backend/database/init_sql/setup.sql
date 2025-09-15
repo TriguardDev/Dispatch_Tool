@@ -97,6 +97,27 @@ CREATE TABLE IF NOT EXISTS bookings (
     FOREIGN KEY (agentId) REFERENCES field_agents(agentId) ON DELETE SET NULL
 );
 
+-- Time Off Requests Table
+CREATE TABLE IF NOT EXISTS time_off_requests (
+    requestId INT AUTO_INCREMENT PRIMARY KEY,
+    agentId INT NOT NULL,
+    request_date DATE NOT NULL,
+    start_time TIME NULL, -- NULL for full day, specific time for 2-hour periods
+    end_time TIME NULL,   -- NULL for full day, specific time for 2-hour periods
+    is_full_day BOOLEAN DEFAULT FALSE,
+    reason TEXT,
+    status ENUM('pending', 'approved', 'rejected', 'cancelled') DEFAULT 'pending',
+    requested_by INT NOT NULL, -- agentId who requested
+    reviewed_by INT NULL,      -- dispatcherId or adminId who approved/rejected
+    reviewer_type ENUM('dispatcher', 'admin') NULL,
+    created_time TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_time TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (agentId) REFERENCES field_agents(agentId) ON DELETE CASCADE,
+    FOREIGN KEY (requested_by) REFERENCES field_agents(agentId) ON DELETE CASCADE,
+    -- Add constraint to prevent overlapping time-off for same agent
+    UNIQUE KEY unique_agent_timeoff (agentId, request_date, start_time, end_time)
+);
+
 -- Lookup table of possible dispositions
 CREATE TABLE IF NOT EXISTS disposition_types (
     typeCode VARCHAR(50) PRIMARY KEY,        -- e.g., "SOLD_CASH_PIF"

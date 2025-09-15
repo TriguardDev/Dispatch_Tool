@@ -21,7 +21,7 @@ def search_agents():
         conn = get_connection()
         cursor = conn.cursor(dictionary=True)
 
-        # Optimized query with less restrictive availability check (1 hour buffer instead of 2)
+        # Optimized query with time-off checking (1 hour buffer instead of 2)
         booking_period = "01:00:00"  # Reduced from 2 hours to 1 hour
         
         query = """
@@ -30,9 +30,27 @@ def search_agents():
                     COS(RADIANS(%s)) * COS(RADIANS(l.latitude)) *
                     COS(RADIANS(l.longitude) - RADIANS(%s)) +
                     SIN(RADIANS(%s)) * SIN(RADIANS(l.latitude))
-                )), 1) AS distance
+                )), 1) AS distance,
+                CASE 
+                    WHEN tor.requestId IS NOT NULL THEN 'unavailable (time-off)'
+                    ELSE 'available'
+                END as availability_status,
+                CASE 
+                    WHEN tor.requestId IS NOT NULL THEN CONCAT(
+                        'Time-off: ',
+                        IF(tor.is_full_day, 'Full day', CONCAT(tor.start_time, ' - ', tor.end_time))
+                    )
+                    ELSE NULL
+                END as unavailable_reason
             FROM field_agents fa
             INNER JOIN locations l ON fa.location_id = l.id
+            LEFT JOIN time_off_requests tor ON fa.agentId = tor.agentId 
+                AND tor.status = 'approved'
+                AND tor.request_date = %s
+                AND (
+                    tor.is_full_day = TRUE 
+                    OR (tor.start_time <= %s AND tor.end_time >= %s)
+                )
             WHERE fa.agentId NOT IN (
                 SELECT COALESCE(b.agentId, 0)
                 FROM bookings b
@@ -40,12 +58,17 @@ def search_agents():
                   AND b.booking_time BETWEEN SUBTIME(%s, %s) AND ADDTIME(%s, %s)
                   AND b.agentId IS NOT NULL
             )
-            ORDER BY distance ASC;
+            ORDER BY 
+                CASE WHEN tor.requestId IS NOT NULL THEN 1 ELSE 0 END,
+                distance ASC;
         """
-        cursor.execute(query, (lat, lon, lat, booking_date, booking_time, booking_period, booking_time, booking_period))
+        cursor.execute(query, (
+            lat, lon, lat, booking_date, booking_time, booking_time,
+            booking_date, booking_time, booking_period, booking_time, booking_period
+        ))
         agents = cursor.fetchall()
         
-        # If no agents available with time conflict check, return all agents with distance
+        # If no agents available with time conflict check, return all agents with distance and time-off status
         if len(agents) == 0:
             fallback_query = """
                 SELECT fa.name, fa.agentId,
@@ -53,12 +76,32 @@ def search_agents():
                         COS(RADIANS(%s)) * COS(RADIANS(l.latitude)) *
                         COS(RADIANS(l.longitude) - RADIANS(%s)) +
                         SIN(RADIANS(%s)) * SIN(RADIANS(l.latitude))
-                    )), 1) AS distance
+                    )), 1) AS distance,
+                    CASE 
+                        WHEN tor.requestId IS NOT NULL THEN 'unavailable (time-off)'
+                        ELSE 'available'
+                    END as availability_status,
+                    CASE 
+                        WHEN tor.requestId IS NOT NULL THEN CONCAT(
+                            'Time-off: ',
+                            IF(tor.is_full_day, 'Full day', CONCAT(tor.start_time, ' - ', tor.end_time))
+                        )
+                        ELSE NULL
+                    END as unavailable_reason
                 FROM field_agents fa
                 INNER JOIN locations l ON fa.location_id = l.id
-                ORDER BY distance ASC;
+                LEFT JOIN time_off_requests tor ON fa.agentId = tor.agentId 
+                    AND tor.status = 'approved'
+                    AND tor.request_date = %s
+                    AND (
+                        tor.is_full_day = TRUE 
+                        OR (tor.start_time <= %s AND tor.end_time >= %s)
+                    )
+                ORDER BY 
+                    CASE WHEN tor.requestId IS NOT NULL THEN 1 ELSE 0 END,
+                    distance ASC;
             """
-            cursor.execute(fallback_query, (lat, lon, lat))
+            cursor.execute(fallback_query, (lat, lon, lat, booking_date, booking_time, booking_time))
             agents = cursor.fetchall()
 
         return jsonify(agents), 200

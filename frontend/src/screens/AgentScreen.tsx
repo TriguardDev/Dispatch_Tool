@@ -1,10 +1,11 @@
 import React from "react";
-import { Box, Typography, CircularProgress, Container } from "@mui/material";
+import { Box, Typography, CircularProgress, Container, Tabs, Tab } from "@mui/material";
 import TopBar from "../components/TopBar";
 import QueueCard from "../components/QueueCard";
 import AppointmentCard from "../components/AppointmentCard";
 import { type Booking, getAgentBookings, updateBooking, saveDisposition } from "../api/crud";
 import { useSmartPolling } from "../hooks/useSmartPolling";
+import TimeOffRequest from "../components/TimeOffRequest";
 
 interface AgentScreenProps {
   agentId: number; // passed from login
@@ -12,6 +13,7 @@ interface AgentScreenProps {
 }
 
 export default function AgentScreen({ agentId, onLogout }: AgentScreenProps) {
+  const [tabValue, setTabValue] = React.useState(0);
   
   // Memoize the fetch function to prevent unnecessary re-renders
   const fetchAgentBookings = React.useCallback(() => {
@@ -125,7 +127,17 @@ export default function AgentScreen({ agentId, onLogout }: AgentScreenProps) {
     <Box sx={{ backgroundColor: 'background.default', minHeight: '100vh' }}>
       <TopBar onLogOut={onLogout} />
       <Container component="main" maxWidth="xl" sx={{ py: 3 }}>
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
+        {/* Tabs */}
+        <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 3 }}>
+          <Tabs value={tabValue} onChange={(_, newValue) => setTabValue(newValue)}>
+            <Tab label="My Appointments" />
+            <Tab label="Time-Off Requests" />
+          </Tabs>
+        </Box>
+
+        {/* Tab Content */}
+        {tabValue === 0 && (
+          <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
           {/* Scheduled */}
           <QueueCard
             title="Scheduled"
@@ -189,7 +201,13 @@ export default function AgentScreen({ agentId, onLogout }: AgentScreenProps) {
               />
             ))}
           </QueueCard>
-        </div>
+          </div>
+        )}
+
+        {/* Time-Off Requests Tab */}
+        {tabValue === 1 && (
+          <TimeOffRequest onLogout={onLogout} />
+        )}
       </Container>
     </Box>
   );
