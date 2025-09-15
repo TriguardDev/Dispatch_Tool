@@ -40,7 +40,7 @@ export default function NewAppointmentModal({ isOpen, onClose, onSave, onLogout 
     postal_code: "",
     city: "",
     state_province: "",
-    country: "",    
+    country: "USA",    
     date: "",
     time: "",
     rep: "",
