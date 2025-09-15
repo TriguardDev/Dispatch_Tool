@@ -81,7 +81,8 @@ export default function AdminScreen({ onLogout }: AdminScreenProps) {
 
   // Categorize bookings by status
   const scheduled = bookings.filter((b) => ["scheduled"].includes(b.status.toLowerCase()));
-  const active = bookings.filter((b) => ["in-progress"].includes(b.status.toLowerCase()));
+  const enroute = bookings.filter((b) => ["enroute"].includes(b.status.toLowerCase()));
+  const onsite = bookings.filter((b) => ["on-site"].includes(b.status.toLowerCase()));
   const completed = bookings.filter((b) => ["completed"].includes(b.status.toLowerCase()));
 
   if (loading && tabValue === 0) {
@@ -129,7 +130,7 @@ export default function AdminScreen({ onLogout }: AdminScreenProps) {
             refreshing={loading}
           />
 
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
             <QueueCard
               title="Queue — Scheduled"
               badgeColor="bg-blue-50 text-blue-700"
@@ -145,11 +146,25 @@ export default function AdminScreen({ onLogout }: AdminScreenProps) {
             </QueueCard>
 
             <QueueCard
-              title="En Route / On Site"
-              badgeColor="bg-yellow-50 text-yellow-700"
-              count={active.length}
+              title="En Route"
+              badgeColor="bg-blue-50 text-blue-700"
+              count={enroute.length}
             >
-              {active.map((appt) => (
+              {enroute.map((appt) => (
+                <AppointmentCard 
+                  key={appt.bookingId} 
+                  appt={appt}
+                  addressText={appt.customer_address ?? ""}
+                  onAgentChange={refetch} />
+              ))}
+            </QueueCard>
+
+            <QueueCard
+              title="On Site"
+              badgeColor="bg-yellow-50 text-yellow-700"
+              count={onsite.length}
+            >
+              {onsite.map((appt) => (
                 <AppointmentCard 
                   key={appt.bookingId} 
                   appt={appt}
