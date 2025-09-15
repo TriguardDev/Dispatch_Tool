@@ -566,13 +566,13 @@ export default function AdminManagement() {
                     margin="normal"
                   />
                   <TextField
-                    label="State/Province"
+                    label="State"
                     value={formData.state_province}
                     onChange={(e) => setFormData({ ...formData, state_province: e.target.value })}
                     margin="normal"
                   />
                   <TextField
-                    label="Postal Code"
+                    label="Zip Code"
                     value={formData.postal_code}
                     onChange={(e) => setFormData({ ...formData, postal_code: e.target.value })}
                     margin="normal"
@@ -634,13 +634,13 @@ export default function AdminManagement() {
                     margin="normal"
                   />
                   <TextField
-                    label="State/Province"
+                    label="State"
                     value={formData.state_province}
                     onChange={(e) => setFormData({ ...formData, state_province: e.target.value })}
                     margin="normal"
                   />
                   <TextField
-                    label="Postal Code"
+                    label="Zip Code"
                     value={formData.postal_code}
                     onChange={(e) => setFormData({ ...formData, postal_code: e.target.value })}
                     margin="normal"
@@ -730,13 +730,13 @@ export default function AdminManagement() {
                     margin="normal"
                   />
                   <TextField
-                    label="State/Province"
+                    label="State"
                     value={formData.state_province}
                     onChange={(e) => setFormData({ ...formData, state_province: e.target.value })}
                     margin="normal"
                   />
                   <TextField
-                    label="Postal Code"
+                    label="Zip Code"
                     value={formData.postal_code}
                     onChange={(e) => setFormData({ ...formData, postal_code: e.target.value })}
                     margin="normal"
@@ -801,13 +801,13 @@ export default function AdminManagement() {
                     margin="normal"
                   />
                   <TextField
-                    label="State/Province"
+                    label="State"
                     value={formData.state_province}
                     onChange={(e) => setFormData({ ...formData, state_province: e.target.value })}
                     margin="normal"
                   />
                   <TextField
-                    label="Postal Code"
+                    label="Zip Code"
                     value={formData.postal_code}
                     onChange={(e) => setFormData({ ...formData, postal_code: e.target.value })}
                     margin="normal"

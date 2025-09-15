@@ -255,7 +255,7 @@ export default function NewAppointmentModal({ isOpen, onClose, onSave, onLogout 
             <Grid size={{xs:12, md:6}}>
               <TextField
                 id="f-state_province"
-                label="Province"
+                label="State"
                 placeholder="NS"
                 value={form.state_province}
                 onChange={handleChange}
@@ -277,7 +277,7 @@ export default function NewAppointmentModal({ isOpen, onClose, onSave, onLogout 
             <Grid size={{xs:12, md:6}}>
               <TextField
                 id="f-postal_code"
-                label="Postal Code"
+                label="Zip Code"
                 placeholder="BA4 3J7"
                 value={form.postal_code}
                 onChange={handleChange}
