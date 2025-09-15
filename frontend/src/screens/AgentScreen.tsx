@@ -88,8 +88,11 @@ export default function AgentScreen({ agentId, onLogout }: AgentScreenProps) {
   const scheduled = bookings.filter(
     (b) => b.status.toLowerCase() === "scheduled"
   );
-  const active = bookings.filter(
-    (b) => b.status.toLowerCase() === "in-progress"
+  const enroute = bookings.filter(
+    (b) => b.status.toLowerCase() === "enroute"
+  );
+  const onsite = bookings.filter(
+    (b) => b.status.toLowerCase() === "on-site"
   );
   const completed = bookings.filter(
     (b) => b.status.toLowerCase() === "completed"
@@ -122,51 +125,53 @@ export default function AgentScreen({ agentId, onLogout }: AgentScreenProps) {
     <Box sx={{ backgroundColor: 'background.default', minHeight: '100vh' }}>
       <TopBar onLogOut={onLogout} />
       <Container component="main" maxWidth="xl" sx={{ py: 3 }}>
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
           {/* Scheduled */}
           <QueueCard
             title="Scheduled"
             badgeColor="bg-blue-50 text-blue-700"
             count={scheduled.length}
           >
-            {scheduled.map((appt) => {
-              const addressText =
-                appt.status === "in-progress"
-                  ? appt.customer_address
-                  : "Address hidden until on route";
-
-              return (
-                <AppointmentCard
-                  key={appt.bookingId}
-                  appt={appt}
-                  addressText={addressText ?? ""}
-                  onStatusChange={handleStatusChange}
-                />
-              );
-            })}
+            {scheduled.map((appt) => (
+              <AppointmentCard
+                key={appt.bookingId}
+                appt={appt}
+                addressText="Address hidden until en route"
+                onStatusChange={handleStatusChange}
+              />
+            ))}
           </QueueCard>
 
-          {/* En Route / On Site */}
+          {/* En Route */}
           <QueueCard
-            title="En Route / On Site"
-            badgeColor="bg-yellow-50 text-yellow-700"
-            count={active.length}
+            title="En Route"
+            badgeColor="bg-blue-50 text-blue-700"
+            count={enroute.length}
           >
-            {active.map((appt) => {
-              const addressText =
-                appt.status === "in-progress"
-                  ? appt.customer_address
-                  : "Address hidden until on route";
+            {enroute.map((appt) => (
+              <AppointmentCard
+                key={appt.bookingId}
+                appt={appt}
+                addressText={appt.customer_address ?? ""}
+                onStatusChange={handleStatusChange}
+              />
+            ))}
+          </QueueCard>
 
-              return (
-                <AppointmentCard
-                  key={appt.bookingId}
-                  appt={appt}
-                  addressText={addressText ?? ""}
-                  onStatusChange={handleStatusChange}
-                />
-              );
-            })}
+          {/* On Site */}
+          <QueueCard
+            title="On Site"
+            badgeColor="bg-yellow-50 text-yellow-700"
+            count={onsite.length}
+          >
+            {onsite.map((appt) => (
+              <AppointmentCard
+                key={appt.bookingId}
+                appt={appt}
+                addressText={appt.customer_address ?? ""}
+                onStatusChange={handleStatusChange}
+              />
+            ))}
           </QueueCard>
 
           {/* Completed */}

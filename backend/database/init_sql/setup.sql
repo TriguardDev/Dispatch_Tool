@@ -90,7 +90,7 @@ CREATE TABLE IF NOT EXISTS bookings (
     dispositionId INT,
     booking_date DATE NOT NULL,
     booking_time TIME NOT NULL,
-    `status` ENUM('scheduled', 'in-progress', 'completed') DEFAULT 'scheduled',
+    `status` ENUM('scheduled', 'enroute', 'on-site', 'completed') DEFAULT 'scheduled',
     created_time TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_time TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     FOREIGN KEY (customerId) REFERENCES customers(customerId) ON DELETE CASCADE,

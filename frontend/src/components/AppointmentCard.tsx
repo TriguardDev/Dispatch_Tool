@@ -19,9 +19,10 @@ interface Agent {
 }
 
 // Constants
-const STATUS_CONFIG: Record<Booking["status"], { color: "primary" | "warning" | "success"; label: string }> = {
-  "in-progress": { color: "primary", label: "En Route / On Site" },
+const STATUS_CONFIG: Record<string, { color: "primary" | "warning" | "success" | "info" | "error"; label: string }> = {
   scheduled: { color: "warning", label: "Scheduled" },
+  enroute: { color: "info", label: "En Route" },
+  "on-site": { color: "primary", label: "On Site" },
   completed: { color: "success", label: "Completed" },
 };
 
@@ -36,7 +37,7 @@ const InfoRow = memo(({ icon, children }: { icon: React.ReactElement; children: 
 ));
 
 const StatusChip = memo(({ status }: { status: Booking["status"] }) => {
-  const config = STATUS_CONFIG[status];
+  const config = STATUS_CONFIG[status] || { color: "warning" as const, label: status };
   return (
     <Chip 
       label={config.label}
@@ -99,6 +100,20 @@ const AppointmentCard = memo(function AppointmentCard({ appt, addressText, onSta
 
   const showDispositionForm = appt.status === 'completed' && onDispositionSave && !dispositionSaved && !hasExistingDisposition;
   const showStatusChangeForm = onStatusChange && appt.status !== 'completed';
+  
+  // Get next possible status based on current status
+  const getNextStatusOptions = (currentStatus: string) => {
+    switch (currentStatus.toLowerCase()) {
+      case 'scheduled':
+        return [{ value: 'enroute', label: 'Start En Route', color: 'info.main' }];
+      case 'enroute':
+        return [{ value: 'on-site', label: 'Arrive On Site', color: 'primary.main' }];
+      case 'on-site':
+        return [{ value: 'completed', label: 'Mark Completed', color: 'success.main' }];
+      default:
+        return [];
+    }
+  };
 
   // Fetch disposition types
   const fetchDispositionTypes = useCallback(async () => {
@@ -436,49 +451,30 @@ const AppointmentCard = memo(function AppointmentCard({ appt, addressText, onSta
               <Assignment sx={{ fontSize: 16, color: 'text.secondary', mt: 0.1 }} />
               <Box sx={{ flex: 1 }}>
                 <Typography variant="body2" color="text.secondary" fontWeight="600" sx={{ mb: 1 }}>
-                  Update Status
+                  Next Step
                 </Typography>
-                <FormControl fullWidth size="small">
-                  <Select
-                    value={appt.status}
-                    onChange={(e) => onStatusChange(appt.bookingId, e.target.value)}
-                    sx={{
-                      '& .MuiSelect-select': {
-                        py: 1,
+                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                  {getNextStatusOptions(appt.status).map((option) => (
+                    <Button
+                      key={option.value}
+                      variant="contained"
+                      size="small"
+                      onClick={() => onStatusChange(appt.bookingId, option.value)}
+                      sx={{
+                        bgcolor: option.color,
+                        '&:hover': {
+                          bgcolor: option.color,
+                          opacity: 0.8,
+                        },
+                        textTransform: 'none',
+                        fontWeight: 600,
                         fontSize: '0.875rem',
-                        fontWeight: 500,
-                      },
-                      '& .MuiOutlinedInput-notchedOutline': {
-                        borderColor: 'divider',
-                      },
-                      '&:hover .MuiOutlinedInput-notchedOutline': {
-                        borderColor: 'primary.main',
-                      },
-                      '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
-                        borderWidth: 1,
-                      }
-                    }}
-                  >
-                    <MenuItem value="scheduled">
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                        <Box sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: 'warning.main' }} />
-                        <Typography variant="body2" fontWeight="500">Scheduled</Typography>
-                      </Box>
-                    </MenuItem>
-                    <MenuItem value="in-progress">
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                        <Box sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: 'primary.main' }} />
-                        <Typography variant="body2" fontWeight="500">En Route / On Site</Typography>
-                      </Box>
-                    </MenuItem>
-                    <MenuItem value="completed">
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                        <Box sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: 'success.main' }} />
-                        <Typography variant="body2" fontWeight="500">Completed</Typography>
-                      </Box>
-                    </MenuItem>
-                  </Select>
-                </FormControl>
+                      }}
+                    >
+                      {option.label}
+                    </Button>
+                  ))}
+                </Box>
               </Box>
             </Box>
           </>
