@@ -6,6 +6,7 @@ import QueueCard from "../components/QueueCard";
 import AppointmentCard from "../components/AppointmentCard";
 import NewAppointmentModal from "../components/NewAppointmentModal";
 import AdminManagement from "../components/AdminManagement";
+import TimeOffManagement from "../components/TimeOffManagement";
 import { getAllBookings, type Booking } from "../api/crud";
 import { useSmartPolling } from "../hooks/useSmartPolling";
 
@@ -116,6 +117,7 @@ export default function AdminScreen({ onLogout }: AdminScreenProps) {
           <Tabs value={tabValue} onChange={handleTabChange} aria-label="admin navigation tabs">
             <Tab label="Bookings Dashboard" {...a11yProps(0)} />
             <Tab label="User Management" {...a11yProps(1)} />
+            <Tab label="Time-Off Management" {...a11yProps(2)} />
           </Tabs>
         </Box>
 
@@ -175,6 +177,11 @@ export default function AdminScreen({ onLogout }: AdminScreenProps) {
         {/* User Management Tab */}
         <TabPanel value={tabValue} index={1}>
           <AdminManagement />
+        </TabPanel>
+
+        {/* Time-Off Management Tab */}
+        <TabPanel value={tabValue} index={2}>
+          <TimeOffManagement onLogout={onLogout} userRole="admin" />
         </TabPanel>
 
       </Container>

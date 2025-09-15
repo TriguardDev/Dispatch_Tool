@@ -1,10 +1,11 @@
 import { useState } from "react";
-import { Box, Typography, CircularProgress, Container } from "@mui/material";
+import { Box, Typography, CircularProgress, Container, Tabs, Tab } from "@mui/material";
 import TopBar from "../components/TopBar";
 import Filters from "../components/Filters";
 import QueueCard from "../components/QueueCard";
 import AppointmentCard from "../components/AppointmentCard";
 import NewAppointmentModal from "../components/NewAppointmentModal";
+import TimeOffManagement from "../components/TimeOffManagement";
 import { getAllBookings, type Booking } from "../api/crud";
 import { useSmartPolling } from "../hooks/useSmartPolling";
 
@@ -14,6 +15,7 @@ interface DispatcherScreenProps {
 
 export default function DispatcherScreen({ onLogout }: DispatcherScreenProps) {
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [tabValue, setTabValue] = useState(0);
   
   const {
     data: bookings,
@@ -75,13 +77,24 @@ export default function DispatcherScreen({ onLogout }: DispatcherScreenProps) {
     <Box sx={{ backgroundColor: 'background.default', minHeight: '100vh' }}>
       <TopBar onLogOut={onLogout} />
       <Container component="main" maxWidth="xl" sx={{ py: 3 }}>
-        <Filters 
-          onNewAppt={handleModalOpen} 
-          onRefresh={refetch}
-          refreshing={loading}
-        />
+        {/* Tabs */}
+        <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 3 }}>
+          <Tabs value={tabValue} onChange={(_, newValue) => setTabValue(newValue)}>
+            <Tab label="All Appointments" />
+            <Tab label="Team Time-Off" />
+          </Tabs>
+        </Box>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        {/* Appointments Tab */}
+        {tabValue === 0 && (
+          <>
+            <Filters 
+              onNewAppt={handleModalOpen} 
+              onRefresh={refetch}
+              refreshing={loading}
+            />
+
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
           <QueueCard
             title="Queue — Scheduled"
             badgeColor="bg-blue-50 text-blue-700"
@@ -123,7 +136,14 @@ export default function DispatcherScreen({ onLogout }: DispatcherScreenProps) {
                 onAgentChange={refetch} />
             ))}
           </QueueCard>
-        </div>
+            </div>
+          </>
+        )}
+
+        {/* Time-Off Management Tab */}
+        {tabValue === 1 && (
+          <TimeOffManagement onLogout={onLogout} userRole="dispatcher" />
+        )}
       </Container>
 
       <NewAppointmentModal
