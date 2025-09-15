@@ -368,6 +368,13 @@ export default function TeamManagement() {
                   </Typography>
                 )}
 
+                {/* Warning for teams without dispatcher */}
+                {team.dispatchers.length === 0 && (
+                  <Alert severity="warning" sx={{ mb: 2 }}>
+                    This team has no dispatcher assigned
+                  </Alert>
+                )}
+
                 <Accordion>
                   <AccordionSummary expandIcon={<ExpandMoreIcon />}>
                     <Typography variant="subtitle2">
