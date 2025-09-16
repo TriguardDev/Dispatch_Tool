@@ -33,7 +33,9 @@ import {
   Person as PersonIcon,
   SupervisorAccount as SupervisorIcon,
   Group as GroupIcon,
-  Assignment as AssignmentIcon
+  Assignment as AssignmentIcon,
+  SwapHoriz as SwapIcon,
+  AdminPanelSettings as AdminIcon
 } from '@mui/icons-material';
 import PhoneInput from './PhoneInput';
 import TeamManagement from './TeamManagement';
@@ -44,6 +46,8 @@ interface User {
   name: string;
   email: string;
   status?: string;
+  role?: string;
+  phone?: string;
   created_time?: string;
   updated_time?: string;
 }
@@ -75,14 +79,18 @@ export default function AdminManagement() {
   const [tabValue, setTabValue] = useState(0);
   const [dispatchers, setDispatchers] = useState<User[]>([]);
   const [agents, setAgents] = useState<User[]>([]);
+  const [allUsers, setAllUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   
   // Modal states
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isRoleSwitchModalOpen, setIsRoleSwitchModalOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<User | null>(null);
+  const [switchingUser, setSwitchingUser] = useState<User | null>(null);
   const [userType, setUserType] = useState<'dispatcher' | 'field_agent'>('dispatcher');
+  const [targetRole, setTargetRole] = useState<'admin' | 'dispatcher' | 'field_agent'>('dispatcher');
   
   // Form states
   const [formData, setFormData] = useState({
@@ -126,6 +134,17 @@ export default function AdminManagement() {
         const agentData = await agentRes.json();
         const agents = agentData.success ? agentData.data.map((a: any) => ({ ...a, id: a.agentId })) : [];
         setAgents(agents);
+      }
+
+      // Fetch all users with roles
+      const allUsersRes = await fetch(`${BASE_URL}/users/all-roles`, {
+        credentials: 'include'
+      });
+      
+      if (allUsersRes.ok) {
+        const allUsersData = await allUsersRes.json();
+        const users = allUsersData.success ? allUsersData.data : [];
+        setAllUsers(users);
       }
       
     } catch (err) {
@@ -297,6 +316,46 @@ export default function AdminManagement() {
     }
   };
 
+  const handleRoleSwitch = (user: User) => {
+    setSwitchingUser(user);
+    // Set default target role (different from current role)
+    const roleOrder = ['field_agent', 'dispatcher', 'admin'];
+    const currentIndex = roleOrder.indexOf(user.role || 'field_agent');
+    const nextIndex = (currentIndex + 1) % roleOrder.length;
+    setTargetRole(roleOrder[nextIndex] as 'admin' | 'dispatcher' | 'field_agent');
+    setIsRoleSwitchModalOpen(true);
+  };
+
+  const handleRoleSwitchConfirm = async () => {
+    if (!switchingUser) return;
+
+    try {
+      const res = await fetch(`${BASE_URL}/users/${switchingUser.id}/switch-role`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+        body: JSON.stringify({
+          current_role: switchingUser.role,
+          target_role: targetRole,
+        }),
+      });
+
+      if (res.ok) {
+        await fetchUsers(); // Refresh all data
+        setIsRoleSwitchModalOpen(false);
+        setSwitchingUser(null);
+      } else {
+        const errorData = await res.json();
+        setError(errorData.error || 'Failed to switch user role');
+      }
+    } catch (err) {
+      setError('Failed to switch user role');
+      console.error('Error switching user role:', err);
+    }
+  };
+
   const resetForm = () => {
     setFormData({
       name: '',
@@ -360,6 +419,14 @@ export default function AdminManagement() {
           <Tab 
             label={
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                <SwapIcon />
+                <span>All Users ({allUsers.length})</span>
+              </Box>
+            } 
+          />
+          <Tab 
+            label={
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                 <SupervisorIcon />
                 <span>Dispatchers ({dispatchers.length})</span>
               </Box>
@@ -392,8 +459,81 @@ export default function AdminManagement() {
         </Tabs>
       </Box>
 
-      {/* Dispatchers Tab */}
+      {/* All Users Tab */}
       <TabPanel value={tabValue} index={0}>
+        <TableContainer component={Paper}>
+          <Table>
+            <TableHead>
+              <TableRow>
+                <TableCell>Name</TableCell>
+                <TableCell>Email</TableCell>
+                <TableCell>Role</TableCell>
+                <TableCell>Phone</TableCell>
+                <TableCell>Status</TableCell>
+                <TableCell>Created</TableCell>
+                <TableCell align="right">Actions</TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {allUsers.map((user) => (
+                <TableRow key={`${user.role}-${user.id}`}>
+                  <TableCell>{user.name}</TableCell>
+                  <TableCell>{user.email}</TableCell>
+                  <TableCell>
+                    <Chip 
+                      label={user.role?.replace('_', ' ').toUpperCase() || 'Unknown'} 
+                      color={
+                        user.role === 'admin' ? 'error' : 
+                        user.role === 'dispatcher' ? 'primary' : 
+                        'default'
+                      }
+                      size="small"
+                      icon={
+                        user.role === 'admin' ? <AdminIcon /> :
+                        user.role === 'dispatcher' ? <SupervisorIcon /> :
+                        <PersonIcon />
+                      }
+                    />
+                  </TableCell>
+                  <TableCell>{user.phone || 'N/A'}</TableCell>
+                  <TableCell>
+                    {user.status ? (
+                      <Chip 
+                        label={user.status} 
+                        color={user.status === 'available' ? 'success' : 'default'}
+                        size="small"
+                      />
+                    ) : 'N/A'}
+                  </TableCell>
+                  <TableCell>
+                    {user.created_time ? new Date(user.created_time).toLocaleDateString() : 'N/A'}
+                  </TableCell>
+                  <TableCell align="right">
+                    <IconButton 
+                      onClick={() => handleRoleSwitch(user)}
+                      size="small"
+                      color="primary"
+                      title="Switch Role"
+                    >
+                      <SwapIcon />
+                    </IconButton>
+                  </TableCell>
+                </TableRow>
+              ))}
+              {allUsers.length === 0 && (
+                <TableRow>
+                  <TableCell colSpan={7} align="center">
+                    <Typography color="textSecondary">No users found</Typography>
+                  </TableCell>
+                </TableRow>
+              )}
+            </TableBody>
+          </Table>
+        </TableContainer>
+      </TabPanel>
+
+      {/* Dispatchers Tab */}
+      <TabPanel value={tabValue} index={1}>
         <TableContainer component={Paper}>
           <Table>
             <TableHead>
@@ -452,7 +592,7 @@ export default function AdminManagement() {
       </TabPanel>
 
       {/* Field Agents Tab */}
-      <TabPanel value={tabValue} index={1}>
+      <TabPanel value={tabValue} index={2}>
         <TableContainer component={Paper}>
           <Table>
             <TableHead>
@@ -512,12 +652,12 @@ export default function AdminManagement() {
       </TabPanel>
 
       {/* Teams Tab */}
-      <TabPanel value={tabValue} index={2}>
+      <TabPanel value={tabValue} index={3}>
         <TeamManagement />
       </TabPanel>
 
       {/* Dispositions Tab */}
-      <TabPanel value={tabValue} index={3}>
+      <TabPanel value={tabValue} index={4}>
         <DispositionManagement />
       </TabPanel>
 
@@ -858,6 +998,72 @@ export default function AdminManagement() {
           <Button onClick={handleCloseEditModal}>Cancel</Button>
           <Button onClick={handleUpdateUser} variant="contained">
             Update
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Role Switch Modal */}
+      <Dialog 
+        open={isRoleSwitchModalOpen} 
+        onClose={() => setIsRoleSwitchModalOpen(false)} 
+        maxWidth="sm" 
+        fullWidth
+      >
+        <DialogTitle>Switch User Role</DialogTitle>
+        <DialogContent>
+          <Box sx={{ pt: 2 }}>
+            {switchingUser && (
+              <>
+                <Typography variant="body1" sx={{ mb: 3 }}>
+                  Switch role for <strong>{switchingUser.name}</strong> ({switchingUser.email})?
+                </Typography>
+                
+                <Typography variant="body2" sx={{ mb: 2 }}>
+                  Current Role: {' '}
+                  <Chip 
+                    label={switchingUser.role?.replace('_', ' ').toUpperCase() || 'Unknown'} 
+                    color={
+                      switchingUser.role === 'admin' ? 'error' : 
+                      switchingUser.role === 'dispatcher' ? 'primary' : 
+                      'default'
+                    }
+                    size="small"
+                  />
+                </Typography>
+
+                <FormControl fullWidth sx={{ mt: 2 }}>
+                  <InputLabel>New Role</InputLabel>
+                  <Select
+                    value={targetRole}
+                    label="New Role"
+                    onChange={(e) => setTargetRole(e.target.value as 'admin' | 'dispatcher' | 'field_agent')}
+                  >
+                    <MenuItem value="field_agent">Field Agent</MenuItem>
+                    <MenuItem value="dispatcher">Dispatcher</MenuItem>
+                    <MenuItem value="admin">Admin</MenuItem>
+                  </Select>
+                </FormControl>
+
+                <Alert severity="warning" sx={{ mt: 2 }}>
+                  <Typography variant="body2">
+                    <strong>Warning:</strong> Role switching will move the user between different user tables. 
+                    The user will need to log in again after the role change. This action cannot be undone.
+                  </Typography>
+                </Alert>
+              </>
+            )}
+          </Box>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setIsRoleSwitchModalOpen(false)}>
+            Cancel
+          </Button>
+          <Button 
+            onClick={handleRoleSwitchConfirm} 
+            variant="contained" 
+            color="primary"
+          >
+            Switch Role
           </Button>
         </DialogActions>
       </Dialog>
