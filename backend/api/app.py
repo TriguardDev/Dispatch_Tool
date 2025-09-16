@@ -22,7 +22,8 @@ def create_app():
              "http://localhost:3000",    # React dev server
              "http://localhost:5173",    # Vite dev server
              "http://localhost:4173",    # Vite preview
-             "https://app.salesdispatcher.com"  # Replace with your actual domain
+             "https://app.salesdispatcher.com",  # Replace with your actual domain
+             "http://54.88.30.22"       # Appointment form server
          ],
          allow_headers=["Content-Type", "Authorization", "X-API-Key"],
          methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"]
