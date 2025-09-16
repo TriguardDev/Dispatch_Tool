@@ -24,7 +24,7 @@ def create_app():
              "http://localhost:4173",    # Vite preview
              "https://app.salesdispatcher.com"  # Replace with your actual domain
          ],
-         allow_headers=["Content-Type", "Authorization"],
+         allow_headers=["Content-Type", "Authorization", "X-API-Key"],
          methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"]
     )
 
