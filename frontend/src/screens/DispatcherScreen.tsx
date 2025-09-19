@@ -6,7 +6,7 @@ import QueueCard from "../components/QueueCard";
 import AppointmentCard from "../components/AppointmentCard";
 import NewAppointmentModal from "../components/NewAppointmentModal";
 import TimeOffManagement from "../components/TimeOffManagement";
-import { getAllBookings, type Booking } from "../api/crud";
+import { getAllBookings } from "../api/crud";
 import { useSmartPolling } from "../hooks/useSmartPolling";
 
 interface DispatcherScreenProps {

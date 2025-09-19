@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { ThemeProvider as MuiThemeProvider, CssBaseline, Box, CircularProgress, Typography } from "@mui/material";
-import { ThemeProvider, useTheme } from "./contexts/ThemeContext";
+import { ThemeProvider } from "./contexts/ThemeContext";
+import { useTheme } from "./hooks/useTheme";
 import { lightTheme, darkTheme } from "./theme/theme";
 import LoginForm from "./components/LoginForm";
 import DispatcherScreen from "./screens/DispatcherScreen";

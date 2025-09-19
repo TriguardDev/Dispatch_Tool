@@ -26,7 +26,7 @@ const STATUS_CONFIG: Record<string, { color: "primary" | "warning" | "success" |
   completed: { color: "success", label: "Completed" },
 };
 
-const BASE_URL = import.meta.env.VITE_API_BASE_URL;
+const BASE_URL = import.meta.env.VITE_BASE_API_URL;
 
 // Helper Components
 const InfoRow = memo(({ icon, children }: { icon: React.ReactElement; children: React.ReactNode }) => (
@@ -128,7 +128,7 @@ const AppointmentCard = memo(function AppointmentCard({ appt, addressText, onSta
       if (response.ok) {
         const data = await response.json();
         if (data.success) {
-          const options = data.data.map((type: any) => ({
+          const options = data.data.map((type: { typeCode: string; description: string }) => ({
             value: type.typeCode,
             label: type.description
           }));
@@ -157,11 +157,12 @@ const AppointmentCard = memo(function AppointmentCard({ appt, addressText, onSta
     }
   }, [onDispositionSave, appt.bookingId, selectedDisposition, note]);
 
-  const handleStatusChange = useCallback((newStatus: string) => {
-    if (onStatusChange) {
-      onStatusChange(appt.bookingId, newStatus);
-    }
-  }, [onStatusChange, appt.bookingId]);
+  // Remove unused variable warning by using the function
+  // const handleStatusChange = useCallback((newStatus: string) => {
+  //   if (onStatusChange) {
+  //     onStatusChange(appt.bookingId, newStatus);
+  //   }
+  // }, [onStatusChange, appt.bookingId]);
 
   const toggleNoteExpansion = useCallback(() => setNoteExpanded(!noteExpanded), [noteExpanded]);
 
@@ -186,7 +187,7 @@ const AppointmentCard = memo(function AppointmentCard({ appt, addressText, onSta
     } finally {
       setLoadingAgents(false);
     }
-  }, [appt.bookingId, appt.customer_latitude, appt.customer_longitude, appt.booking_date, appt.booking_time]);
+  }, [appt.customer_latitude, appt.customer_longitude, appt.booking_date, appt.booking_time]);
 
   const handleAgentChange = useCallback(async (newAgentId: string) => {
     try {
