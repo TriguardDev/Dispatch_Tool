@@ -1,4 +1,4 @@
-from flask import Flask
+from flask import Flask, request
 from flask_cors import CORS
 from routes.booking import booking_bp
 from routes.agent import agent_bp
@@ -11,6 +11,7 @@ from routes.teams import teams_bp
 from routes.timeoff import timeoff_bp
 from config import Config
 from extensions import mail
+import logging
 
 def create_app():
     app = Flask(__name__)
@@ -48,6 +49,22 @@ def create_app():
     app.config["MAIL_DEFAULT_SENDER"] = Config.MAIL_DEFAULT_SENDER
 
     mail.init_app(app)
+    
+    # Configure logging
+    logging.basicConfig(level=logging.INFO)
+    app.logger.setLevel(logging.INFO)
+    
+    # Log all requests for debugging
+    @app.before_request
+    def log_request_info():
+        app.logger.info('Request: %s %s', request.method, request.url)
+        app.logger.info('Headers: %s', dict(request.headers))
+    
+    @app.after_request
+    def log_response_info(response):
+        app.logger.info('Response: %s', response.status_code)
+        return response
+    
     return app
 
 if __name__ == "__main__":
