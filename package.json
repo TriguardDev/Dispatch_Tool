@@ -1,0 +1,21 @@
+{
+  "name": "dispatch-tool-v3",
+  "version": "1.0.0",
+  "description": "Dispatch Tool - Full Stack Application",
+  "scripts": {
+    "dev": "docker-compose -f docker-compose.dev.yml up --build",
+    "dev:detached": "docker-compose -f docker-compose.dev.yml up --build -d",
+    "dev:down": "docker-compose -f docker-compose.dev.yml down",
+    "dev:logs": "docker-compose -f docker-compose.dev.yml logs -f",
+    "prod": "docker-compose -f docker-compose.prod.yml up --build",
+    "prod:detached": "docker-compose -f docker-compose.prod.yml up --build -d",
+    "prod:down": "docker-compose -f docker-compose.prod.yml down",
+    "clean": "docker system prune -a --volumes -f",
+    "frontend:install": "cd frontend && npm install",
+    "backend:install": "cd backend && pip install -r requirements.txt",
+    "setup": "npm run frontend:install && npm run backend:install"
+  },
+  "keywords": ["dispatch", "tool", "react", "flask", "docker"],
+  "author": "Your Name",
+  "license": "MIT"
+}
