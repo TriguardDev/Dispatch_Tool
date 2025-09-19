@@ -1,6 +1,68 @@
-# Environment files
+# Dependencies
+node_modules/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# Environment files (keep .env.example)
 .env
-.env.*
 .env.local
 .env.development.local
+.env.test.local
 .env.production.local
+.env.prod
+backend/.env
+backend/.env.prod
+frontend/.env
+frontend/.env.prod
+
+# Secrets
+secrets/
+*.key
+*.pem
+
+# Build outputs
+frontend/dist/
+frontend/build/
+*.egg-info/
+build/
+dist/
+
+# Logs
+*.log
+logs/
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Docker
+.dockerignore
+
+# Testing
+.coverage
+htmlcov/
+.pytest_cache/
+.nyc_output/
+
+# Temporary files
+*.tmp
+*.temp
