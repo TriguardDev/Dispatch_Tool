@@ -30,7 +30,7 @@ RUN chown -R appuser:appuser /app
 USER appuser
 
 # Expose port
-EXPOSE 5000
+EXPOSE 8000
 
 # Make wait-for-it.sh executable
 RUN chmod +x wait-for-it.sh
