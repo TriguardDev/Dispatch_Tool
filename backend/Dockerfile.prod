@@ -36,4 +36,4 @@ EXPOSE 8000
 RUN chmod +x wait-for-it.sh
 
 # Start production server with wait-for-it and factory pattern
-CMD ["./wait-for-it.sh", "mysql:3306", "--", "gunicorn", "--bind", "0.0.0.0:5000", "--workers", "4", "--timeout", "120", "--access-logfile", "-", "--error-logfile", "-", "--log-level", "info", "app:create_app()"]
+CMD ["./wait-for-it.sh", "mysql:3306", "--", "gunicorn", "--bind", "0.0.0.0:8000", "--workers", "4", "--timeout", "120", "--access-logfile", "-", "--error-logfile", "-", "--log-level", "info", "app:create_app()"]
