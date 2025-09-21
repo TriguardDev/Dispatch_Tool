@@ -1,6 +1,6 @@
-# Dispatch Tool V3
+# Dispatch Tool
 
-A full-stack dispatch management application built with React, Flask, and MySQL.
+A comprehensive field service management system for roofing companies with region-based queue management.
 
 ## 🚀 Tech Stack
 
@@ -25,27 +25,25 @@ A full-stack dispatch management application built with React, Flask, and MySQL.
 
 ### Prerequisites
 - Docker and Docker Compose
-- Node.js 20+ (for local development)
-- Make (optional, for convenience commands)
+- jq (for JSON parsing in scripts)
+- curl (for API calls)
 
 ### Development Setup
 
-1. **Clone and setup:**
+1. **Start the application:**
    ```bash
-   git clone https://github.com/Saher-Anwar/Dispatch_Tool_V3.git
-   cd Dispatch_Tool_V3
-   make setup  # or npm run setup
+   make dev-bg
    ```
 
-2. **Start development environment:**
+2. **Add test data:**
    ```bash
-   make dev  # or npm run dev
+   ./scripts/add_test_data.sh
    ```
 
 3. **Access the application:**
-   - **Frontend**: http://localhost:5173
-   - **Backend API**: http://localhost:5000
-   - **Database Admin**: http://localhost:8080 (phpMyAdmin)
+   - **Frontend**: http://localhost:3000
+   - **Backend API**: http://localhost:8000
+   - **Admin Login**: admin@triguardroofing.com / admin123
 
 ### Production Deployment
 
@@ -83,37 +81,57 @@ npm run clean          # Clean Docker system
 ## 📁 Project Structure
 
 ```
-Dispatch_Tool_V3/
-├── frontend/                    # React frontend
-│   ├── src/                    # Source code
-│   ├── Dockerfile              # Frontend Docker config
-│   ├── nginx.conf              # Production nginx config
-│   └── package.json            # Frontend dependencies
-├── backend/                    # Flask backend
-│   ├── app.py                  # Main application file
-│   ├── requirements.txt        # Python dependencies
-│   └── Dockerfile              # Backend Docker config
+Dispatch_Tool/
+├── docs/                       # Documentation
+│   ├── SETUP.md               # Complete setup guide
+│   ├── CALL_CENTER_API.md     # Call center API documentation
+│   ├── DEPLOYMENT.md          # Production deployment guide
+│   └── REGION_SYSTEM_IMPLEMENTATION.md # Technical details
+├── scripts/                    # Setup and utility scripts
+│   ├── add_test_data.sh       # Populate system with test data
+│   └── deploy.sh              # Production deployment script
+├── frontend/                   # React TypeScript frontend
+│   ├── src/                   # Source code
+│   └── package.json           # Frontend dependencies
+├── backend/                    # Flask Python backend
+│   ├── app.py                 # Main application file
+│   ├── routes/                # API endpoints
+│   └── requirements.txt       # Python dependencies
 ├── mysql/                      # Database configuration
-│   └── init/                   # Database initialization scripts
-├── secrets/                    # Production secrets (not in git)
-├── docker-compose.dev.yml      # Development configuration
-├── docker-compose.prod.yml     # Production configuration
-├── Makefile                    # Development commands
-└── README.md                   # Documentation
+│   └── init/                  # Database initialization scripts
+├── docker-compose.yml         # Development configuration
+├── Makefile                   # Development commands
+└── README.md                  # This file
 ```
+
+## 📖 Documentation
+
+- **[Setup Guide](docs/SETUP.md)** - Complete installation and setup instructions
+- **[Call Center API](docs/CALL_CENTER_API.md)** - External API documentation for appointment creation
+- **[Deployment Guide](docs/DEPLOYMENT.md)** - Production deployment instructions
+- **[Region System](docs/REGION_SYSTEM_IMPLEMENTATION.md)** - Technical implementation details
+
+## 🎯 Features
+
+- **Region-based Queue Management** - Organize teams and appointments by geographic regions
+- **Role-based Access Control** - Admin, Dispatcher, Field Agent, and Call Center roles
+- **Real-time Updates** - Live status updates and notifications
+- **Call Center API** - External API for appointment creation
+- **Comprehensive Dashboard** - Multiple queue views and management interfaces
 
 ## ⚙️ Environment Configuration
 
 ### Development
-- Frontend runs on port **5173** with hot reload
-- Backend runs on port **5000** with debug mode
-- MySQL runs on port **3307** with phpMyAdmin on **8080**
+- Frontend runs on port **3000** with hot reload
+- Backend runs on port **8000** with debug mode
+- MySQL runs on port **3306**
 
-### Production
-- Frontend served by Nginx on port **80**
-- Backend runs with Gunicorn on port **5000**
-- MySQL with secure password management
-- All services auto-restart on failure
+### Test Data
+The system includes comprehensive test data setup via `scripts/add_test_data.sh`:
+- 6 Regions (Global + 5 Texas regions)
+- 5 Teams (one per region)
+- 14 Users (1 admin + 5 dispatchers + 8 field agents)
+- 6 Sample appointments
 
 ## 🔒 Security Notes
 

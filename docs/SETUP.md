@@ -20,8 +20,8 @@ make dev-bg
 Execute the automated setup script to populate the system via API calls:
 
 ```bash
-# Run the initial data setup script
-./setup_initial_data.sh
+# Run the test data setup script
+./scripts/add_test_data.sh
 ```
 
 This script will automatically:
@@ -149,14 +149,14 @@ If the script fails partway through, you can:
 
 2. **Re-run the setup script:**
    ```bash
-   ./setup_initial_data.sh
+   ./scripts/add_test_data.sh
    ```
 
 ## Customization
 
 To customize the initial data:
 
-1. **Edit the script** `setup_initial_data.sh`
+1. **Edit the script** `scripts/add_test_data.sh`
 2. **Modify the data arrays** for regions, teams, dispatchers, agents, or appointments
 3. **Re-run the script** after resetting the database
 
@@ -184,4 +184,4 @@ curl -X POST "http://localhost:8000/api/teams" \
   -d '{"name": "Test Team", "description": "Test team", "region_id": 2}'
 ```
 
-See the `setup_initial_data.sh` script for more API examples.
+See the `scripts/add_test_data.sh` script for more API examples.
