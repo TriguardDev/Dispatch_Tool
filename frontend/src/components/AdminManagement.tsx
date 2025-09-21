@@ -3,9 +3,6 @@ import {
   Box,
   Typography,
   Button,
-  Card,
-  CardContent,
-  Grid,
   Dialog,
   DialogTitle,
   DialogContent,
@@ -34,16 +31,47 @@ import {
   Edit as EditIcon,
   Delete as DeleteIcon,
   Person as PersonIcon,
-  SupervisorAccount as SupervisorIcon
+  SupervisorAccount as SupervisorIcon,
+  Group as GroupIcon,
+  Assignment as AssignmentIcon,
+  SwapHoriz as SwapIcon,
+  AdminPanelSettings as AdminIcon
 } from '@mui/icons-material';
+import PhoneInput from './PhoneInput';
+import TeamManagement from './TeamManagement';
+import DispositionManagement from './DispositionManagement';
 
 interface User {
   id: number;
   name: string;
   email: string;
   status?: string;
+  role?: string;
+  phone?: string;
   created_time?: string;
   updated_time?: string;
+}
+
+interface Dispatcher extends User {
+  dispatcherId: number;
+  location_id?: number;
+  street_number?: string;
+  street_name?: string;
+  city?: string;
+  state_province?: string;
+  postal_code?: string;
+  country?: string;
+}
+
+interface Agent extends User {
+  agentId: number;
+  location_id?: number;
+  street_number?: string;
+  street_name?: string;
+  city?: string;
+  state_province?: string;
+  postal_code?: string;
+  country?: string;
 }
 
 interface TabPanelProps {
@@ -67,20 +95,24 @@ function TabPanel(props: TabPanelProps) {
   );
 }
 
-const BASE_URL = import.meta.env.VITE_API_BASE_URL;
+const BASE_URL = import.meta.env.VITE_BASE_API_URL;
 
 export default function AdminManagement() {
   const [tabValue, setTabValue] = useState(0);
-  const [dispatchers, setDispatchers] = useState<User[]>([]);
-  const [agents, setAgents] = useState<User[]>([]);
+  const [dispatchers, setDispatchers] = useState<Dispatcher[]>([]);
+  const [agents, setAgents] = useState<Agent[]>([]);
+  const [allUsers, setAllUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   
   // Modal states
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isRoleSwitchModalOpen, setIsRoleSwitchModalOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<User | null>(null);
+  const [switchingUser, setSwitchingUser] = useState<User | null>(null);
   const [userType, setUserType] = useState<'dispatcher' | 'field_agent'>('dispatcher');
+  const [targetRole, setTargetRole] = useState<'admin' | 'dispatcher' | 'field_agent'>('dispatcher');
   
   // Form states
   const [formData, setFormData] = useState({
@@ -109,10 +141,19 @@ export default function AdminManagement() {
       });
       
       if (dispatcherRes.ok) {
-        const dispatcherData = await dispatcherRes.json();
-        const dispatchers = dispatcherData.success ? dispatcherData.data.map((d: any) => ({ ...d, id: d.dispatcherId })) : [];
-        console.log(dispatchers)
-        setDispatchers(dispatchers);
+        const responseText = await dispatcherRes.text();
+        console.log('Dispatcher response:', responseText);
+        try {
+          const dispatcherData = JSON.parse(responseText);
+          const dispatchers = dispatcherData.success ? dispatcherData.data.map((d: Dispatcher) => ({ ...d, id: d.dispatcherId })) : [];
+          console.log(dispatchers)
+          setDispatchers(dispatchers);
+        } catch (parseError) {
+          console.error('Failed to parse dispatcher response:', parseError);
+          setError('Invalid response from dispatchers endpoint');
+        }
+      } else {
+        console.error('Dispatcher request failed:', dispatcherRes.status, dispatcherRes.statusText);
       }
       
       // Fetch agents  
@@ -121,9 +162,38 @@ export default function AdminManagement() {
       });
       
       if (agentRes.ok) {
-        const agentData = await agentRes.json();
-        const agents = agentData.success ? agentData.data.map((a: any) => ({ ...a, id: a.agentId })) : [];
-        setAgents(agents);
+        const responseText = await agentRes.text();
+        console.log('Agent response:', responseText);
+        try {
+          const agentData = JSON.parse(responseText);
+          const agents = agentData.success ? agentData.data.map((a: Agent) => ({ ...a, id: a.agentId })) : [];
+          setAgents(agents);
+        } catch (parseError) {
+          console.error('Failed to parse agent response:', parseError);
+          setError('Invalid response from agents endpoint');
+        }
+      } else {
+        console.error('Agent request failed:', agentRes.status, agentRes.statusText);
+      }
+
+      // Fetch all users with roles
+      const allUsersRes = await fetch(`${BASE_URL}/users/all-roles`, {
+        credentials: 'include'
+      });
+      
+      if (allUsersRes.ok) {
+        const responseText = await allUsersRes.text();
+        console.log('All users response:', responseText);
+        try {
+          const allUsersData = JSON.parse(responseText);
+          const users = allUsersData.success ? allUsersData.data : [];
+          setAllUsers(users);
+        } catch (parseError) {
+          console.error('Failed to parse all users response:', parseError);
+          setError('Invalid response from users endpoint');
+        }
+      } else {
+        console.error('All users request failed:', allUsersRes.status, allUsersRes.statusText);
       }
       
     } catch (err) {
@@ -138,7 +208,7 @@ export default function AdminManagement() {
     fetchUsers();
   }, []);
 
-  const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
+  const handleTabChange = (_event: React.SyntheticEvent, newValue: number) => {
     setTabValue(newValue);
   };
 
@@ -148,8 +218,7 @@ export default function AdminManagement() {
       const payload = userType === 'dispatcher' 
         ? { 
             name: formData.name, 
-            email: formData.email, 
-            password: formData.password,
+            email: formData.email,
             phone: formData.phone || null,
             location_id: formData.location_id,
             street_number: formData.street_number,
@@ -159,7 +228,19 @@ export default function AdminManagement() {
             postal_code: formData.postal_code,
             country: formData.country
           }
-        : { name: formData.name, email: formData.email, password: formData.password, phone: formData.phone, status: formData.status };
+        : { 
+            name: formData.name, 
+            email: formData.email, 
+            phone: formData.phone, 
+            status: formData.status,
+            location_id: formData.location_id,
+            street_number: formData.street_number,
+            street_name: formData.street_name,
+            city: formData.city,
+            state_province: formData.state_province,
+            postal_code: formData.postal_code,
+            country: formData.country
+          };
 
       const res = await fetch(endpoint, {
         method: 'POST',
@@ -191,15 +272,15 @@ export default function AdminManagement() {
       name: user.name,
       email: user.email,
       password: '',
-      phone: (user as any).phone || '',
-      status: (user as any).status || 'available',
-      location_id: (user as any).location_id || null,
-      street_number: (user as any).street_number || '',
-      street_name: (user as any).street_name || '',
-      city: (user as any).city || '',
-      state_province: (user as any).state_province || '',
-      postal_code: (user as any).postal_code || '',
-      country: (user as any).country || 'USA'
+      phone: user.phone || '',
+      status: user.status || 'available',
+      location_id: (user as Dispatcher | Agent).location_id || null,
+      street_number: (user as Dispatcher | Agent).street_number || '',
+      street_name: (user as Dispatcher | Agent).street_name || '',
+      city: (user as Dispatcher | Agent).city || '',
+      state_province: (user as Dispatcher | Agent).state_province || '',
+      postal_code: (user as Dispatcher | Agent).postal_code || '',
+      country: (user as Dispatcher | Agent).country || 'USA'
     });
     setIsEditModalOpen(true);
   };
@@ -212,11 +293,18 @@ export default function AdminManagement() {
         ? `${BASE_URL}/dispatchers/${editingUser.id}`
         : `${BASE_URL}/agents/${editingUser.id}`;
       
-      const payload: any = { name: formData.name, email: formData.email };
+      const payload: Record<string, unknown> = { name: formData.name, email: formData.email };
       if (formData.password) payload.password = formData.password;
       if (userType === 'field_agent') {
         if (formData.phone) payload.phone = formData.phone;
         if (formData.status) payload.status = formData.status;
+        payload.location_id = formData.location_id;
+        payload.street_number = formData.street_number;
+        payload.street_name = formData.street_name;
+        payload.city = formData.city;
+        payload.state_province = formData.state_province;
+        payload.postal_code = formData.postal_code;
+        payload.country = formData.country;
       } else if (userType === 'dispatcher') {
         payload.phone = formData.phone || null;
         payload.location_id = formData.location_id;
@@ -274,6 +362,46 @@ export default function AdminManagement() {
     } catch (err) {
       setError('Failed to delete user');
       console.error('Error deleting user:', err);
+    }
+  };
+
+  const handleRoleSwitch = (user: User) => {
+    setSwitchingUser(user);
+    // Set default target role (different from current role)
+    const roleOrder = ['field_agent', 'dispatcher', 'admin'];
+    const currentIndex = roleOrder.indexOf(user.role || 'field_agent');
+    const nextIndex = (currentIndex + 1) % roleOrder.length;
+    setTargetRole(roleOrder[nextIndex] as 'admin' | 'dispatcher' | 'field_agent');
+    setIsRoleSwitchModalOpen(true);
+  };
+
+  const handleRoleSwitchConfirm = async () => {
+    if (!switchingUser) return;
+
+    try {
+      const res = await fetch(`${BASE_URL}/users/${switchingUser.id}/switch-role`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+        body: JSON.stringify({
+          current_role: switchingUser.role,
+          target_role: targetRole,
+        }),
+      });
+
+      if (res.ok) {
+        await fetchUsers(); // Refresh all data
+        setIsRoleSwitchModalOpen(false);
+        setSwitchingUser(null);
+      } else {
+        const errorData = await res.json();
+        setError(errorData.error || 'Failed to switch user role');
+      }
+    } catch (err) {
+      setError('Failed to switch user role');
+      console.error('Error switching user role:', err);
     }
   };
 
@@ -340,6 +468,14 @@ export default function AdminManagement() {
           <Tab 
             label={
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                <SwapIcon />
+                <span>All Users ({allUsers.length})</span>
+              </Box>
+            } 
+          />
+          <Tab 
+            label={
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                 <SupervisorIcon />
                 <span>Dispatchers ({dispatchers.length})</span>
               </Box>
@@ -353,11 +489,100 @@ export default function AdminManagement() {
               </Box>
             } 
           />
+          <Tab 
+            label={
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                <GroupIcon />
+                <span>Teams</span>
+              </Box>
+            } 
+          />
+          <Tab 
+            label={
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                <AssignmentIcon />
+                <span>Dispositions</span>
+              </Box>
+            } 
+          />
         </Tabs>
       </Box>
 
-      {/* Dispatchers Tab */}
+      {/* All Users Tab */}
       <TabPanel value={tabValue} index={0}>
+        <TableContainer component={Paper}>
+          <Table>
+            <TableHead>
+              <TableRow>
+                <TableCell>Name</TableCell>
+                <TableCell>Email</TableCell>
+                <TableCell>Role</TableCell>
+                <TableCell>Phone</TableCell>
+                <TableCell>Status</TableCell>
+                <TableCell>Created</TableCell>
+                <TableCell align="right">Actions</TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {allUsers.map((user) => (
+                <TableRow key={`${user.role}-${user.id}`}>
+                  <TableCell>{user.name}</TableCell>
+                  <TableCell>{user.email}</TableCell>
+                  <TableCell>
+                    <Chip 
+                      label={user.role?.replace('_', ' ').toUpperCase() || 'Unknown'} 
+                      color={
+                        user.role === 'admin' ? 'error' : 
+                        user.role === 'dispatcher' ? 'primary' : 
+                        'default'
+                      }
+                      size="small"
+                      icon={
+                        user.role === 'admin' ? <AdminIcon /> :
+                        user.role === 'dispatcher' ? <SupervisorIcon /> :
+                        <PersonIcon />
+                      }
+                    />
+                  </TableCell>
+                  <TableCell>{user.phone || 'N/A'}</TableCell>
+                  <TableCell>
+                    {user.status ? (
+                      <Chip 
+                        label={user.status} 
+                        color={user.status === 'available' ? 'success' : 'default'}
+                        size="small"
+                      />
+                    ) : 'N/A'}
+                  </TableCell>
+                  <TableCell>
+                    {user.created_time ? new Date(user.created_time).toLocaleDateString() : 'N/A'}
+                  </TableCell>
+                  <TableCell align="right">
+                    <IconButton 
+                      onClick={() => handleRoleSwitch(user)}
+                      size="small"
+                      color="primary"
+                      title="Switch Role"
+                    >
+                      <SwapIcon />
+                    </IconButton>
+                  </TableCell>
+                </TableRow>
+              ))}
+              {allUsers.length === 0 && (
+                <TableRow>
+                  <TableCell colSpan={7} align="center">
+                    <Typography color="textSecondary">No users found</Typography>
+                  </TableCell>
+                </TableRow>
+              )}
+            </TableBody>
+          </Table>
+        </TableContainer>
+      </TabPanel>
+
+      {/* Dispatchers Tab */}
+      <TabPanel value={tabValue} index={1}>
         <TableContainer component={Paper}>
           <Table>
             <TableHead>
@@ -375,10 +600,10 @@ export default function AdminManagement() {
                 <TableRow key={dispatcher.id}>
                   <TableCell>{dispatcher.name}</TableCell>
                   <TableCell>{dispatcher.email}</TableCell>
-                  <TableCell>{(dispatcher as any).phone || 'N/A'}</TableCell>
+                  <TableCell>{dispatcher.phone || 'N/A'}</TableCell>
                   <TableCell>
-                    {(dispatcher as any).street_number && (dispatcher as any).street_name
-                      ? `${(dispatcher as any).street_number} ${(dispatcher as any).street_name}, ${(dispatcher as any).city}, ${(dispatcher as any).state_province}`
+                    {dispatcher.street_number && dispatcher.street_name
+                      ? `${dispatcher.street_number} ${dispatcher.street_name}, ${dispatcher.city}, ${dispatcher.state_province}`
                       : 'N/A'
                     }
                   </TableCell>
@@ -416,7 +641,7 @@ export default function AdminManagement() {
       </TabPanel>
 
       {/* Field Agents Tab */}
-      <TabPanel value={tabValue} index={1}>
+      <TabPanel value={tabValue} index={2}>
         <TableContainer component={Paper}>
           <Table>
             <TableHead>
@@ -434,11 +659,11 @@ export default function AdminManagement() {
                 <TableRow key={agent.id}>
                   <TableCell>{agent.name}</TableCell>
                   <TableCell>{agent.email}</TableCell>
-                  <TableCell>{(agent as any).phone || 'N/A'}</TableCell>
+                  <TableCell>{agent.phone || 'N/A'}</TableCell>
                   <TableCell>
                     <Chip 
-                      label={(agent as any).status || 'N/A'} 
-                      color={(agent as any).status === 'available' ? 'success' : 'default'}
+                      label={agent.status || 'N/A'} 
+                      color={agent.status === 'available' ? 'success' : 'default'}
                       size="small"
                     />
                   </TableCell>
@@ -473,6 +698,16 @@ export default function AdminManagement() {
             </TableBody>
           </Table>
         </TableContainer>
+      </TabPanel>
+
+      {/* Teams Tab */}
+      <TabPanel value={tabValue} index={3}>
+        <TeamManagement />
+      </TabPanel>
+
+      {/* Dispositions Tab */}
+      <TabPanel value={tabValue} index={4}>
+        <DispositionManagement />
       </TabPanel>
 
       {/* Create User Modal */}
@@ -511,25 +746,21 @@ export default function AdminManagement() {
               required
             />
 
-            <TextField
-              fullWidth
-              label="Password"
-              type="password"
-              value={formData.password}
-              onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-              margin="normal"
-              required
-            />
+            <Alert severity="info" sx={{ mt: 2 }}>
+              Default password "Room2025!" will be set automatically. Users can reset their password after first login.
+            </Alert>
+
 
             {userType === 'dispatcher' && (
               <>
-                <TextField
-                  fullWidth
-                  label="Phone"
-                  value={formData.phone}
-                  onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                  margin="normal"
-                />
+                <Box sx={{ mt: 2, mb: 1 }}>
+                  <PhoneInput
+                    value={formData.phone}
+                    onChange={(value) => setFormData({ ...formData, phone: value })}
+                    label="Phone"
+                    fullWidth
+                  />
+                </Box>
                 
                 <Typography variant="h6" sx={{ mt: 3, mb: 1 }}>Location (Optional)</Typography>
                 <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: 2 }}>
@@ -554,13 +785,13 @@ export default function AdminManagement() {
                     margin="normal"
                   />
                   <TextField
-                    label="State/Province"
+                    label="State"
                     value={formData.state_province}
                     onChange={(e) => setFormData({ ...formData, state_province: e.target.value })}
                     margin="normal"
                   />
                   <TextField
-                    label="Postal Code"
+                    label="Zip Code"
                     value={formData.postal_code}
                     onChange={(e) => setFormData({ ...formData, postal_code: e.target.value })}
                     margin="normal"
@@ -578,13 +809,14 @@ export default function AdminManagement() {
             
             {userType === 'field_agent' && (
               <>
-                <TextField
-                  fullWidth
-                  label="Phone"
-                  value={formData.phone}
-                  onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                  margin="normal"
-                />
+                <Box sx={{ mt: 2, mb: 1 }}>
+                  <PhoneInput
+                    value={formData.phone}
+                    onChange={(value) => setFormData({ ...formData, phone: value })}
+                    label="Phone"
+                    fullWidth
+                  />
+                </Box>
 
                 <FormControl fullWidth sx={{ mt: 2 }}>
                   <InputLabel>Status</InputLabel>
@@ -597,6 +829,49 @@ export default function AdminManagement() {
                     <MenuItem value="unavailable">Unavailable</MenuItem>
                   </Select>
                 </FormControl>
+
+                <Typography variant="h6" sx={{ mt: 3, mb: 1 }}>Location (Optional)</Typography>
+                <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: 2 }}>
+                  <TextField
+                    label="Street Number"
+                    value={formData.street_number}
+                    onChange={(e) => setFormData({ ...formData, street_number: e.target.value })}
+                    margin="normal"
+                  />
+                  <TextField
+                    label="Street Name"
+                    value={formData.street_name}
+                    onChange={(e) => setFormData({ ...formData, street_name: e.target.value })}
+                    margin="normal"
+                  />
+                </Box>
+                <Box sx={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr', gap: 2 }}>
+                  <TextField
+                    label="City"
+                    value={formData.city}
+                    onChange={(e) => setFormData({ ...formData, city: e.target.value })}
+                    margin="normal"
+                  />
+                  <TextField
+                    label="State"
+                    value={formData.state_province}
+                    onChange={(e) => setFormData({ ...formData, state_province: e.target.value })}
+                    margin="normal"
+                  />
+                  <TextField
+                    label="Zip Code"
+                    value={formData.postal_code}
+                    onChange={(e) => setFormData({ ...formData, postal_code: e.target.value })}
+                    margin="normal"
+                  />
+                </Box>
+                <TextField
+                  fullWidth
+                  label="Country"
+                  value={formData.country}
+                  onChange={(e) => setFormData({ ...formData, country: e.target.value })}
+                  margin="normal"
+                />
               </>
             )}
           </Box>
@@ -642,13 +917,14 @@ export default function AdminManagement() {
 
             {userType === 'dispatcher' && (
               <>
-                <TextField
-                  fullWidth
-                  label="Phone"
-                  value={formData.phone}
-                  onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                  margin="normal"
-                />
+                <Box sx={{ mt: 2, mb: 1 }}>
+                  <PhoneInput
+                    value={formData.phone}
+                    onChange={(value) => setFormData({ ...formData, phone: value })}
+                    label="Phone"
+                    fullWidth
+                  />
+                </Box>
                 
                 <Typography variant="h6" sx={{ mt: 3, mb: 1 }}>Location (Optional)</Typography>
                 <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: 2 }}>
@@ -673,13 +949,13 @@ export default function AdminManagement() {
                     margin="normal"
                   />
                   <TextField
-                    label="State/Province"
+                    label="State"
                     value={formData.state_province}
                     onChange={(e) => setFormData({ ...formData, state_province: e.target.value })}
                     margin="normal"
                   />
                   <TextField
-                    label="Postal Code"
+                    label="Zip Code"
                     value={formData.postal_code}
                     onChange={(e) => setFormData({ ...formData, postal_code: e.target.value })}
                     margin="normal"
@@ -697,13 +973,14 @@ export default function AdminManagement() {
             
             {userType === 'field_agent' && (
               <>
-                <TextField
-                  fullWidth
-                  label="Phone"
-                  value={formData.phone}
-                  onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                  margin="normal"
-                />
+                <Box sx={{ mt: 2, mb: 1 }}>
+                  <PhoneInput
+                    value={formData.phone}
+                    onChange={(value) => setFormData({ ...formData, phone: value })}
+                    label="Phone"
+                    fullWidth
+                  />
+                </Box>
 
                 <FormControl fullWidth sx={{ mt: 2 }}>
                   <InputLabel>Status</InputLabel>
@@ -719,6 +996,49 @@ export default function AdminManagement() {
                     <MenuItem value="enroute">En Route</MenuItem>
                   </Select>
                 </FormControl>
+
+                <Typography variant="h6" sx={{ mt: 3, mb: 1 }}>Location (Optional)</Typography>
+                <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: 2 }}>
+                  <TextField
+                    label="Street Number"
+                    value={formData.street_number}
+                    onChange={(e) => setFormData({ ...formData, street_number: e.target.value })}
+                    margin="normal"
+                  />
+                  <TextField
+                    label="Street Name"
+                    value={formData.street_name}
+                    onChange={(e) => setFormData({ ...formData, street_name: e.target.value })}
+                    margin="normal"
+                  />
+                </Box>
+                <Box sx={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr', gap: 2 }}>
+                  <TextField
+                    label="City"
+                    value={formData.city}
+                    onChange={(e) => setFormData({ ...formData, city: e.target.value })}
+                    margin="normal"
+                  />
+                  <TextField
+                    label="State"
+                    value={formData.state_province}
+                    onChange={(e) => setFormData({ ...formData, state_province: e.target.value })}
+                    margin="normal"
+                  />
+                  <TextField
+                    label="Zip Code"
+                    value={formData.postal_code}
+                    onChange={(e) => setFormData({ ...formData, postal_code: e.target.value })}
+                    margin="normal"
+                  />
+                </Box>
+                <TextField
+                  fullWidth
+                  label="Country"
+                  value={formData.country}
+                  onChange={(e) => setFormData({ ...formData, country: e.target.value })}
+                  margin="normal"
+                />
               </>
             )}
           </Box>
@@ -727,6 +1047,72 @@ export default function AdminManagement() {
           <Button onClick={handleCloseEditModal}>Cancel</Button>
           <Button onClick={handleUpdateUser} variant="contained">
             Update
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Role Switch Modal */}
+      <Dialog 
+        open={isRoleSwitchModalOpen} 
+        onClose={() => setIsRoleSwitchModalOpen(false)} 
+        maxWidth="sm" 
+        fullWidth
+      >
+        <DialogTitle>Switch User Role</DialogTitle>
+        <DialogContent>
+          <Box sx={{ pt: 2 }}>
+            {switchingUser && (
+              <>
+                <Typography variant="body1" sx={{ mb: 3 }}>
+                  Switch role for <strong>{switchingUser.name}</strong> ({switchingUser.email})?
+                </Typography>
+                
+                <Typography variant="body2" sx={{ mb: 2 }}>
+                  Current Role: {' '}
+                  <Chip 
+                    label={switchingUser.role?.replace('_', ' ').toUpperCase() || 'Unknown'} 
+                    color={
+                      switchingUser.role === 'admin' ? 'error' : 
+                      switchingUser.role === 'dispatcher' ? 'primary' : 
+                      'default'
+                    }
+                    size="small"
+                  />
+                </Typography>
+
+                <FormControl fullWidth sx={{ mt: 2 }}>
+                  <InputLabel>New Role</InputLabel>
+                  <Select
+                    value={targetRole}
+                    label="New Role"
+                    onChange={(e) => setTargetRole(e.target.value as 'admin' | 'dispatcher' | 'field_agent')}
+                  >
+                    <MenuItem value="field_agent">Field Agent</MenuItem>
+                    <MenuItem value="dispatcher">Dispatcher</MenuItem>
+                    <MenuItem value="admin">Admin</MenuItem>
+                  </Select>
+                </FormControl>
+
+                <Alert severity="warning" sx={{ mt: 2 }}>
+                  <Typography variant="body2">
+                    <strong>Warning:</strong> Role switching will move the user between different user tables. 
+                    The user will need to log in again after the role change. This action cannot be undone.
+                  </Typography>
+                </Alert>
+              </>
+            )}
+          </Box>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setIsRoleSwitchModalOpen(false)}>
+            Cancel
+          </Button>
+          <Button 
+            onClick={handleRoleSwitchConfirm} 
+            variant="contained" 
+            color="primary"
+          >
+            Switch Role
           </Button>
         </DialogActions>
       </Dialog>

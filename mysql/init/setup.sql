@@ -20,6 +20,15 @@ CREATE TABLE IF NOT EXISTS locations (
     )
 );
 
+-- Teams Table
+CREATE TABLE IF NOT EXISTS teams (
+    teamId INT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(100) NOT NULL UNIQUE,
+    description TEXT,
+    created_time TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_time TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);
+
 -- Dispatcher Table
 CREATE TABLE IF NOT EXISTS dispatchers (
     dispatcherId INT AUTO_INCREMENT PRIMARY KEY,
@@ -28,9 +37,11 @@ CREATE TABLE IF NOT EXISTS dispatchers (
     password VARCHAR(255) NOT NULL,
     phone VARCHAR(15),
     location_id INT,
+    team_id INT,
     created_time TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_time TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    FOREIGN KEY (location_id) REFERENCES locations(id) ON DELETE SET NULL
+    FOREIGN KEY (location_id) REFERENCES locations(id) ON DELETE SET NULL,
+    FOREIGN KEY (team_id) REFERENCES teams(teamId) ON DELETE SET NULL
 );
 
 -- Field Agent Table
@@ -42,9 +53,11 @@ CREATE TABLE IF NOT EXISTS field_agents (
     phone VARCHAR(15),
     `status` ENUM('available', 'unavailable', 'accepted', 'declined', 'enroute') DEFAULT 'available',
     location_id INT,
+    team_id INT,
     created_time TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_time TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    FOREIGN KEY (location_id) REFERENCES locations(id) ON DELETE SET NULL
+    FOREIGN KEY (location_id) REFERENCES locations(id) ON DELETE SET NULL,
+    FOREIGN KEY (team_id) REFERENCES teams(teamId) ON DELETE SET NULL
 );
 
 -- Admin Table
@@ -77,11 +90,32 @@ CREATE TABLE IF NOT EXISTS bookings (
     dispositionId INT,
     booking_date DATE NOT NULL,
     booking_time TIME NOT NULL,
-    `status` ENUM('scheduled', 'in-progress', 'completed') DEFAULT 'scheduled',
+    `status` ENUM('scheduled', 'enroute', 'on-site', 'completed') DEFAULT 'scheduled',
     created_time TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_time TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     FOREIGN KEY (customerId) REFERENCES customers(customerId) ON DELETE CASCADE,
     FOREIGN KEY (agentId) REFERENCES field_agents(agentId) ON DELETE SET NULL
+);
+
+-- Time Off Requests Table
+CREATE TABLE IF NOT EXISTS time_off_requests (
+    requestId INT AUTO_INCREMENT PRIMARY KEY,
+    agentId INT NOT NULL,
+    request_date DATE NOT NULL,
+    start_time TIME NULL, -- NULL for full day, specific time for 2-hour periods
+    end_time TIME NULL,   -- NULL for full day, specific time for 2-hour periods
+    is_full_day BOOLEAN DEFAULT FALSE,
+    reason TEXT,
+    status ENUM('pending', 'approved', 'rejected', 'cancelled') DEFAULT 'pending',
+    requested_by INT NOT NULL, -- agentId who requested
+    reviewed_by INT NULL,      -- dispatcherId or adminId who approved/rejected
+    reviewer_type ENUM('dispatcher', 'admin') NULL,
+    created_time TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_time TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (agentId) REFERENCES field_agents(agentId) ON DELETE CASCADE,
+    FOREIGN KEY (requested_by) REFERENCES field_agents(agentId) ON DELETE CASCADE,
+    -- Add constraint to prevent overlapping time-off for same agent
+    UNIQUE KEY unique_agent_timeoff (agentId, request_date, start_time, end_time)
 );
 
 -- Lookup table of possible dispositions
@@ -109,19 +143,25 @@ VALUES
 (26.3237612, -98.1369012, '78542', 'Edinburg', 'Texas', 'USA', 'Sunset Blvd', '101'),
 (33.1811789, -96.6291685, '75069', 'McKinney', 'Texas', 'USA', 'Bay Street', '100');
 
+-- Sample Teams
+INSERT INTO teams (name, description) VALUES
+('Team Alpha', 'Primary response team for McAllen area'),
+('Team Beta', 'Specialized team for Edinburg region'),
+('Team Gamma', 'McKinney area coverage team');
+
 -- Sample Dispatchers
-INSERT INTO dispatchers (`name`, email, password, phone, location_id)
+INSERT INTO dispatchers (`name`, email, password, phone, location_id, team_id)
 VALUES
-('Pete Stathopoulos', 'pete@triguardroofing.com', 'pete', '555-0001', 1);
+('Pete Stathopoulos', 'pete@triguardroofing.com', 'pete', '555-0001', 1, 1);
 
 -- Sample Field Agents
-INSERT INTO field_agents (`name`, email, password, phone, `status`, location_id)
+INSERT INTO field_agents (`name`, email, password, phone, `status`, location_id, team_id)
 VALUES
-('Larey Farias', 'larey@triguardroofing.com', "larey", '555-1111', 'available', 1),
-('Arthur Garica', 'arthur@triguardroofing.com', 'arthur', '555-1111', 'available', 1),
-('Jeremy Moreno', 'jeremy@triguardroofing.com', 'jeremy', '555-2222', 'available', 2),
-('rebecca steward', 'rebecca@triguardroofing.com', 'rebecca', '555-2222', 'available', 3),
-('tester', 'test@example.com', 'tester', '555-6666', 'available', 3);
+('Larey Farias', 'larey@triguardroofing.com', "larey", '555-1111', 'available', 1, 1),
+('Arthur Garica', 'arthur@triguardroofing.com', 'arthur', '555-1111', 'available', 1, 1),
+('Jeremy Moreno', 'jeremy@triguardroofing.com', 'jeremy', '555-2222', 'available', 2, 2),
+('rebecca steward', 'rebecca@triguardroofing.com', 'rebecca', '555-2222', 'available', 3, 3),
+('tester', 'test@example.com', 'tester', '555-6666', 'available', 3, 3);
 
 -- Sample Admin
 INSERT INTO admins (`name`, email, password)

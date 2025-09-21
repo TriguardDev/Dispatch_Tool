@@ -1,4 +1,4 @@
-from flask import Flask
+from flask import Flask, request
 from flask_cors import CORS
 from routes.booking import booking_bp
 from routes.agent import agent_bp
@@ -7,8 +7,11 @@ from routes.search import search_bp
 from routes.auth import auth_bp
 from routes.admin import admin_bp
 from routes.dispatcher import dispatcher_bp
+from routes.teams import teams_bp
+from routes.timeoff import timeoff_bp
 from config import Config
 from extensions import mail
+import logging
 
 def create_app():
     app = Flask(__name__)
@@ -20,9 +23,10 @@ def create_app():
              "http://localhost:3000",    # React dev server
              "http://localhost:5173",    # Vite dev server
              "http://localhost:4173",    # Vite preview
-             "https://app.salesdispatcher.com"  # Replace with your actual domain
+             "https://app.salesdispatcher.com",  # Replace with your actual domain
+             "http://54.88.30.22"       # Appointment form server
          ],
-         allow_headers=["Content-Type", "Authorization"],
+         allow_headers=["Content-Type", "Authorization", "X-API-Key"],
          methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"]
     )
 
@@ -34,6 +38,8 @@ def create_app():
     app.register_blueprint(auth_bp)
     app.register_blueprint(admin_bp)
     app.register_blueprint(dispatcher_bp)
+    app.register_blueprint(teams_bp)
+    app.register_blueprint(timeoff_bp)
     
     app.config["MAIL_SERVER"] = Config.MAIL_SERVER
     app.config["MAIL_PORT"] = Config.MAIL_PORT
@@ -43,6 +49,22 @@ def create_app():
     app.config["MAIL_DEFAULT_SENDER"] = Config.MAIL_DEFAULT_SENDER
 
     mail.init_app(app)
+    
+    # Configure logging
+    logging.basicConfig(level=logging.INFO)
+    app.logger.setLevel(logging.INFO)
+    
+    # Log all requests for debugging
+    @app.before_request
+    def log_request_info():
+        app.logger.info('Request: %s %s', request.method, request.url)
+        app.logger.info('Headers: %s', dict(request.headers))
+    
+    @app.after_request
+    def log_response_info(response):
+        app.logger.info('Response: %s', response.status_code)
+        return response
+    
     return app
 
 if __name__ == "__main__":

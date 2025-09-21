@@ -1,12 +1,14 @@
 import { authenticatedFetch } from "./login";
 
-const BASE_URL = import.meta.env.VITE_API_BASE_URL;
+const BASE_URL = import.meta.env.VITE_BASE_API_URL;
 
 export interface Booking {
   bookingId: number;
   booking_date: string; // YYYY-MM-DD
   booking_time: string; // HH:MM:SS
   customer_address: string | null;
+  customer_latitude: number | null;
+  customer_longitude: number | null;
   status: string;
   customer_name: string;
   agent_name: string | null;
@@ -50,10 +52,16 @@ export async function getAgentBookings(agentId: number): Promise<Booking[]> {
   return result.success ? result.data : [];
 }
 
-export async function updateBookingStatus(bookingId: number, status: string): Promise<void> {
-  const res = await authenticatedFetch(`${BASE_URL}/booking`, {
+
+export async function updateBooking(bookingId: number, updates: { 
+  agentId?: number | null; 
+  booking_date?: string; 
+  booking_time?: string; 
+  status?: string; 
+}): Promise<void> {
+  const res = await authenticatedFetch(`${BASE_URL}/bookings/${bookingId}`, {
     method: "PUT",
-    body: JSON.stringify({ booking_id: bookingId, status }),
+    body: JSON.stringify(updates),
   });
 
   if (!res.ok) {
@@ -63,7 +71,10 @@ export async function updateBookingStatus(bookingId: number, status: string): Pr
     if (res.status === 403) {
       throw new Error("Access denied");
     }
-    throw new Error("Failed to update booking status");
+    if (res.status === 404) {
+      throw new Error("Booking not found");
+    }
+    throw new Error("Failed to update booking");
   }
 }
 
@@ -128,5 +139,6 @@ export async function searchAgents(params: {
   }
 
   const result = await res.json();
-  return result.success ? result.data : result;
+  // The search endpoint returns agents array directly, not wrapped in success/data
+  return Array.isArray(result) ? result : (result.success ? result.data : []);
 }

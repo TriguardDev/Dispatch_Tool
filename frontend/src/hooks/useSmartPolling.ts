@@ -154,7 +154,7 @@ export function useSmartPolling({
         intervalRef.current = undefined;
       }
     };
-  }, [pollingInterval, enabled, isPaused]); // Remove fetchData from deps to prevent continuous re-initialization
+  }, [fetchData, pollingInterval, enabled, isPaused]);
 
   // Cleanup on unmount
   useEffect(() => {

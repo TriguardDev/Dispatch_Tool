@@ -137,6 +137,66 @@ def debug_cookies():
         "headers": dict(request.headers)
     })
 
+@auth_bp.route("/reset-password", methods=["POST"])
+def reset_password():
+    """
+    Reset password for any user type. Requires old password and new password.
+    """
+    try:
+        data = request.get_json()
+        email = data.get("email")
+        role = data.get("role")
+        old_password = data.get("old_password")
+        new_password = data.get("new_password")
+
+        if not email or not role or not old_password or not new_password:
+            return jsonify({"success": False, "error": "Missing required fields: email, role, old_password, new_password"}), 400
+
+        if role not in ['dispatcher', 'field_agent', 'admin']:
+            return jsonify({"success": False, "error": "Invalid role"}), 400
+
+        conn = get_connection()
+        cursor = conn.cursor(dictionary=True)
+
+        # Define table and ID column mapping based on role
+        role_config = {
+            'dispatcher': {'table': 'dispatchers', 'id_column': 'dispatcherId'},
+            'field_agent': {'table': 'field_agents', 'id_column': 'agentId'},
+            'admin': {'table': 'admins', 'id_column': 'adminId'}
+        }
+
+        config = role_config[role]
+        
+        # Query the appropriate table based on role
+        query = f"SELECT {config['id_column']}, password FROM {config['table']} WHERE email = %s"
+        cursor.execute(query, (email,))
+        user = cursor.fetchone()
+        
+        if not user:
+            return jsonify({"success": False, "error": f"User not found with email {email}"}), 404
+
+        # Verify old password
+        if not verify_password(old_password, user['password']):
+            return jsonify({"success": False, "error": "Invalid old password"}), 401
+
+        # Hash the new password
+        hashed_new_password = hash_password(new_password)
+        
+        # Update password
+        update_query = f"UPDATE {config['table']} SET password = %s WHERE email = %s"
+        cursor.execute(update_query, (hashed_new_password, email))
+        conn.commit()
+
+        return jsonify({"success": True, "message": "Password reset successfully"}), 200
+
+    except Exception as e:
+        if 'conn' in locals(): conn.rollback()
+        return jsonify({"success": False, "error": str(e)}), 500
+
+    finally:
+        if 'cursor' in locals(): cursor.close()
+        if 'conn' in locals(): conn.close()
+
 # Utility function to create hashed passwords for existing users
 @auth_bp.route("/hash-existing-passwords", methods=["POST"])
 def hash_existing_passwords():

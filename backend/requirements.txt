@@ -1,0 +1,23 @@
+# Flask and related
+Flask==2.3.3
+Flask-CORS==4.0.0
+Flask-Mail==0.9.1
+
+# Database
+mysql-connector-python==8.1.0
+
+# Security
+bcrypt==4.0.1
+PyJWT==2.8.0
+python-dotenv==1.0.0
+
+# Communication
+twilio==8.9.1
+requests==2.31.0
+
+# Production server
+gunicorn==21.2.0
+
+# Development
+pytest==7.4.2
+pytest-flask==1.2.0

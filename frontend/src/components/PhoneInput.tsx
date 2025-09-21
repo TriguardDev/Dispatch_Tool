@@ -46,7 +46,7 @@ export default function PhoneInput({
       setIsValid(valid);
       onValidityChange?.(valid);
     }
-  }, [value]);
+  }, [value, displayValue, onValidityChange]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const inputValue = e.target.value;

@@ -1,11 +1,12 @@
 import { useState } from "react";
-import { Box, Typography, CircularProgress, Container } from "@mui/material";
+import { Box, Typography, CircularProgress, Container, Tabs, Tab } from "@mui/material";
 import TopBar from "../components/TopBar";
 import Filters from "../components/Filters";
 import QueueCard from "../components/QueueCard";
 import AppointmentCard from "../components/AppointmentCard";
 import NewAppointmentModal from "../components/NewAppointmentModal";
-import { getAllBookings, type Booking } from "../api/crud";
+import TimeOffManagement from "../components/TimeOffManagement";
+import { getAllBookings } from "../api/crud";
 import { useSmartPolling } from "../hooks/useSmartPolling";
 
 interface DispatcherScreenProps {
@@ -14,6 +15,7 @@ interface DispatcherScreenProps {
 
 export default function DispatcherScreen({ onLogout }: DispatcherScreenProps) {
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [tabValue, setTabValue] = useState(0);
   
   const {
     data: bookings,
@@ -45,7 +47,8 @@ export default function DispatcherScreen({ onLogout }: DispatcherScreenProps) {
 
   // Categorize bookings by status
   const scheduled = bookings.filter((b) => ["scheduled"].includes(b.status.toLowerCase()));
-  const active = bookings.filter((b) => ["in-progress"].includes(b.status.toLowerCase()));
+  const enroute = bookings.filter((b) => ["enroute"].includes(b.status.toLowerCase()));
+  const onsite = bookings.filter((b) => ["on-site"].includes(b.status.toLowerCase()));
   const completed = bookings.filter((b) => ["completed"].includes(b.status.toLowerCase()));
 
   if (loading) {
@@ -75,13 +78,24 @@ export default function DispatcherScreen({ onLogout }: DispatcherScreenProps) {
     <Box sx={{ backgroundColor: 'background.default', minHeight: '100vh' }}>
       <TopBar onLogOut={onLogout} />
       <Container component="main" maxWidth="xl" sx={{ py: 3 }}>
-        <Filters 
-          onNewAppt={handleModalOpen} 
-          onRefresh={refetch}
-          refreshing={loading}
-        />
+        {/* Tabs */}
+        <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 3 }}>
+          <Tabs value={tabValue} onChange={(_, newValue) => setTabValue(newValue)}>
+            <Tab label="All Appointments" />
+            <Tab label="Team Time-Off" />
+          </Tabs>
+        </Box>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        {/* Appointments Tab */}
+        {tabValue === 0 && (
+          <>
+            <Filters 
+              onNewAppt={handleModalOpen} 
+              onRefresh={refetch}
+              refreshing={loading}
+            />
+
+            <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
           <QueueCard
             title="Queue — Scheduled"
             badgeColor="bg-blue-50 text-blue-700"
@@ -91,20 +105,36 @@ export default function DispatcherScreen({ onLogout }: DispatcherScreenProps) {
               <AppointmentCard 
                 key={appt.bookingId} 
                 appt={appt}
-                addressText={appt.customer_address ?? ""} />
+                addressText={appt.customer_address ?? ""}
+                onAgentChange={refetch} />
             ))}
           </QueueCard>
 
           <QueueCard
-            title="En Route / On Site"
-            badgeColor="bg-yellow-50 text-yellow-700"
-            count={active.length}
+            title="En Route"
+            badgeColor="bg-blue-50 text-blue-700"
+            count={enroute.length}
           >
-            {active.map((appt) => (
+            {enroute.map((appt) => (
               <AppointmentCard 
                 key={appt.bookingId} 
                 appt={appt}
-                addressText={appt.customer_address ?? ""} />
+                addressText={appt.customer_address ?? ""}
+                onAgentChange={refetch} />
+            ))}
+          </QueueCard>
+
+          <QueueCard
+            title="On Site"
+            badgeColor="bg-yellow-50 text-yellow-700"
+            count={onsite.length}
+          >
+            {onsite.map((appt) => (
+              <AppointmentCard 
+                key={appt.bookingId} 
+                appt={appt}
+                addressText={appt.customer_address ?? ""}
+                onAgentChange={refetch} />
             ))}
           </QueueCard>
 
@@ -117,10 +147,18 @@ export default function DispatcherScreen({ onLogout }: DispatcherScreenProps) {
               <AppointmentCard 
                 key={appt.bookingId} 
                 appt={appt}
-                addressText={appt.customer_address ?? ""} />
+                addressText={appt.customer_address ?? ""}
+                onAgentChange={refetch} />
             ))}
           </QueueCard>
-        </div>
+            </div>
+          </>
+        )}
+
+        {/* Time-Off Management Tab */}
+        {tabValue === 1 && (
+          <TimeOffManagement onLogout={onLogout} userRole="dispatcher" />
+        )}
       </Container>
 
       <NewAppointmentModal

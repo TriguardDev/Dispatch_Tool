@@ -1,10 +1,30 @@
 from flask import Blueprint, request, jsonify
 from db import get_connection
 from utils.async_notifier import send_notifications_async, prepare_booking_notifications
-from utils.middleware import require_auth, require_dispatcher
+from utils.middleware import require_any_role
 import datetime
+import os
 
 booking_bp = Blueprint("booking", __name__, url_prefix="/api")
+
+# Call Center API Key (should be set in environment variables)
+CALL_CENTER_API_KEY = os.getenv('CALL_CENTER_API_KEY', 'cc_api_key_change_this_in_production')
+
+def require_call_center_auth(f):
+    """Middleware to authenticate call center API requests"""
+    from functools import wraps
+    
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        api_key = request.headers.get('X-API-Key') or request.headers.get('X-Api-Key')
+        if not api_key:
+            return jsonify({"success": False, "error": "API key required"}), 401
+        
+        if api_key != CALL_CENTER_API_KEY:
+            return jsonify({"success": False, "error": "Invalid API key"}), 401
+        
+        return f(*args, **kwargs)
+    return decorated_function
 
 def serialize_booking_timestamps(booking):
     """Convert booking timestamps to ISO format for JSON serialization"""
@@ -18,87 +38,9 @@ def serialize_booking_timestamps(booking):
         booking["booking_time"] = f"{hours:02}:{minutes:02}:{seconds:02}"
     return booking
 
-@booking_bp.route("/booking", methods=["PUT"])
-@require_auth
-def update_booking_status():
-    """
-    Update booking status. If completed, trigger survey notifications.
-    """
-    try:
-        data = request.get_json()
-        booking_id = data.get("booking_id")
-        new_status = data.get("status")
-
-        if not booking_id or not new_status:
-            return jsonify({"success": False, "error": "Missing fields"}), 400
-
-        conn = get_connection()
-        cursor = conn.cursor(dictionary=True)
-
-        # Verify user has access to this booking (admins can access all bookings)
-        if request.role == 'field_agent':
-            cursor.execute("""
-                SELECT bookingId FROM bookings 
-                WHERE bookingId = %s AND agentId = %s
-            """, (booking_id, request.user_id))
-            if not cursor.fetchone():
-                return jsonify({"success": False, "error": "Access denied"}), 403
-
-        cursor.execute("""
-            UPDATE bookings
-            SET status = %s
-            WHERE bookingId = %s
-        """, (new_status, booking_id))
-
-        cursor.execute("""
-            SELECT c.email AS customer_email, c.phone AS customer_phone, c.name AS customer_name,
-                   fa.email AS agent_email, fa.phone AS agent_phone, fa.name AS agent_name,
-                   b.booking_date, b.booking_time
-            FROM bookings b
-            JOIN customers c ON b.customerId = c.customerId
-            LEFT JOIN field_agents fa ON b.agentId = fa.agentId
-            WHERE b.bookingId = %s
-        """, (booking_id,))
-        res = cursor.fetchone()
-
-        if not res:
-            return jsonify({"success": False, "error": "Booking not found"}), 404
-
-        conn.commit()
-
-        # -------------------- Notifications -------------------- #
-        # Prepare notification data
-        notification_data = {
-            'customer_name': res['customer_name'],
-            'customer_email': res.get('customer_email'),
-            'customer_phone': res.get('customer_phone'),
-            'agent_name': res.get('agent_name'),
-            'agent_email': res.get('agent_email'),
-            'agent_phone': res.get('agent_phone'),
-            'booking_date': res['booking_date'],
-            'booking_time': res['booking_time'],
-            'status': new_status
-        }
-        
-        # Send notifications asynchronously
-        notifications = prepare_booking_notifications(notification_data, is_update=True)
-        send_notifications_async(notifications)
-
-        # TODO: send survey link if completed
-        return jsonify({"success": True, "message": "Booking updated"}), 200
-
-    except Exception as e:
-        return jsonify({"success": False, "error": str(e)}), 500
-
-    finally:
-        if 'cursor' in locals():
-            cursor.close()
-        if 'conn' in locals():
-            conn.close()
-
 
 @booking_bp.route("/bookings", methods=["GET"])
-@require_auth
+@require_any_role('admin', 'dispatcher')
 def get_all_bookings():
     """
     Get all bookings (dispatcher/admin access only).
@@ -119,6 +61,8 @@ def get_all_bookings():
             d.typeCode AS disposition_code,
             d.note AS disposition_note,
             dt.description AS disposition_description,
+            l.latitude AS customer_latitude,
+            l.longitude AS customer_longitude,
             CONCAT(
                 l.street_number, ' ', 
                 l.street_name, ', ', 
@@ -154,7 +98,7 @@ def get_all_bookings():
 
 
 @booking_bp.route("/agents/<int:agent_id>/bookings", methods=["GET"])
-@require_auth
+@require_any_role('admin', 'dispatcher', 'field_agent')
 def get_agent_bookings(agent_id):
     """
     Get all bookings for a specific agent. Agents can only see their own bookings.
@@ -185,6 +129,8 @@ def get_agent_bookings(agent_id):
               d.typeCode AS disposition_code,
               d.note AS disposition_note,
               dt.description AS disposition_description,
+              l.latitude AS customer_latitude,
+              l.longitude AS customer_longitude,
               CONCAT(
                   l.street_number, ' ', 
                   l.street_name, ', ', 
@@ -226,7 +172,7 @@ def get_agent_bookings(agent_id):
 
 
 @booking_bp.route("/bookings/<int:booking_id>", methods=["GET"])
-@require_auth
+@require_any_role('admin', 'dispatcher', 'field_agent')
 def get_booking(booking_id):
     """
     Get a specific booking by ID.
@@ -253,6 +199,8 @@ def get_booking(booking_id):
                     d.typeCode AS disposition_code,
                     d.note AS disposition_note,
                     dt.description AS disposition_description,
+                    l.latitude AS customer_latitude,
+                    l.longitude AS customer_longitude,
                     CONCAT(
                         l.street_number, ' ', 
                         l.street_name, ', ', 
@@ -291,6 +239,8 @@ def get_booking(booking_id):
                     d.typeCode AS disposition_code,
                     d.note AS disposition_note,
                     dt.description AS disposition_description,
+                    l.latitude AS customer_latitude,
+                    l.longitude AS customer_longitude,
                     CONCAT(
                         l.street_number, ' ', 
                         l.street_name, ', ', 
@@ -328,7 +278,7 @@ def get_booking(booking_id):
 
 
 @booking_bp.route("/bookings", methods=["POST"])
-@require_dispatcher  # Only dispatchers can create bookings
+@require_any_role('admin', 'dispatcher')  # Only admins and dispatchers can create bookings
 def create_booking():
     """
     Create a new booking, inserting location + customer if new.
@@ -466,10 +416,10 @@ def create_booking():
 
 
 @booking_bp.route("/bookings/<int:booking_id>", methods=["PUT"])
-@require_auth
+@require_any_role('admin', 'dispatcher', 'field_agent')
 def update_booking(booking_id):
     """
-    Update a booking. Agents can only update their own bookings.
+    Update a booking (admin, dispatcher, and field agent access).
     """
     try:
         data = request.get_json()
@@ -506,7 +456,7 @@ def update_booking(booking_id):
             update_fields.append("status = %s")
             update_values.append(data["status"])
 
-        if data.get("agentId") and request.role != 'field_agent':  # Only dispatchers/admins can reassign
+        if "agentId" in data and request.role != 'field_agent':  # Only dispatchers/admins can reassign
             update_fields.append("agentId = %s")
             update_values.append(data["agentId"])
 
@@ -567,10 +517,10 @@ def update_booking(booking_id):
 
 
 @booking_bp.route("/bookings/<int:booking_id>", methods=["DELETE"])
-@require_dispatcher  # Only dispatchers can delete bookings
+@require_any_role('admin')  # Only admins can delete bookings
 def delete_booking(booking_id):
     """
-    Delete a booking (dispatcher access only).
+    Delete a booking (admin access only).
     """
     try:
         conn = get_connection()
@@ -596,6 +546,153 @@ def delete_booking(booking_id):
             "success": True,
             "message": f"Booking for {booking['customer_name']} on {booking['booking_date']} deleted successfully"
         }), 200
+
+    except Exception as e:
+        if 'conn' in locals():
+            conn.rollback()
+        return jsonify({"success": False, "error": str(e)}), 500
+
+    finally:
+        if 'cursor' in locals():
+            cursor.close()
+        if 'conn' in locals():
+            conn.close()
+
+
+@booking_bp.route("/call-center/booking", methods=["POST"])
+@require_call_center_auth
+def create_call_center_booking():
+    """
+    Create a new booking from call center with call center agent tracking.
+    Always creates unassigned bookings (agentId = NULL).
+    """
+    try:
+        data = request.get_json()
+        
+        # Validate required call center agent info
+        if not data.get("call_center_agent"):
+            return jsonify({"success": False, "error": "Call center agent information is required"}), 400
+        
+        call_center_agent = data["call_center_agent"]
+        if not call_center_agent.get("name") or not call_center_agent.get("email"):
+            return jsonify({"success": False, "error": "Call center agent name and email are required"}), 400
+
+        conn = get_connection()
+        cursor = conn.cursor(dictionary=True)
+
+        # Location lookup/insert (same logic as regular booking creation)
+        cursor.execute("""
+            SELECT id FROM locations 
+            WHERE street_number=%s AND street_name=%s AND postal_code=%s 
+              AND city=%s AND state_province=%s
+        """, (
+            data["location"]["street_number"],
+            data["location"]["street_name"],
+            data["location"]["postal_code"],
+            data["location"]["city"],
+            data["location"]["state_province"]
+        ))
+        existing_location = cursor.fetchone()
+        location_id = existing_location["id"] if existing_location else None
+
+        if not location_id:
+            cursor.execute("""
+                INSERT INTO locations (latitude, longitude, postal_code, city, state_province, country, street_name, street_number)
+                VALUES (%s,%s,%s,%s,%s,%s,%s,%s)
+            """, (
+                data["location"]["latitude"],
+                data["location"]["longitude"],
+                data["location"]["postal_code"],
+                data["location"]["city"],
+                data["location"]["state_province"],
+                data["location"]["country"],
+                data["location"]["street_name"],
+                data["location"]["street_number"]
+            ))
+            location_id = cursor.lastrowid
+
+        # Customer lookup/insert (same logic as regular booking creation)
+        cursor.execute("SELECT customerId FROM customers WHERE email = %s", (data["customer"]["email"],))
+        existing_customer = cursor.fetchone()
+        customer_id = existing_customer["customerId"] if existing_customer else None
+
+        if not customer_id:
+            cursor.execute("""
+                INSERT INTO customers (name, email, phone, location_id)
+                VALUES (%s,%s,%s,%s)
+            """, (
+                data["customer"]["name"],
+                data["customer"]["email"],
+                data["customer"]["phone"],
+                location_id
+            ))
+            customer_id = cursor.lastrowid
+
+        # Create booking with agentId=NULL (unassigned)
+        cursor.execute("""
+            INSERT INTO bookings (agentId, customerId, booking_date, booking_time, status)
+            VALUES (%s,%s,%s,%s,%s)
+        """, (
+            None,  # Always unassigned from call center
+            customer_id,
+            data["booking"]["booking_date"],
+            data["booking"]["booking_time"],
+            "scheduled"  # Default status
+        ))
+        booking_id = cursor.lastrowid
+
+        conn.commit()
+
+        # Fetch the created booking with full details
+        cursor.execute("""
+            SELECT 
+                b.bookingId, 
+                b.booking_date, 
+                b.booking_time, 
+                b.status,
+                c.name AS customer_name,
+                fa.name AS agent_name,
+                CONCAT(
+                    l.street_number, ' ', 
+                    l.street_name, ', ', 
+                    l.postal_code, ' ', 
+                    l.city
+                ) AS customer_address
+            FROM bookings b
+            JOIN customers c ON b.customerId = c.customerId
+            LEFT JOIN field_agents fa ON b.agentId = fa.agentId
+            LEFT JOIN locations l ON c.location_id = l.id
+            WHERE b.bookingId = %s
+        """, (booking_id,))
+        
+        created_booking = cursor.fetchone()
+        serialize_booking_timestamps(created_booking)
+
+        # Prepare notification data (no agent notifications since unassigned)
+        notification_data = {
+            'customer_name': data['customer']['name'],
+            'customer_email': data['customer'].get('email'),
+            'customer_phone': data['customer'].get('phone'),
+            'agent_name': None,  # No agent assigned
+            'agent_email': None,
+            'agent_phone': None,
+            'booking_date': data['booking']['booking_date'],
+            'booking_time': data['booking']['booking_time']
+        }
+        
+        # Send customer notification only (no agent since unassigned)
+        notifications = prepare_booking_notifications(notification_data, is_update=False)
+        # Filter to only customer notifications
+        customer_notifications = [n for n in notifications if 'customer' in n.get('type', '')]
+        if customer_notifications:
+            send_notifications_async(customer_notifications)
+
+        return jsonify({
+            "success": True,
+            "message": f"Booking created successfully by {call_center_agent['name']} - unassigned, ready for dispatcher assignment",
+            "data": created_booking,
+            "call_center_agent": call_center_agent['name']
+        }), 201
 
     except Exception as e:
         if 'conn' in locals():

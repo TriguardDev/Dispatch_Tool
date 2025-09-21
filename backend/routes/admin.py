@@ -96,10 +96,10 @@ def create_admin():
         data = request.get_json()
         name = data.get("name")
         email = data.get("email")
-        password = data.get("password")
+        password = data.get("password", "Room2025!")
 
-        if not name or not email or not password:
-            return jsonify({"success": False, "error": "Missing required fields: name, email, password"}), 400
+        if not name or not email:
+            return jsonify({"success": False, "error": "Missing required fields: name, email"}), 400
 
         # Hash the password
         hashed_password = hash_password(password)
@@ -264,6 +264,177 @@ def delete_admin(admin_id):
 
     except Exception as e:
         if 'conn' in locals(): conn.rollback()
+        return jsonify({"success": False, "error": str(e)}), 500
+
+    finally:
+        if 'cursor' in locals(): cursor.close()
+        if 'conn' in locals(): conn.close()
+
+@admin_bp.route("/users/<int:user_id>/switch-role", methods=["PUT"])
+@require_auth
+def switch_user_role(user_id):
+    """Switch a user's role between admin, dispatcher, and field_agent (admin access only)"""
+    try:
+        if request.role != 'admin':
+            return jsonify({"success": False, "error": "Admin access required"}), 403
+
+        data = request.get_json()
+        current_role = data.get("current_role")
+        target_role = data.get("target_role")
+        
+        if not current_role or not target_role:
+            return jsonify({"success": False, "error": "Missing required fields: current_role, target_role"}), 400
+
+        if current_role == target_role:
+            return jsonify({"success": False, "error": "Current role and target role cannot be the same"}), 400
+
+        valid_roles = ['admin', 'dispatcher', 'field_agent']
+        if current_role not in valid_roles or target_role not in valid_roles:
+            return jsonify({"success": False, "error": f"Invalid role. Valid roles: {', '.join(valid_roles)}"}), 400
+
+        conn = get_connection()
+        cursor = conn.cursor(dictionary=True)
+
+        # Map roles to their respective tables and ID fields
+        role_table_map = {
+            'admin': ('admins', 'adminId'),
+            'dispatcher': ('dispatchers', 'dispatcherId'), 
+            'field_agent': ('field_agents', 'agentId')
+        }
+
+        current_table, current_id_field = role_table_map[current_role]
+        target_table, target_id_field = role_table_map[target_role]
+
+        # Fetch current user data
+        cursor.execute(f"""
+            SELECT * FROM {current_table} 
+            WHERE {current_id_field} = %s
+        """, (user_id,))
+        
+        current_user = cursor.fetchone()
+        if not current_user:
+            return jsonify({"success": False, "error": f"User not found in {current_role} table"}), 404
+
+        # Check if email already exists in target table
+        cursor.execute(f"SELECT email FROM {target_table} WHERE email = %s", (current_user['email'],))
+        if cursor.fetchone():
+            return jsonify({"success": False, "error": f"Email already exists in {target_role} table"}), 409
+
+        # Insert user into target table with appropriate fields
+        if target_role == 'admin':
+            cursor.execute("""
+                INSERT INTO admins (name, email, password)
+                VALUES (%s, %s, %s)
+            """, (current_user['name'], current_user['email'], current_user['password']))
+            
+        elif target_role == 'dispatcher':
+            cursor.execute("""
+                INSERT INTO dispatchers (name, email, password, phone, location_id, team_id)
+                VALUES (%s, %s, %s, %s, %s, %s)
+            """, (current_user['name'], current_user['email'], current_user['password'], 
+                  current_user.get('phone'), current_user.get('location_id'), current_user.get('team_id')))
+                  
+        elif target_role == 'field_agent':
+            cursor.execute("""
+                INSERT INTO field_agents (name, email, password, phone, status, location_id, team_id)
+                VALUES (%s, %s, %s, %s, %s, %s, %s)
+            """, (current_user['name'], current_user['email'], current_user['password'], 
+                  current_user.get('phone'), current_user.get('status', 'available'), 
+                  current_user.get('location_id'), current_user.get('team_id')))
+
+        new_user_id = cursor.lastrowid
+
+        # Delete user from current table
+        cursor.execute(f"DELETE FROM {current_table} WHERE {current_id_field} = %s", (user_id,))
+
+        conn.commit()
+
+        # Fetch the newly created user
+        cursor.execute(f"""
+            SELECT {target_id_field} as id, name, email, created_time, updated_time
+            FROM {target_table}
+            WHERE {target_id_field} = %s
+        """, (new_user_id,))
+        
+        new_user = cursor.fetchone()
+
+        # Convert timestamps to strings for JSON serialization
+        if new_user['created_time']:
+            new_user['created_time'] = new_user['created_time'].isoformat()
+        if new_user['updated_time']:
+            new_user['updated_time'] = new_user['updated_time'].isoformat()
+
+        return jsonify({
+            "success": True,
+            "message": f"User role switched from {current_role} to {target_role} successfully",
+            "data": {
+                "new_user_id": new_user_id,
+                "new_role": target_role,
+                "user": new_user
+            }
+        }), 200
+
+    except Exception as e:
+        if 'conn' in locals(): 
+            conn.rollback()
+        return jsonify({"success": False, "error": str(e)}), 500
+
+    finally:
+        if 'cursor' in locals(): cursor.close()
+        if 'conn' in locals(): conn.close()
+
+@admin_bp.route("/users/all-roles", methods=["GET"])
+@require_auth
+def get_all_users_with_roles():
+    """Get all users from all tables with their roles (admin access only)"""
+    try:
+        if request.role != 'admin':
+            return jsonify({"success": False, "error": "Admin access required"}), 403
+
+        conn = get_connection()
+        cursor = conn.cursor(dictionary=True)
+
+        all_users = []
+
+        # Fetch admins
+        cursor.execute("""
+            SELECT adminId as id, name, email, created_time, updated_time, 'admin' as role
+            FROM admins
+            ORDER BY name
+        """)
+        admins = cursor.fetchall()
+        
+        # Fetch dispatchers
+        cursor.execute("""
+            SELECT d.dispatcherId as id, d.name, d.email, d.phone, d.location_id,
+                   l.street_number, l.street_name, l.city, l.state_province, l.postal_code, l.country,
+                   d.created_time, d.updated_time, 'dispatcher' as role
+            FROM dispatchers d
+            LEFT JOIN locations l ON d.location_id = l.id
+            ORDER BY d.name
+        """)
+        dispatchers = cursor.fetchall()
+
+        # Fetch field agents  
+        cursor.execute("""
+            SELECT agentId as id, name, email, phone, status, location_id, 
+                   created_time, updated_time, 'field_agent' as role
+            FROM field_agents
+            ORDER BY name
+        """)
+        agents = cursor.fetchall()
+
+        # Combine all users and serialize timestamps
+        all_users = admins + dispatchers + agents
+        for user in all_users:
+            if user.get('created_time'):
+                user['created_time'] = user['created_time'].isoformat()
+            if user.get('updated_time'):
+                user['updated_time'] = user['updated_time'].isoformat()
+
+        return jsonify({"success": True, "data": all_users}), 200
+
+    except Exception as e:
         return jsonify({"success": False, "error": str(e)}), 500
 
     finally:

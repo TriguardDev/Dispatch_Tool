@@ -1,35 +1,32 @@
-import { useState, useMemo, useCallback, memo } from "react";
+import { useState, useMemo, useCallback, memo, useEffect } from "react";
 import type { Booking } from "../api/crud";
-import { Card, CardContent, Typography, Chip, Box, Divider, Select, MenuItem, FormControl, TextField, Button, InputLabel, IconButton, Collapse } from "@mui/material";
+import { Card, CardContent, Typography, Chip, Box, Divider, Select, MenuItem, FormControl, TextField, Button, InputLabel, IconButton, Collapse, CircularProgress } from "@mui/material";
 import { AccessTime, LocationOn, Person, Assignment, Add, Remove } from "@mui/icons-material";
+import { searchAgents, updateBooking } from "../api/crud";
 
 interface Props {
   appt: Booking;
   addressText: string;
   onStatusChange?: (bookingId: number, status: string) => void;
   onDispositionSave?: (bookingId: number, dispositionType: string, note: string) => void;
+  onAgentChange?: () => void; // Callback to refresh data after agent assignment
+}
+
+interface Agent {
+  distance: string;
+  agentId: string;
+  name: string;
 }
 
 // Constants
-const STATUS_CONFIG: Record<Booking["status"], { color: "primary" | "warning" | "success"; label: string }> = {
-  "in-progress": { color: "primary", label: "En Route / On Site" },
+const STATUS_CONFIG: Record<string, { color: "primary" | "warning" | "success" | "info" | "error"; label: string }> = {
   scheduled: { color: "warning", label: "Scheduled" },
+  enroute: { color: "info", label: "En Route" },
+  "on-site": { color: "primary", label: "On Site" },
   completed: { color: "success", label: "Completed" },
 };
 
-const DISPOSITION_OPTIONS = [
-  { value: "SOLD_CASH_PIF", label: "Sold – Cash Deal (Paid in Full)" },
-  { value: "SOLD_CHECK_COLLECTED", label: "Sold – Check Collected" },
-  { value: "SOLD_CARD_ACH_SUBMITTED", label: "Sold – Card/ACH Payment Submitted" },
-  { value: "SOLD_DEPOSIT_COLLECTED", label: "Sold – Deposit Collected (Balance Due)" },
-  { value: "SOLD_LENDER_SUBMITTED", label: "Sold – Lender Financing Submitted" },
-  { value: "SOLD_LENDER_APPROVED_DOCS", label: "Sold – Lender Approved (Docs Signed)" },
-  { value: "SOLD_FUNDED", label: "Sold – Funded (Lender Disbursed)" },
-  { value: "SOLD_LENDER_DECLINED", label: "Sold – Lender Declined" },
-  { value: "SOLD_IN_HOUSE_PLAN", label: "Sold – Payment Plan (In-House)" },
-  { value: "SOLD_FINAL_PAYMENT", label: "Sold – Balance Paid (Final Payment)" },
-  { value: "SOLD_RESCINDED_REVERSED", label: "Sale Rescinded / Payment Reversed" },
-];
+const BASE_URL = import.meta.env.VITE_BASE_API_URL;
 
 // Helper Components
 const InfoRow = memo(({ icon, children }: { icon: React.ReactElement; children: React.ReactNode }) => (
@@ -40,7 +37,7 @@ const InfoRow = memo(({ icon, children }: { icon: React.ReactElement; children: 
 ));
 
 const StatusChip = memo(({ status }: { status: Booking["status"] }) => {
-  const config = STATUS_CONFIG[status];
+  const config = STATUS_CONFIG[status] || { color: "warning" as const, label: status };
   return (
     <Chip 
       label={config.label}
@@ -82,12 +79,18 @@ const DispositionNote = memo(({ note, expanded }: { note: string; expanded: bool
   </Collapse>
 ));
 
-const AppointmentCard = memo(function AppointmentCard({ appt, addressText, onStatusChange, onDispositionSave }: Props) {
+const AppointmentCard = memo(function AppointmentCard({ appt, addressText, onStatusChange, onDispositionSave, onAgentChange }: Props) {
   // State management
   const [note, setNote] = useState("");
   const [selectedDisposition, setSelectedDisposition] = useState(appt.disposition_code || "");
   const [dispositionSaved, setDispositionSaved] = useState(false);
   const [noteExpanded, setNoteExpanded] = useState(false);
+  const [agents, setAgents] = useState<Agent[]>([]);
+  const [loadingAgents, setLoadingAgents] = useState(false);
+  const [agentDropdownOpen, setAgentDropdownOpen] = useState(false);
+  const [agentsLoaded, setAgentsLoaded] = useState(false); // Track if agents have been loaded
+  const [dispositionOptions, setDispositionOptions] = useState<Array<{value: string, label: string}>>([]);
+  const [loadingDispositions, setLoadingDispositions] = useState(false);
 
   // Computed values
   const hasExistingDisposition = useMemo(() => 
@@ -97,6 +100,54 @@ const AppointmentCard = memo(function AppointmentCard({ appt, addressText, onSta
 
   const showDispositionForm = appt.status === 'completed' && onDispositionSave && !dispositionSaved && !hasExistingDisposition;
   const showStatusChangeForm = onStatusChange && appt.status !== 'completed';
+  
+  // Get next possible status based on current status
+  const getNextStatusOptions = (currentStatus: string) => {
+    switch (currentStatus.toLowerCase()) {
+      case 'scheduled':
+        return [{ value: 'enroute', label: 'Start En Route', color: 'info.main' }];
+      case 'enroute':
+        return [{ value: 'on-site', label: 'Arrive On Site', color: 'primary.main' }];
+      case 'on-site':
+        return [{ value: 'completed', label: 'Mark Completed', color: 'success.main' }];
+      default:
+        return [];
+    }
+  };
+
+  // Fetch disposition types
+  const fetchDispositionTypes = useCallback(async () => {
+    if (dispositionOptions.length > 0) return; // Already loaded
+    
+    setLoadingDispositions(true);
+    try {
+      const response = await fetch(`${BASE_URL}/disposition-types`, {
+        credentials: 'include'
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success) {
+          const options = data.data.map((type: { typeCode: string; description: string }) => ({
+            value: type.typeCode,
+            label: type.description
+          }));
+          setDispositionOptions(options);
+        }
+      }
+    } catch (err) {
+      console.error('Error fetching disposition types:', err);
+    } finally {
+      setLoadingDispositions(false);
+    }
+  }, [dispositionOptions.length]);
+
+  // Load disposition types when component mounts or when disposition form is shown
+  useEffect(() => {
+    if (showDispositionForm) {
+      fetchDispositionTypes();
+    }
+  }, [showDispositionForm, fetchDispositionTypes]);
 
   // Event handlers
   const handleDispositionSave = useCallback(() => {
@@ -106,13 +157,54 @@ const AppointmentCard = memo(function AppointmentCard({ appt, addressText, onSta
     }
   }, [onDispositionSave, appt.bookingId, selectedDisposition, note]);
 
-  const handleStatusChange = useCallback((newStatus: string) => {
-    if (onStatusChange) {
-      onStatusChange(appt.bookingId, newStatus);
-    }
-  }, [onStatusChange, appt.bookingId]);
+  // Remove unused variable warning by using the function
+  // const handleStatusChange = useCallback((newStatus: string) => {
+  //   if (onStatusChange) {
+  //     onStatusChange(appt.bookingId, newStatus);
+  //   }
+  // }, [onStatusChange, appt.bookingId]);
 
   const toggleNoteExpansion = useCallback(() => setNoteExpanded(!noteExpanded), [noteExpanded]);
+
+  const handleSearchAgents = useCallback(async () => {
+    if (!appt.customer_latitude || !appt.customer_longitude) {
+      console.warn("Customer location not available for agent search");
+      return;
+    }
+    
+    setLoadingAgents(true);
+    try {
+      const data = await searchAgents({
+        latitude: appt.customer_latitude.toString(),
+        longitude: appt.customer_longitude.toString(),
+        booking_date: appt.booking_date,
+        booking_time: appt.booking_time,
+      });
+      setAgents(data);
+      setAgentsLoaded(true);
+    } catch (err) {
+      console.error("Error fetching agents:", err);
+    } finally {
+      setLoadingAgents(false);
+    }
+  }, [appt.customer_latitude, appt.customer_longitude, appt.booking_date, appt.booking_time]);
+
+  const handleAgentChange = useCallback(async (newAgentId: string) => {
+    try {
+      const agentUpdate = newAgentId === "unassigned" 
+        ? { agentId: null } 
+        : { agentId: parseInt(newAgentId) };
+      
+      await updateBooking(appt.bookingId, agentUpdate);
+      setAgentDropdownOpen(false);
+      if (onAgentChange) {
+        onAgentChange(); // Refresh the booking data
+      }
+    } catch (err) {
+      console.error("Error updating agent:", err);
+      alert("Error updating assigned agent");
+    }
+  }, [appt.bookingId, onAgentChange]);
 
   // Render sections
   const renderHeader = () => (
@@ -137,18 +229,125 @@ const AppointmentCard = memo(function AppointmentCard({ appt, addressText, onSta
 
   const renderBasicInfo = () => (
     <>
-      {appt.agent_name && (
-        <InfoRow icon={<Person sx={{ fontSize: 16, color: 'text.secondary' }} />}>
-          <Typography variant="body2" color="text.secondary">
-            <Typography component="span" fontWeight="600">
-              Assigned to:
-            </Typography>{' '}
-            <Typography component="span" color="text.primary" fontWeight="500">
-              {appt.agent_name}
-            </Typography>
+      <InfoRow icon={<Person sx={{ fontSize: 16, color: 'text.secondary' }} />}>
+        <Box sx={{ flex: 1 }}>
+          <Typography variant="body2" color="text.secondary" fontWeight="600" sx={{ mb: 0.5 }}>
+            Assigned to:
           </Typography>
-        </InfoRow>
-      )}
+          <FormControl fullWidth size="small" variant="outlined">
+            <Select
+              value={agentDropdownOpen ? "" : (appt.agent_name || "")}
+              open={agentDropdownOpen}
+              onOpen={() => {
+                setAgentDropdownOpen(true);
+                if (!agentsLoaded && !loadingAgents) {
+                  handleSearchAgents(); // Only search if not already loaded
+                }
+              }}
+              onClose={() => setAgentDropdownOpen(false)}
+              displayEmpty
+              renderValue={(selected) => {
+                if (loadingAgents) {
+                  return (
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      <CircularProgress size={14} />
+                      <Typography variant="body2">Loading agents...</Typography>
+                    </Box>
+                  );
+                }
+                return selected || appt.agent_name || "No agent assigned";
+              }}
+              sx={{
+                '& .MuiSelect-select': {
+                  py: 1,
+                  fontSize: '0.875rem',
+                  fontWeight: 500,
+                },
+                '& .MuiOutlinedInput-notchedOutline': {
+                  borderColor: 'divider',
+                },
+                '&:hover .MuiOutlinedInput-notchedOutline': {
+                  borderColor: 'primary.main',
+                },
+                '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                  borderWidth: 1,
+                }
+              }}
+            >
+              {[
+                // Unassigned option
+                <MenuItem 
+                  key="unassigned" 
+                  value="unassigned"
+                  onClick={() => handleAgentChange("unassigned")}
+                  sx={{ borderBottom: '1px solid', borderColor: 'divider' }}
+                >
+                  <Typography variant="body2" fontWeight="500" color="text.secondary" sx={{ fontStyle: 'italic' }}>
+                    Unassigned
+                  </Typography>
+                </MenuItem>,
+                
+                // Refresh agents option (only show if agents are loaded)
+                ...(agentsLoaded ? [
+                  <MenuItem 
+                    key="refresh" 
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleSearchAgents();
+                    }}
+                    sx={{ borderBottom: '1px solid', borderColor: 'divider' }}
+                    disabled={loadingAgents}
+                  >
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      {loadingAgents && <CircularProgress size={14} />}
+                      <Typography variant="body2" color="primary.main" sx={{ fontStyle: 'italic' }}>
+                        {loadingAgents ? 'Refreshing...' : 'Refresh agents'}
+                      </Typography>
+                    </Box>
+                  </MenuItem>
+                ] : []),
+                
+                // Available agents or loading state
+                ...(loadingAgents && !agentsLoaded ? [
+                  <MenuItem key="loading" disabled>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      <CircularProgress size={16} />
+                      <Typography variant="body2">Searching for nearby agents...</Typography>
+                    </Box>
+                  </MenuItem>
+                ] : [
+                  // Available agents
+                  ...agents.map((agent) => (
+                    <MenuItem 
+                      key={agent.agentId} 
+                      value={agent.agentId}
+                      onClick={() => handleAgentChange(agent.agentId)}
+                    >
+                      <Box sx={{ display: 'flex', justifyContent: 'space-between', width: '100%' }}>
+                        <Typography variant="body2" fontWeight="500">
+                          {agent.name}
+                        </Typography>
+                        <Typography variant="body2" color="text.secondary">
+                          {Math.ceil(Number(agent.distance))} km
+                        </Typography>
+                      </Box>
+                    </MenuItem>
+                  )),
+                  
+                  // Show message if no agents found (only if agents have been loaded)
+                  ...(agents.length === 0 && agentsLoaded && !loadingAgents ? [
+                    <MenuItem key="no-agents" disabled>
+                      <Typography variant="body2" color="text.secondary" sx={{ fontStyle: 'italic' }}>
+                        No nearby agents available
+                      </Typography>
+                    </MenuItem>
+                  ] : [])
+                ])
+              ]}
+            </Select>
+          </FormControl>
+        </Box>
+      </InfoRow>
 
       <InfoRow icon={<LocationOn sx={{ fontSize: 16, color: 'text.secondary', mt: 0.1 }} />}>
         <Typography 
@@ -253,49 +452,30 @@ const AppointmentCard = memo(function AppointmentCard({ appt, addressText, onSta
               <Assignment sx={{ fontSize: 16, color: 'text.secondary', mt: 0.1 }} />
               <Box sx={{ flex: 1 }}>
                 <Typography variant="body2" color="text.secondary" fontWeight="600" sx={{ mb: 1 }}>
-                  Update Status
+                  Next Step
                 </Typography>
-                <FormControl fullWidth size="small">
-                  <Select
-                    value={appt.status}
-                    onChange={(e) => onStatusChange(appt.bookingId, e.target.value)}
-                    sx={{
-                      '& .MuiSelect-select': {
-                        py: 1,
+                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                  {getNextStatusOptions(appt.status).map((option) => (
+                    <Button
+                      key={option.value}
+                      variant="contained"
+                      size="small"
+                      onClick={() => onStatusChange(appt.bookingId, option.value)}
+                      sx={{
+                        bgcolor: option.color,
+                        '&:hover': {
+                          bgcolor: option.color,
+                          opacity: 0.8,
+                        },
+                        textTransform: 'none',
+                        fontWeight: 600,
                         fontSize: '0.875rem',
-                        fontWeight: 500,
-                      },
-                      '& .MuiOutlinedInput-notchedOutline': {
-                        borderColor: 'divider',
-                      },
-                      '&:hover .MuiOutlinedInput-notchedOutline': {
-                        borderColor: 'primary.main',
-                      },
-                      '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
-                        borderWidth: 1,
-                      }
-                    }}
-                  >
-                    <MenuItem value="scheduled">
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                        <Box sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: 'warning.main' }} />
-                        <Typography variant="body2" fontWeight="500">Scheduled</Typography>
-                      </Box>
-                    </MenuItem>
-                    <MenuItem value="in-progress">
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                        <Box sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: 'primary.main' }} />
-                        <Typography variant="body2" fontWeight="500">En Route / On Site</Typography>
-                      </Box>
-                    </MenuItem>
-                    <MenuItem value="completed">
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                        <Box sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: 'success.main' }} />
-                        <Typography variant="body2" fontWeight="500">Completed</Typography>
-                      </Box>
-                    </MenuItem>
-                  </Select>
-                </FormControl>
+                      }}
+                    >
+                      {option.label}
+                    </Button>
+                  ))}
+                </Box>
               </Box>
             </Box>
           </>
@@ -326,8 +506,10 @@ const AppointmentCard = memo(function AppointmentCard({ appt, addressText, onSta
                       },
                     }}
                   >
-                    <MenuItem value="">Select Disposition</MenuItem>
-                    {DISPOSITION_OPTIONS.map((option) => (
+                    <MenuItem value="">
+                      {loadingDispositions ? "Loading..." : "Select Disposition"}
+                    </MenuItem>
+                    {dispositionOptions.map((option) => (
                       <MenuItem key={option.value} value={option.value}>
                         {option.label}
                       </MenuItem>

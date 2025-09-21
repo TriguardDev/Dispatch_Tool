@@ -1,12 +1,19 @@
-# Production stage
-FROM nginx:alpine
+# Frontend Dockerfile - Development
+FROM node:20-alpine
 
-# Copy pre-built app (built locally)
-COPY dist /usr/share/nginx/html
+WORKDIR /app
 
-# Copy custom nginx config
-COPY nginx.conf /etc/nginx/conf.d/default.conf
+# Copy package files
+COPY package*.json ./
 
-EXPOSE 80 443
+# Install dependencies
+RUN npm ci
 
-CMD ["nginx", "-g", "daemon off;"]
+# Copy source code
+COPY . .
+
+# Expose port
+EXPOSE 5173
+
+# Start development server
+CMD ["npm", "run", "dev", "--", "--host", "0.0.0.0"]

@@ -6,7 +6,8 @@ import QueueCard from "../components/QueueCard";
 import AppointmentCard from "../components/AppointmentCard";
 import NewAppointmentModal from "../components/NewAppointmentModal";
 import AdminManagement from "../components/AdminManagement";
-import { getAllBookings, type Booking } from "../api/crud";
+import TimeOffManagement from "../components/TimeOffManagement";
+import { getAllBookings } from "../api/crud";
 import { useSmartPolling } from "../hooks/useSmartPolling";
 
 interface AdminScreenProps {
@@ -80,7 +81,8 @@ export default function AdminScreen({ onLogout }: AdminScreenProps) {
 
   // Categorize bookings by status
   const scheduled = bookings.filter((b) => ["scheduled"].includes(b.status.toLowerCase()));
-  const active = bookings.filter((b) => ["in-progress"].includes(b.status.toLowerCase()));
+  const enroute = bookings.filter((b) => ["enroute"].includes(b.status.toLowerCase()));
+  const onsite = bookings.filter((b) => ["on-site"].includes(b.status.toLowerCase()));
   const completed = bookings.filter((b) => ["completed"].includes(b.status.toLowerCase()));
 
   if (loading && tabValue === 0) {
@@ -116,6 +118,7 @@ export default function AdminScreen({ onLogout }: AdminScreenProps) {
           <Tabs value={tabValue} onChange={handleTabChange} aria-label="admin navigation tabs">
             <Tab label="Bookings Dashboard" {...a11yProps(0)} />
             <Tab label="User Management" {...a11yProps(1)} />
+            <Tab label="Time-Off Management" {...a11yProps(2)} />
           </Tabs>
         </Box>
 
@@ -127,7 +130,7 @@ export default function AdminScreen({ onLogout }: AdminScreenProps) {
             refreshing={loading}
           />
 
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
             <QueueCard
               title="Queue — Scheduled"
               badgeColor="bg-blue-50 text-blue-700"
@@ -137,20 +140,36 @@ export default function AdminScreen({ onLogout }: AdminScreenProps) {
                 <AppointmentCard 
                   key={appt.bookingId} 
                   appt={appt}
-                  addressText={appt.customer_address ?? ""} />
+                  addressText={appt.customer_address ?? ""}
+                  onAgentChange={refetch} />
               ))}
             </QueueCard>
 
             <QueueCard
-              title="En Route / On Site"
-              badgeColor="bg-yellow-50 text-yellow-700"
-              count={active.length}
+              title="En Route"
+              badgeColor="bg-blue-50 text-blue-700"
+              count={enroute.length}
             >
-              {active.map((appt) => (
+              {enroute.map((appt) => (
                 <AppointmentCard 
                   key={appt.bookingId} 
                   appt={appt}
-                  addressText={appt.customer_address ?? ""} />
+                  addressText={appt.customer_address ?? ""}
+                  onAgentChange={refetch} />
+              ))}
+            </QueueCard>
+
+            <QueueCard
+              title="On Site"
+              badgeColor="bg-yellow-50 text-yellow-700"
+              count={onsite.length}
+            >
+              {onsite.map((appt) => (
+                <AppointmentCard 
+                  key={appt.bookingId} 
+                  appt={appt}
+                  addressText={appt.customer_address ?? ""}
+                  onAgentChange={refetch} />
               ))}
             </QueueCard>
 
@@ -163,7 +182,8 @@ export default function AdminScreen({ onLogout }: AdminScreenProps) {
                 <AppointmentCard 
                   key={appt.bookingId} 
                   appt={appt}
-                  addressText={appt.customer_address ?? ""} />
+                  addressText={appt.customer_address ?? ""}
+                  onAgentChange={refetch} />
               ))}
             </QueueCard>
           </div>
@@ -172,6 +192,11 @@ export default function AdminScreen({ onLogout }: AdminScreenProps) {
         {/* User Management Tab */}
         <TabPanel value={tabValue} index={1}>
           <AdminManagement />
+        </TabPanel>
+
+        {/* Time-Off Management Tab */}
+        <TabPanel value={tabValue} index={2}>
+          <TimeOffManagement onLogout={onLogout} userRole="admin" />
         </TabPanel>
 
       </Container>

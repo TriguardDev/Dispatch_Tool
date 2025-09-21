@@ -119,3 +119,49 @@ def require_admin(f):
             return jsonify({"success": False, "error": str(e)}), 401
     
     return decorated_function
+
+
+def require_any_role(*allowed_roles):
+    """
+    Decorator to allow access to users with any of the specified roles.
+    
+    Usage:
+        @require_any_role('admin', 'dispatcher')
+        @require_any_role('admin', 'dispatcher', 'field_agent')
+        
+    Args:
+        *allowed_roles: Variable number of role strings that are allowed access
+    """
+    def decorator(f):
+        @wraps(f)
+        def decorated_function(*args, **kwargs):
+            try:
+                # Get token from cookie (following existing pattern)
+                token = request.cookies.get('auth_token')
+                
+                if not token:
+                    return jsonify({"success": False, "error": "Authentication required"}), 401
+                
+                # Verify token using existing function
+                payload = verify_jwt_token(token)
+                
+                # Check if user role is in allowed roles
+                user_role = payload['role']
+                if user_role not in allowed_roles:
+                    roles_str = ', '.join(allowed_roles)
+                    return jsonify({
+                        "success": False, 
+                        "error": f"Access denied. Required roles: {roles_str}"
+                    }), 403
+                
+                # Add user info to request context
+                request.user_id = payload['user_id']
+                request.role = payload['role']
+                
+                return f(*args, **kwargs)
+                
+            except Exception as e:
+                return jsonify({"success": False, "error": f"Authentication failed: {str(e)}"}), 401
+        
+        return decorated_function
+    return decorator

@@ -1,6 +1,6 @@
 import { AppBar, Toolbar, Typography, Box, Avatar, IconButton } from '@mui/material';
 import { Brightness4, Brightness7 } from '@mui/icons-material';
-import { useTheme } from '../contexts/ThemeContext';
+import { useTheme } from '../hooks/useTheme';
 import LogoutButton from "./LogoutButton";
 
 interface TopBarProps {

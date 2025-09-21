@@ -1,4 +1,6 @@
-const BASE_URL = import.meta.env.VITE_API_BASE_URL;
+const BASE_URL = import.meta.env.VITE_BASE_API_URL;
+console.log('LOGIN API - BASE_URL:', BASE_URL);
+console.log('LOGIN API - All env vars:', import.meta.env);
 
 export interface LoginResponse {
   id: number;
@@ -50,6 +52,20 @@ export async function verifyAuth(): Promise<{success: boolean, user_id?: number,
   } catch (error) {
     console.error("Auth verification error:", error);
     return { success: false };
+  }
+}
+
+export async function resetPassword(email: string, role: "dispatcher" | "field_agent" | "admin", oldPassword: string, newPassword: string): Promise<void> {
+  const res = await fetch(`${BASE_URL}/reset-password`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    credentials: "include",
+    body: JSON.stringify({ email, role, old_password: oldPassword, new_password: newPassword }),
+  });
+
+  if (!res.ok) {
+    const errorData = await res.json();
+    throw new Error(errorData.error || "Password reset failed");
   }
 }
 

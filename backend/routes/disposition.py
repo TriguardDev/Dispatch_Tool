@@ -1,6 +1,6 @@
 from flask import Blueprint, request, jsonify
 from db import get_connection
-from utils.middleware import require_auth, require_dispatcher
+from utils.middleware import require_auth, require_dispatcher, require_any_role
 
 disposition_bp = Blueprint("disposition", __name__, url_prefix="/api")
 
@@ -450,6 +450,155 @@ def add_disposition():
         # TODO: Send notification to dispatcher (and customer and agent?)
         conn.commit()
         return jsonify({"success": True, "message": "Disposition saved"}), 200
+
+    except Exception as e:
+        if 'conn' in locals(): conn.rollback()
+        return jsonify({"success": False, "error": str(e)}), 500
+
+    finally:
+        if 'cursor' in locals(): cursor.close()
+        if 'conn' in locals(): conn.close()
+
+
+# Admin-only disposition type management
+@disposition_bp.route("/disposition-types", methods=["POST"])
+@require_any_role('admin')
+def create_disposition_type():
+    """Create a new disposition type (admin only)"""
+    try:
+        data = request.get_json()
+        if not data:
+            return jsonify({"success": False, "error": "No data provided"}), 400
+
+        type_code = data.get('typeCode')
+        description = data.get('description')
+
+        if not type_code or not description:
+            return jsonify({"success": False, "error": "typeCode and description are required"}), 400
+
+        # Validate typeCode format (alphanumeric with underscores)
+        if not type_code.replace('_', '').isalnum():
+            return jsonify({"success": False, "error": "typeCode must be alphanumeric with underscores only"}), 400
+
+        if len(type_code) > 50:
+            return jsonify({"success": False, "error": "typeCode must be 50 characters or less"}), 400
+
+        if len(description) > 255:
+            return jsonify({"success": False, "error": "description must be 255 characters or less"}), 400
+
+        conn = get_connection()
+        cursor = conn.cursor(dictionary=True)
+
+        # Check if typeCode already exists
+        cursor.execute("SELECT typeCode FROM disposition_types WHERE typeCode = %s", (type_code,))
+        if cursor.fetchone():
+            return jsonify({"success": False, "error": "Disposition type code already exists"}), 409
+
+        # Insert new disposition type
+        cursor.execute("""
+            INSERT INTO disposition_types (typeCode, description) 
+            VALUES (%s, %s)
+        """, (type_code.upper(), description.strip()))
+
+        conn.commit()
+
+        # Return the created disposition type
+        cursor.execute("SELECT * FROM disposition_types WHERE typeCode = %s", (type_code.upper(),))
+        created_type = cursor.fetchone()
+        serialize_disposition_timestamps(created_type)
+
+        return jsonify({"success": True, "data": created_type}), 201
+
+    except Exception as e:
+        if 'conn' in locals(): conn.rollback()
+        return jsonify({"success": False, "error": str(e)}), 500
+
+    finally:
+        if 'cursor' in locals(): cursor.close()
+        if 'conn' in locals(): conn.close()
+
+
+@disposition_bp.route("/disposition-types/<string:type_code>", methods=["PUT"])
+@require_any_role('admin')
+def update_disposition_type(type_code):
+    """Update a disposition type (admin only)"""
+    try:
+        data = request.get_json()
+        if not data:
+            return jsonify({"success": False, "error": "No data provided"}), 400
+
+        description = data.get('description')
+        if not description:
+            return jsonify({"success": False, "error": "description is required"}), 400
+
+        if len(description) > 255:
+            return jsonify({"success": False, "error": "description must be 255 characters or less"}), 400
+
+        conn = get_connection()
+        cursor = conn.cursor(dictionary=True)
+
+        # Check if disposition type exists
+        cursor.execute("SELECT typeCode FROM disposition_types WHERE typeCode = %s", (type_code,))
+        if not cursor.fetchone():
+            return jsonify({"success": False, "error": "Disposition type not found"}), 404
+
+        # Update disposition type
+        cursor.execute("""
+            UPDATE disposition_types 
+            SET description = %s, updated_time = CURRENT_TIMESTAMP 
+            WHERE typeCode = %s
+        """, (description.strip(), type_code))
+
+        conn.commit()
+
+        # Return updated disposition type
+        cursor.execute("SELECT * FROM disposition_types WHERE typeCode = %s", (type_code,))
+        updated_type = cursor.fetchone()
+        serialize_disposition_timestamps(updated_type)
+
+        return jsonify({"success": True, "data": updated_type}), 200
+
+    except Exception as e:
+        if 'conn' in locals(): conn.rollback()
+        return jsonify({"success": False, "error": str(e)}), 500
+
+    finally:
+        if 'cursor' in locals(): cursor.close()
+        if 'conn' in locals(): conn.close()
+
+
+@disposition_bp.route("/disposition-types/<string:type_code>", methods=["DELETE"])
+@require_any_role('admin')
+def delete_disposition_type(type_code):
+    """Delete a disposition type (admin only)"""
+    try:
+        conn = get_connection()
+        cursor = conn.cursor(dictionary=True)
+
+        # Check if disposition type exists
+        cursor.execute("SELECT typeCode, description FROM disposition_types WHERE typeCode = %s", (type_code,))
+        disposition_type = cursor.fetchone()
+        if not disposition_type:
+            return jsonify({"success": False, "error": "Disposition type not found"}), 404
+
+        # Check if any dispositions are using this type
+        cursor.execute("SELECT COUNT(*) as count FROM dispositions WHERE typeCode = %s", (type_code,))
+        usage_count = cursor.fetchone()['count']
+        
+        if usage_count > 0:
+            return jsonify({
+                "success": False, 
+                "error": f"Cannot delete disposition type. It is currently used by {usage_count} disposition(s)"
+            }), 409
+
+        # Delete the disposition type
+        cursor.execute("DELETE FROM disposition_types WHERE typeCode = %s", (type_code,))
+        conn.commit()
+
+        return jsonify({
+            "success": True,
+            "message": f"Disposition type '{disposition_type['description']}' deleted successfully"
+        }), 200
 
     except Exception as e:
         if 'conn' in locals(): conn.rollback()
