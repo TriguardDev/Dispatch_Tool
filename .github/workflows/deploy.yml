@@ -54,7 +54,6 @@ jobs:
   deploy:
     needs: test
     runs-on: ubuntu-latest
-    if: github.event.pull_request.merged == true
     
     steps:
     - name: Deploy to EC2
