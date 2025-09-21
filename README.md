@@ -110,6 +110,7 @@ Dispatch_Tool/
 - **[Call Center API](docs/CALL_CENTER_API.md)** - External API documentation for appointment creation
 - **[Deployment Guide](docs/DEPLOYMENT.md)** - Production deployment instructions
 - **[Region System](docs/REGION_SYSTEM_IMPLEMENTATION.md)** - Technical implementation details
+- **[Notifications](docs/NOTIFICATIONS.md)** - Environment-aware SMS and email system
 
 ## 🎯 Features
 

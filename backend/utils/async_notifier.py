@@ -1,15 +1,27 @@
 import threading
 from typing import Dict, Any
-from utils.notifier import send_sms, send_email
+from utils.notifier import send_sms, send_email, is_production_environment
+from config import Config
+import logging
+
+# Set up logger
+logger = logging.getLogger(__name__)
 
 def send_notifications_async(notifications: list):
     """
     Send notifications asynchronously in a background thread.
+    Environment-aware: only sends in production, logs in development.
     
     Args:
         notifications (list): List of notification dictionaries
     """
+    if not notifications:
+        return
+        
     def _send_notifications():
+        env_prefix = "[PROD]" if is_production_environment() else "[DEV]"
+        logger.info(f"{env_prefix} Processing {len(notifications)} notifications")
+        
         for notification in notifications:
             if notification['type'] == 'sms' and notification.get('phone'):
                 send_sms(notification['phone'], notification['message'])

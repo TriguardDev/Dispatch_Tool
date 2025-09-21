@@ -202,14 +202,14 @@ create_field_agents() {
         --cookie /tmp/admin_cookies.txt)
     
     agents=(
-        '{"name": "Larey Farias", "email": "larey@example.com", "password": "larey123", "phone": "469-555-1001", "status": "available", "team_name": "Team Alpha"}'
-        '{"name": "Arthur Garcia", "email": "arthur@example.com", "password": "arthur123", "phone": "469-555-1002", "status": "available", "team_name": "Team Alpha"}'
-        '{"name": "Jeremy Moreno", "email": "jeremy@example.com", "password": "jeremy123", "phone": "956-555-1003", "status": "available", "team_name": "Team Beta"}'
-        '{"name": "Rebecca Stewart", "email": "rebecca@example.com", "password": "rebecca123", "phone": "956-555-1004", "status": "available", "team_name": "Team Beta"}'
-        '{"name": "David Thompson", "email": "david@example.com", "password": "david123", "phone": "903-555-1005", "status": "available", "team_name": "Team Gamma"}'
-        '{"name": "Lisa Chen", "email": "lisa@example.com", "password": "lisa123", "phone": "915-555-1006", "status": "available", "team_name": "Team Delta"}'
-        '{"name": "Robert Johnson", "email": "robert@example.com", "password": "robert123", "phone": "512-555-1007", "status": "available", "team_name": "Team Echo"}'
-        '{"name": "Jennifer Wilson", "email": "jennifer@example.com", "password": "jennifer123", "phone": "512-555-1008", "status": "available", "team_name": "Team Echo"}'
+        '{"name": "Larey Farias", "email": "larey@example.com", "password": "larey123", "phone": "469-555-1001", "status": "available", "team_name": "Team Alpha", "street_number": "123", "street_name": "Main St", "city": "Dallas", "state_province": "Texas", "postal_code": "75201", "country": "USA"}'
+        '{"name": "Arthur Garcia", "email": "arthur@example.com", "password": "arthur123", "phone": "469-555-1002", "status": "available", "team_name": "Team Alpha", "street_number": "456", "street_name": "Elm St", "city": "Dallas", "state_province": "Texas", "postal_code": "75202", "country": "USA"}'
+        '{"name": "Jeremy Moreno", "email": "jeremy@example.com", "password": "jeremy123", "phone": "956-555-1003", "status": "available", "team_name": "Team Beta", "street_number": "789", "street_name": "Oak Ave", "city": "Laredo", "state_province": "Texas", "postal_code": "78040", "country": "USA"}'
+        '{"name": "Rebecca Stewart", "email": "rebecca@example.com", "password": "rebecca123", "phone": "956-555-1004", "status": "available", "team_name": "Team Beta", "street_number": "321", "street_name": "Pine St", "city": "Laredo", "state_province": "Texas", "postal_code": "78041", "country": "USA"}'
+        '{"name": "David Thompson", "email": "david@example.com", "password": "david123", "phone": "903-555-1005", "status": "available", "team_name": "Team Gamma", "street_number": "654", "street_name": "Cedar Rd", "city": "Tyler", "state_province": "Texas", "postal_code": "75701", "country": "USA"}'
+        '{"name": "Lisa Chen", "email": "lisa@example.com", "password": "lisa123", "phone": "915-555-1006", "status": "available", "team_name": "Team Delta", "street_number": "987", "street_name": "Maple Dr", "city": "El Paso", "state_province": "Texas", "postal_code": "79901", "country": "USA"}'
+        '{"name": "Robert Johnson", "email": "robert@example.com", "password": "robert123", "phone": "512-555-1007", "status": "available", "team_name": "Team Echo", "street_number": "147", "street_name": "Congress Ave", "city": "Austin", "state_province": "Texas", "postal_code": "78701", "country": "USA"}'
+        '{"name": "Jennifer Wilson", "email": "jennifer@example.com", "password": "jennifer123", "phone": "512-555-1008", "status": "available", "team_name": "Team Echo", "street_number": "258", "street_name": "6th St", "city": "Austin", "state_province": "Texas", "postal_code": "78702", "country": "USA"}'
     )
     
     for agent_data in "${agents[@]}"; do

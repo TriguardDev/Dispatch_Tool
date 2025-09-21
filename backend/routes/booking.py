@@ -753,10 +753,8 @@ def create_call_center_booking():
         
         # Send customer notification only (no agent since unassigned)
         notifications = prepare_booking_notifications(notification_data, is_update=False)
-        # Filter to only customer notifications
-        customer_notifications = [n for n in notifications if 'customer' in n.get('type', '')]
-        if customer_notifications:
-            send_notifications_async(customer_notifications)
+        if notifications:
+            send_notifications_async(notifications)
 
         response_data = {
             "success": True,
