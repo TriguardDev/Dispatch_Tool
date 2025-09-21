@@ -84,7 +84,7 @@ fi
 # Show final status
 print_status "Deployment completed!"
 print_status "Application is available at:"
-echo "  Frontend: http://$(curl -s http://app.salesdispatcher.com"
-echo "  Backend:  http://$(curl -s http://app.salesdispatcher.com/api"
+echo "  Frontend: http://$(curl -s http://app.salesdispatcher.com)"
+echo "  Backend:  http://$(curl -s http://app.salesdispatcher.com)/api"
 
 print_status "Deployment script finished successfully! 🎉"
