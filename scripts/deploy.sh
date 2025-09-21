@@ -75,7 +75,7 @@ else
 fi
 
 # Test backend
-if curl -f http://localhost:5000/health > /dev/null 2>&1; then
+if curl -f http://localhost:8000/health > /dev/null 2>&1; then
     print_status "Backend is healthy"
 else
     print_warning "Backend health check failed"
@@ -84,7 +84,7 @@ fi
 # Show final status
 print_status "Deployment completed!"
 print_status "Application is available at:"
-echo "  Frontend: http://$(curl -s http://169.254.169.254/latest/meta-data/public-ipv4)/"
-echo "  Backend:  http://$(curl -s http://169.254.169.254/latest/meta-data/public-ipv4):5000/"
+echo "  Frontend: http://$(curl -s http://app.salesdispatcher.com"
+echo "  Backend:  http://$(curl -s http://app.salesdispatcher.com/api"
 
 print_status "Deployment script finished successfully! 🎉"
