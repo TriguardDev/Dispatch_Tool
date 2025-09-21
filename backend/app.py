@@ -9,6 +9,7 @@ from routes.admin import admin_bp
 from routes.dispatcher import dispatcher_bp
 from routes.teams import teams_bp
 from routes.timeoff import timeoff_bp
+from routes.regions import regions_bp
 from config import Config
 from extensions import mail
 import logging
@@ -40,6 +41,7 @@ def create_app():
     app.register_blueprint(dispatcher_bp)
     app.register_blueprint(teams_bp)
     app.register_blueprint(timeoff_bp)
+    app.register_blueprint(regions_bp)
     
     app.config["MAIL_SERVER"] = Config.MAIL_SERVER
     app.config["MAIL_PORT"] = Config.MAIL_PORT

@@ -16,10 +16,14 @@ export interface Booking {
   disposition_code: string | null
   disposition_description: string | null
   disposition_note: string | null
+  regionId?: number;
+  region_name?: string;
+  region_is_global?: boolean;
 }
 
-export async function getAllBookings(): Promise<Booking[]> {
-  const res = await authenticatedFetch(`${BASE_URL}/bookings`);
+export async function getAllBookings(regionId?: number): Promise<Booking[]> {
+  const url = regionId ? `${BASE_URL}/bookings?region_id=${regionId}` : `${BASE_URL}/bookings`;
+  const res = await authenticatedFetch(url);
 
   if (!res.ok) {
     if (res.status === 401) {

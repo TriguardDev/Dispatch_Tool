@@ -53,7 +53,12 @@ def get_all_bookings():
         conn = get_connection()
         cursor = conn.cursor(dictionary=True)
 
-        query = """
+        # Get filter parameters
+        region_filter = request.args.get('region_id')
+        user_role = getattr(request, 'role', None)
+        user_id = getattr(request, 'user_id', None)
+        
+        base_query = """
           SELECT b.bookingId, b.booking_date, b.booking_time, b.status,
             c.name AS customer_name,
             fa.name AS agent_name,
@@ -68,16 +73,50 @@ def get_all_bookings():
                 l.street_name, ', ', 
                 l.postal_code, ' ', 
                 l.city
-            ) AS customer_address
+            ) AS customer_address,
+            r.regionId, r.name AS region_name, r.is_global AS region_is_global
           FROM bookings b
           JOIN customers c ON b.customerId = c.customerId
           LEFT JOIN field_agents fa ON b.agentId = fa.agentId
           LEFT JOIN dispositions d ON b.dispositionId = d.dispositionId
           LEFT JOIN disposition_types dt ON d.typeCode = dt.typeCode
           LEFT JOIN locations l ON c.location_id = l.id
-          ORDER BY b.booking_date, b.booking_time;
+          LEFT JOIN regions r ON b.region_id = r.regionId
         """
-        cursor.execute(query)
+        
+        where_conditions = []
+        query_params = []
+        
+        # Apply region filtering for dispatchers
+        if user_role == 'dispatcher':
+            # Get dispatcher's team region
+            cursor.execute("""
+                SELECT DISTINCT r.regionId 
+                FROM dispatchers d 
+                JOIN teams t ON d.team_id = t.teamId 
+                JOIN regions r ON t.region_id = r.regionId 
+                WHERE d.dispatcherId = %s
+            """, (user_id,))
+            dispatcher_region = cursor.fetchone()
+            
+            if dispatcher_region:
+                # Dispatcher can see bookings in their team's region OR global bookings
+                where_conditions.append("(b.region_id = %s OR r.is_global = TRUE)")
+                query_params.append(dispatcher_region['regionId'])
+        
+        # Apply specific region filter if requested (admin only)
+        if region_filter and user_role == 'admin':
+            where_conditions.append("b.region_id = %s")
+            query_params.append(region_filter)
+        
+        # Build final query
+        if where_conditions:
+            query = base_query + " WHERE " + " AND ".join(where_conditions)
+        else:
+            query = base_query
+            
+        query += " ORDER BY b.booking_date, b.booking_time"
+        cursor.execute(query, query_params)
 
         bookings = cursor.fetchall()
 
@@ -337,15 +376,26 @@ def create_booking():
             ))
             customer_id = cursor.lastrowid
 
+        # Validate and get region_id
+        region_id = data["booking"].get("region_id")
+        if region_id is not None:
+            cursor.execute("SELECT regionId FROM regions WHERE regionId = %s", (region_id,))
+            if not cursor.fetchone():
+                return jsonify({"success": False, "error": "Invalid region ID"}), 400
+        else:
+            # Default to Global region (regionId = 1)
+            region_id = 1
+        
         # Booking insert
         cursor.execute("""
-            INSERT INTO bookings (agentId, customerId, booking_date, booking_time)
-            VALUES (%s,%s,%s,%s)
+            INSERT INTO bookings (agentId, customerId, booking_date, booking_time, region_id)
+            VALUES (%s,%s,%s,%s,%s)
         """, (
             data["booking"]["agentId"],
             customer_id,
             data["booking"]["booking_date"],
-            data["booking"]["booking_time"]
+            data["booking"]["booking_time"],
+            region_id
         ))
         booking_id = cursor.lastrowid
 
@@ -372,7 +422,7 @@ def create_booking():
         notifications = prepare_booking_notifications(notification_data, is_update=False)
         send_notifications_async(notifications)
 
-        # Fetch the created booking with full details
+        # Fetch the created booking with full details including region
         cursor.execute("""
             SELECT 
                 b.bookingId, 
@@ -386,11 +436,13 @@ def create_booking():
                     l.street_name, ', ', 
                     l.postal_code, ' ', 
                     l.city
-                ) AS customer_address
+                ) AS customer_address,
+                r.regionId, r.name AS region_name, r.is_global AS region_is_global
             FROM bookings b
             JOIN customers c ON b.customerId = c.customerId
             LEFT JOIN field_agents fa ON b.agentId = fa.agentId
             LEFT JOIN locations l ON c.location_id = l.id
+            LEFT JOIN regions r ON b.region_id = r.regionId
             WHERE b.bookingId = %s
         """, (booking_id,))
         
@@ -576,6 +628,22 @@ def create_call_center_booking():
         call_center_agent = data["call_center_agent"]
         if not call_center_agent.get("name") or not call_center_agent.get("email"):
             return jsonify({"success": False, "error": "Call center agent name and email are required"}), 400
+        
+        # Validate region selection (REQUIRED)
+        region_id = data["booking"].get("region_id")
+        if region_id is None:
+            return jsonify({"success": False, "error": "Region selection is required for all appointments"}), 400
+        
+        # Check if region exists
+        cursor.execute("SELECT regionId, is_global, name FROM regions WHERE regionId = %s", (region_id,))
+        region = cursor.fetchone()
+        if not region:
+            return jsonify({"success": False, "error": "Invalid region ID"}), 400
+        
+        # Prepare warning if Global region is selected
+        warning_message = None
+        if region['is_global']:
+            warning_message = "Warning: Global region selected. This appointment will be visible to all teams, which is not recommended for optimal workflow."
 
         conn = get_connection()
         cursor = conn.cursor(dictionary=True)
@@ -628,22 +696,23 @@ def create_call_center_booking():
             ))
             customer_id = cursor.lastrowid
 
-        # Create booking with agentId=NULL (unassigned)
+        # Create booking with agentId=NULL (unassigned) and specified region
         cursor.execute("""
-            INSERT INTO bookings (agentId, customerId, booking_date, booking_time, status)
-            VALUES (%s,%s,%s,%s,%s)
+            INSERT INTO bookings (agentId, customerId, booking_date, booking_time, status, region_id)
+            VALUES (%s,%s,%s,%s,%s,%s)
         """, (
             None,  # Always unassigned from call center
             customer_id,
             data["booking"]["booking_date"],
             data["booking"]["booking_time"],
-            "scheduled"  # Default status
+            "scheduled",  # Default status
+            region_id
         ))
         booking_id = cursor.lastrowid
 
         conn.commit()
 
-        # Fetch the created booking with full details
+        # Fetch the created booking with full details including region
         cursor.execute("""
             SELECT 
                 b.bookingId, 
@@ -657,11 +726,13 @@ def create_call_center_booking():
                     l.street_name, ', ', 
                     l.postal_code, ' ', 
                     l.city
-                ) AS customer_address
+                ) AS customer_address,
+                r.regionId, r.name AS region_name, r.is_global AS region_is_global
             FROM bookings b
             JOIN customers c ON b.customerId = c.customerId
             LEFT JOIN field_agents fa ON b.agentId = fa.agentId
             LEFT JOIN locations l ON c.location_id = l.id
+            LEFT JOIN regions r ON b.region_id = r.regionId
             WHERE b.bookingId = %s
         """, (booking_id,))
         
@@ -687,12 +758,18 @@ def create_call_center_booking():
         if customer_notifications:
             send_notifications_async(customer_notifications)
 
-        return jsonify({
+        response_data = {
             "success": True,
             "message": f"Booking created successfully by {call_center_agent['name']} - unassigned, ready for dispatcher assignment",
             "data": created_booking,
             "call_center_agent": call_center_agent['name']
-        }), 201
+        }
+        
+        # Include warning if Global region was selected
+        if warning_message:
+            response_data["warning"] = warning_message
+        
+        return jsonify(response_data), 201
 
     except Exception as e:
         if 'conn' in locals():

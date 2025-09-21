@@ -53,11 +53,13 @@ def validate_team_data(data):
 def get_teams(cursor, conn):
     """Get all teams with their members"""
     try:
-        # Get all teams
+        # Get all teams with their region information
         teams_query = """
-        SELECT teamId, name, description, created_time, updated_time 
-        FROM teams 
-        ORDER BY name
+        SELECT t.teamId, t.name, t.description, t.created_time, t.updated_time,
+               r.regionId, r.name as region_name, r.is_global as region_is_global
+        FROM teams t
+        LEFT JOIN regions r ON t.region_id = r.regionId
+        ORDER BY t.name
         """
         cursor.execute(teams_query)
         teams = cursor.fetchall()
@@ -111,21 +113,37 @@ def create_team(cursor, conn):
         if cursor.fetchone():
             return jsonify({"success": False, "error": "Team name already exists"}), 409
         
+        # Validate region_id if provided
+        region_id = data.get('region_id')
+        if region_id is not None:
+            cursor.execute("SELECT regionId FROM regions WHERE regionId = %s", (region_id,))
+            if not cursor.fetchone():
+                return jsonify({"success": False, "error": "Invalid region ID"}), 400
+        else:
+            # Default to Global region (regionId = 1)
+            region_id = 1
+        
         # Insert new team
         insert_query = """
-        INSERT INTO teams (name, description) 
-        VALUES (%s, %s)
+        INSERT INTO teams (name, description, region_id) 
+        VALUES (%s, %s, %s)
         """
         cursor.execute(insert_query, (
             data['name'].strip(),
-            data.get('description', '').strip() if data.get('description') else None
+            data.get('description', '').strip() if data.get('description') else None,
+            region_id
         ))
         
         team_id = cursor.lastrowid
         conn.commit()
         
-        # Return the created team
-        cursor.execute("SELECT * FROM teams WHERE teamId = %s", (team_id,))
+        # Return the created team with region information
+        cursor.execute("""
+            SELECT t.*, r.regionId, r.name as region_name, r.is_global as region_is_global
+            FROM teams t
+            LEFT JOIN regions r ON t.region_id = r.regionId
+            WHERE t.teamId = %s
+        """, (team_id,))
         team = cursor.fetchone()
         
         return jsonify({"success": True, "data": team}), 201
@@ -141,8 +159,14 @@ def create_team(cursor, conn):
 def get_team(cursor, conn, team_id):
     """Get a specific team with its members"""
     try:
-        # Get team details
-        cursor.execute("SELECT * FROM teams WHERE teamId = %s", (team_id,))
+        # Get team details with region information
+        team_query = """
+        SELECT t.*, r.regionId, r.name as region_name, r.is_global as region_is_global
+        FROM teams t
+        LEFT JOIN regions r ON t.region_id = r.regionId
+        WHERE t.teamId = %s
+        """
+        cursor.execute(team_query, (team_id,))
         team = cursor.fetchone()
         
         if not team:
@@ -199,22 +223,45 @@ def update_team(cursor, conn, team_id):
         if cursor.fetchone():
             return jsonify({"success": False, "error": "Team name already exists"}), 409
         
+        # Validate region_id if provided
+        update_values = [data['name'].strip()]
+        set_clauses = ["name = %s"]
+        
+        # Handle description
+        if 'description' in data:
+            set_clauses.append("description = %s")
+            update_values.append(data.get('description', '').strip() if data.get('description') else None)
+        
+        # Handle region reassignment
+        if 'region_id' in data:
+            region_id = data['region_id']
+            if region_id is not None:
+                cursor.execute("SELECT regionId FROM regions WHERE regionId = %s", (region_id,))
+                if not cursor.fetchone():
+                    return jsonify({"success": False, "error": "Invalid region ID"}), 400
+            set_clauses.append("region_id = %s")
+            update_values.append(region_id)
+        
+        set_clauses.append("updated_time = CURRENT_TIMESTAMP")
+        update_values.append(team_id)
+        
         # Update team
-        update_query = """
+        update_query = f"""
         UPDATE teams 
-        SET name = %s, description = %s, updated_time = CURRENT_TIMESTAMP 
+        SET {', '.join(set_clauses)}
         WHERE teamId = %s
         """
-        cursor.execute(update_query, (
-            data['name'].strip(),
-            data.get('description', '').strip() if data.get('description') else None,
-            team_id
-        ))
+        cursor.execute(update_query, update_values)
         
         conn.commit()
         
-        # Return updated team
-        cursor.execute("SELECT * FROM teams WHERE teamId = %s", (team_id,))
+        # Return updated team with region information
+        cursor.execute("""
+            SELECT t.*, r.regionId, r.name as region_name, r.is_global as region_is_global
+            FROM teams t
+            LEFT JOIN regions r ON t.region_id = r.regionId
+            WHERE t.teamId = %s
+        """, (team_id,))
         team = cursor.fetchone()
         
         return jsonify({"success": True, "data": team}), 200
