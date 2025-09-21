@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import {
   Box,
   Typography,
@@ -66,7 +66,7 @@ interface UnassignedMembers {
   total: number;
 }
 
-const BASE_URL = import.meta.env.VITE_API_BASE_URL;
+const BASE_URL = import.meta.env.VITE_BASE_API_URL;
 
 export default function TeamManagement() {
   const [teams, setTeams] = useState<Team[]>([]);
@@ -129,7 +129,7 @@ export default function TeamManagement() {
     }
   };
 
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     setLoading(true);
     setError('');
     
@@ -138,11 +138,11 @@ export default function TeamManagement() {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     fetchData();
-  }, []);
+  }, [fetchData]);
 
   const handleCreateTeam = async () => {
     try {

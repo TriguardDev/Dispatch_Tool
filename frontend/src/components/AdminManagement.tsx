@@ -52,6 +52,28 @@ interface User {
   updated_time?: string;
 }
 
+interface Dispatcher extends User {
+  dispatcherId: number;
+  location_id?: number;
+  street_number?: string;
+  street_name?: string;
+  city?: string;
+  state_province?: string;
+  postal_code?: string;
+  country?: string;
+}
+
+interface Agent extends User {
+  agentId: number;
+  location_id?: number;
+  street_number?: string;
+  street_name?: string;
+  city?: string;
+  state_province?: string;
+  postal_code?: string;
+  country?: string;
+}
+
 interface TabPanelProps {
   children?: React.ReactNode;
   index: number;
@@ -73,12 +95,12 @@ function TabPanel(props: TabPanelProps) {
   );
 }
 
-const BASE_URL = import.meta.env.VITE_API_BASE_URL;
+const BASE_URL = import.meta.env.VITE_BASE_API_URL;
 
 export default function AdminManagement() {
   const [tabValue, setTabValue] = useState(0);
-  const [dispatchers, setDispatchers] = useState<User[]>([]);
-  const [agents, setAgents] = useState<User[]>([]);
+  const [dispatchers, setDispatchers] = useState<Dispatcher[]>([]);
+  const [agents, setAgents] = useState<Agent[]>([]);
   const [allUsers, setAllUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -119,10 +141,19 @@ export default function AdminManagement() {
       });
       
       if (dispatcherRes.ok) {
-        const dispatcherData = await dispatcherRes.json();
-        const dispatchers = dispatcherData.success ? dispatcherData.data.map((d: any) => ({ ...d, id: d.dispatcherId })) : [];
-        console.log(dispatchers)
-        setDispatchers(dispatchers);
+        const responseText = await dispatcherRes.text();
+        console.log('Dispatcher response:', responseText);
+        try {
+          const dispatcherData = JSON.parse(responseText);
+          const dispatchers = dispatcherData.success ? dispatcherData.data.map((d: Dispatcher) => ({ ...d, id: d.dispatcherId })) : [];
+          console.log(dispatchers)
+          setDispatchers(dispatchers);
+        } catch (parseError) {
+          console.error('Failed to parse dispatcher response:', parseError);
+          setError('Invalid response from dispatchers endpoint');
+        }
+      } else {
+        console.error('Dispatcher request failed:', dispatcherRes.status, dispatcherRes.statusText);
       }
       
       // Fetch agents  
@@ -131,9 +162,18 @@ export default function AdminManagement() {
       });
       
       if (agentRes.ok) {
-        const agentData = await agentRes.json();
-        const agents = agentData.success ? agentData.data.map((a: any) => ({ ...a, id: a.agentId })) : [];
-        setAgents(agents);
+        const responseText = await agentRes.text();
+        console.log('Agent response:', responseText);
+        try {
+          const agentData = JSON.parse(responseText);
+          const agents = agentData.success ? agentData.data.map((a: Agent) => ({ ...a, id: a.agentId })) : [];
+          setAgents(agents);
+        } catch (parseError) {
+          console.error('Failed to parse agent response:', parseError);
+          setError('Invalid response from agents endpoint');
+        }
+      } else {
+        console.error('Agent request failed:', agentRes.status, agentRes.statusText);
       }
 
       // Fetch all users with roles
@@ -142,9 +182,18 @@ export default function AdminManagement() {
       });
       
       if (allUsersRes.ok) {
-        const allUsersData = await allUsersRes.json();
-        const users = allUsersData.success ? allUsersData.data : [];
-        setAllUsers(users);
+        const responseText = await allUsersRes.text();
+        console.log('All users response:', responseText);
+        try {
+          const allUsersData = JSON.parse(responseText);
+          const users = allUsersData.success ? allUsersData.data : [];
+          setAllUsers(users);
+        } catch (parseError) {
+          console.error('Failed to parse all users response:', parseError);
+          setError('Invalid response from users endpoint');
+        }
+      } else {
+        console.error('All users request failed:', allUsersRes.status, allUsersRes.statusText);
       }
       
     } catch (err) {
@@ -223,15 +272,15 @@ export default function AdminManagement() {
       name: user.name,
       email: user.email,
       password: '',
-      phone: (user as any).phone || '',
-      status: (user as any).status || 'available',
-      location_id: (user as any).location_id || null,
-      street_number: (user as any).street_number || '',
-      street_name: (user as any).street_name || '',
-      city: (user as any).city || '',
-      state_province: (user as any).state_province || '',
-      postal_code: (user as any).postal_code || '',
-      country: (user as any).country || 'USA'
+      phone: user.phone || '',
+      status: user.status || 'available',
+      location_id: (user as Dispatcher | Agent).location_id || null,
+      street_number: (user as Dispatcher | Agent).street_number || '',
+      street_name: (user as Dispatcher | Agent).street_name || '',
+      city: (user as Dispatcher | Agent).city || '',
+      state_province: (user as Dispatcher | Agent).state_province || '',
+      postal_code: (user as Dispatcher | Agent).postal_code || '',
+      country: (user as Dispatcher | Agent).country || 'USA'
     });
     setIsEditModalOpen(true);
   };
@@ -244,7 +293,7 @@ export default function AdminManagement() {
         ? `${BASE_URL}/dispatchers/${editingUser.id}`
         : `${BASE_URL}/agents/${editingUser.id}`;
       
-      const payload: any = { name: formData.name, email: formData.email };
+      const payload: Record<string, unknown> = { name: formData.name, email: formData.email };
       if (formData.password) payload.password = formData.password;
       if (userType === 'field_agent') {
         if (formData.phone) payload.phone = formData.phone;
@@ -551,10 +600,10 @@ export default function AdminManagement() {
                 <TableRow key={dispatcher.id}>
                   <TableCell>{dispatcher.name}</TableCell>
                   <TableCell>{dispatcher.email}</TableCell>
-                  <TableCell>{(dispatcher as any).phone || 'N/A'}</TableCell>
+                  <TableCell>{dispatcher.phone || 'N/A'}</TableCell>
                   <TableCell>
-                    {(dispatcher as any).street_number && (dispatcher as any).street_name
-                      ? `${(dispatcher as any).street_number} ${(dispatcher as any).street_name}, ${(dispatcher as any).city}, ${(dispatcher as any).state_province}`
+                    {dispatcher.street_number && dispatcher.street_name
+                      ? `${dispatcher.street_number} ${dispatcher.street_name}, ${dispatcher.city}, ${dispatcher.state_province}`
                       : 'N/A'
                     }
                   </TableCell>
@@ -610,11 +659,11 @@ export default function AdminManagement() {
                 <TableRow key={agent.id}>
                   <TableCell>{agent.name}</TableCell>
                   <TableCell>{agent.email}</TableCell>
-                  <TableCell>{(agent as any).phone || 'N/A'}</TableCell>
+                  <TableCell>{agent.phone || 'N/A'}</TableCell>
                   <TableCell>
                     <Chip 
-                      label={(agent as any).status || 'N/A'} 
-                      color={(agent as any).status === 'available' ? 'success' : 'default'}
+                      label={agent.status || 'N/A'} 
+                      color={agent.status === 'available' ? 'success' : 'default'}
                       size="small"
                     />
                   </TableCell>

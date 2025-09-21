@@ -18,7 +18,6 @@ import {
   DialogTitle,
   DialogContent,
   DialogActions,
-  TextField,
   Tabs,
   Tab
 } from '@mui/material';
@@ -47,7 +46,7 @@ interface TimeOffRequest {
   updated_time: string;
 }
 
-const BASE_URL = import.meta.env.VITE_API_BASE_URL;
+const BASE_URL = import.meta.env.VITE_BASE_API_URL;
 
 interface Props {
   onLogout: () => void;

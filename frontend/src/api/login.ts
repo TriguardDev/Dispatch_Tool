@@ -1,4 +1,6 @@
-const BASE_URL = import.meta.env.VITE_API_BASE_URL;
+const BASE_URL = import.meta.env.VITE_BASE_API_URL;
+console.log('LOGIN API - BASE_URL:', BASE_URL);
+console.log('LOGIN API - All env vars:', import.meta.env);
 
 export interface LoginResponse {
   id: number;

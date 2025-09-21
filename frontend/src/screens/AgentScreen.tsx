@@ -26,8 +26,6 @@ export default function AgentScreen({ agentId, onLogout }: AgentScreenProps) {
     loading,
     error,
     refetch,
-    pausePolling,
-    resumePolling,
     optimisticUpdate
   } = useSmartPolling({
     fetchFunction: fetchAgentBookings,
