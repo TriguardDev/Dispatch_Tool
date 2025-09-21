@@ -136,37 +136,10 @@ CREATE TABLE IF NOT EXISTS dispositions (
     FOREIGN KEY (typeCode) REFERENCES disposition_types(typeCode)
 );
 
--- Sample Locations (with country)
-INSERT INTO locations (latitude, longitude, postal_code, city, state_province, country, street_name, street_number)
-VALUES
-(26.1936248, -98.2118124, '78502', 'McAllen', 'Texas', 'USA', 'Broadway', '1'),
-(26.3237612, -98.1369012, '78542', 'Edinburg', 'Texas', 'USA', 'Sunset Blvd', '101'),
-(33.1811789, -96.6291685, '75069', 'McKinney', 'Texas', 'USA', 'Bay Street', '100');
-
--- Sample Teams
-INSERT INTO teams (name, description) VALUES
-('Team Alpha', 'Primary response team for McAllen area'),
-('Team Beta', 'Specialized team for Edinburg region'),
-('Team Gamma', 'McKinney area coverage team');
-
--- Sample Dispatchers
-INSERT INTO dispatchers (`name`, email, password, phone, location_id, team_id)
-VALUES
-('Pete Stathopoulos', 'pete@triguardroofing.com', 'pete', '555-0001', 1, 1);
-
--- Sample Field Agents
-INSERT INTO field_agents (`name`, email, password, phone, `status`, location_id, team_id)
-VALUES
-('Larey Farias', 'larey@triguardroofing.com', "larey", '555-1111', 'available', 1, 1),
-('Arthur Garica', 'arthur@triguardroofing.com', 'arthur', '555-1111', 'available', 1, 1),
-('Jeremy Moreno', 'jeremy@triguardroofing.com', 'jeremy', '555-2222', 'available', 2, 2),
-('rebecca steward', 'rebecca@triguardroofing.com', 'rebecca', '555-2222', 'available', 3, 3),
-('tester', 'test@example.com', 'tester', '555-6666', 'available', 3, 3);
-
--- Sample Admin
+-- Admin User (required for initial system access)
 INSERT INTO admins (`name`, email, password)
 VALUES
-('Admin User', 'admin@triguardroofing.com', 'admin123');
+('Admin User', 'admin@triguardroofing.com', '$2b$12$fnsSM5iFB2ClCSgcc1wGMe9g4rNfNuM7ncWv7XP1fL7nNvdEmQ0NG');
 
 -- Populate your disposition types
 INSERT INTO disposition_types (typeCode, description) VALUES

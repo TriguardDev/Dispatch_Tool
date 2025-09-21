@@ -31,20 +31,6 @@ ADD FOREIGN KEY (region_id) REFERENCES regions(regionId) ON DELETE SET NULL;
 -- Update all existing bookings to be assigned to Global region
 UPDATE bookings SET region_id = 1 WHERE region_id IS NULL;
 
--- Add some sample regions for demonstration
-INSERT INTO regions (name, description, is_global) VALUES
-('North Texas', 'Northern Texas region including McKinney area', FALSE),
-('South Texas', 'Southern Texas region including McAllen and Edinburg areas', FALSE),
-('East Texas', 'Eastern Texas region', FALSE),
-('West Texas', 'Western Texas region', FALSE);
-
--- Update sample teams to use specific regions instead of Global
--- Team Alpha (McAllen area) -> South Texas
-UPDATE teams SET region_id = 3 WHERE name = 'Team Alpha';
--- Team Beta (Edinburg region) -> South Texas  
-UPDATE teams SET region_id = 3 WHERE name = 'Team Beta';
--- Team Gamma (McKinney area) -> North Texas
-UPDATE teams SET region_id = 2 WHERE name = 'Team Gamma';
 
 -- Create index for better performance on region-based queries
 CREATE INDEX idx_teams_region ON teams(region_id);

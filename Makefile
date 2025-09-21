@@ -50,6 +50,11 @@ down:
 	docker-compose -f docker-compose.dev.yml down
 	docker-compose -f docker-compose.prod.yml down
 
+# Stop and remove containers, networks, volumes
+dev-down:
+	@echo "Removing dev volume..."
+	docker-compose -f docker-compose.dev.yml down -v
+
 # Clean Docker system
 clean:
 	@echo "Cleaning Docker system..."
