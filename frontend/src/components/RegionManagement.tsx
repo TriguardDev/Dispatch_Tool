@@ -69,7 +69,6 @@ const RegionManagement: React.FC = () => {
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [assignTeamsDialogOpen, setAssignTeamsDialogOpen] = useState(false);
   
   // Form and selection states
   const [formData, setFormData] = useState<RegionFormData>({
@@ -211,28 +210,6 @@ const RegionManagement: React.FC = () => {
     }
   };
 
-  const handleAssignTeamToRegion = async (teamId: number, regionId: number) => {
-    try {
-      const response = await fetch(`/api/teams/${teamId}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        credentials: 'include',
-        body: JSON.stringify({ region_id: regionId })
-      });
-      
-      const data = await response.json();
-      if (data.success) {
-        setSuccess('Team reassigned successfully');
-        await Promise.all([fetchRegions(), fetchTeams()]);
-      } else {
-        throw new Error(data.error || 'Failed to reassign team');
-      }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to reassign team');
-    }
-  };
 
   const openEditDialog = (region: Region) => {
     setSelectedRegion(region);
@@ -251,11 +228,6 @@ const RegionManagement: React.FC = () => {
     setMenuAnchor(null);
   };
 
-  const openAssignTeamsDialog = (region: Region) => {
-    setSelectedRegion(region);
-    setAssignTeamsDialogOpen(true);
-    setMenuAnchor(null);
-  };
 
   if (loading) {
     return (
@@ -352,10 +324,6 @@ const RegionManagement: React.FC = () => {
         <MenuItem onClick={() => openEditDialog(selectedRegion!)}>
           <EditIcon sx={{ mr: 1 }} />
           Edit
-        </MenuItem>
-        <MenuItem onClick={() => openAssignTeamsDialog(selectedRegion!)}>
-          <BusinessIcon sx={{ mr: 1 }} />
-          Manage Teams
         </MenuItem>
         {selectedRegion && !selectedRegion.is_global && (
           <MenuItem onClick={() => openDeleteDialog(selectedRegion)}>
@@ -464,56 +432,6 @@ const RegionManagement: React.FC = () => {
         </DialogActions>
       </Dialog>
 
-      {/* Assign Teams Dialog */}
-      <Dialog open={assignTeamsDialogOpen} onClose={() => setAssignTeamsDialogOpen(false)} maxWidth="md" fullWidth>
-        <DialogTitle>Manage Teams in {selectedRegion?.name}</DialogTitle>
-        <DialogContent>
-          <Typography variant="h6" sx={{ mb: 2 }}>Teams in this region:</Typography>
-          {teams.filter(team => team.region_id === selectedRegion?.regionId).map(team => (
-            <Box key={team.teamId} display="flex" justifyContent="space-between" alignItems="center" py={1}>
-              <Typography>{team.name}</Typography>
-              <Button
-                variant="outlined"
-                size="small"
-                onClick={() => {
-                  const globalRegion = regions.find(r => r.is_global);
-                  if (globalRegion) {
-                    handleAssignTeamToRegion(team.teamId, globalRegion.regionId);
-                  }
-                }}
-              >
-                Move to Global
-              </Button>
-            </Box>
-          ))}
-          
-          <Typography variant="h6" sx={{ mt: 3, mb: 2 }}>Available teams to assign:</Typography>
-          {teams.filter(team => team.region_id !== selectedRegion?.regionId).map(team => (
-            <Box key={team.teamId} display="flex" justifyContent="space-between" alignItems="center" py={1}>
-              <Box>
-                <Typography>{team.name}</Typography>
-                <Typography variant="body2" color="text.secondary">
-                  Currently in: {team.region_name}
-                </Typography>
-              </Box>
-              <Button
-                variant="contained"
-                size="small"
-                onClick={() => {
-                  if (selectedRegion) {
-                    handleAssignTeamToRegion(team.teamId, selectedRegion.regionId);
-                  }
-                }}
-              >
-                Assign Here
-              </Button>
-            </Box>
-          ))}
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setAssignTeamsDialogOpen(false)}>Close</Button>
-        </DialogActions>
-      </Dialog>
     </Box>
   );
 };

@@ -37,7 +37,8 @@ import {
   Person as PersonIcon,
   SupervisorAccount as SupervisorIcon,
   ExpandMore as ExpandMoreIcon,
-  PersonAdd as PersonAddIcon
+  PersonAdd as PersonAddIcon,
+  Business as BusinessIcon
 } from '@mui/icons-material';
 
 interface Team {
@@ -47,6 +48,9 @@ interface Team {
   dispatchers: TeamMember[];
   agents: TeamMember[];
   memberCount: number;
+  regionId: number;
+  region_name: string;
+  region_is_global: boolean;
   created_time: string;
   updated_time: string;
 }
@@ -66,10 +70,22 @@ interface UnassignedMembers {
   total: number;
 }
 
+interface Region {
+  regionId: number;
+  name: string;
+  description: string;
+  is_global: boolean;
+  team_count: number;
+  booking_count: number;
+  created_time: string;
+  updated_time: string;
+}
+
 const BASE_URL = import.meta.env.VITE_BASE_API_URL;
 
 export default function TeamManagement() {
   const [teams, setTeams] = useState<Team[]>([]);
+  const [regions, setRegions] = useState<Region[]>([]);
   const [unassignedMembers, setUnassignedMembers] = useState<UnassignedMembers>({
     dispatchers: [],
     agents: [],
@@ -77,6 +93,7 @@ export default function TeamManagement() {
   });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
   
   // Modal states
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
@@ -88,7 +105,8 @@ export default function TeamManagement() {
   // Form states
   const [formData, setFormData] = useState({
     name: '',
-    description: ''
+    description: '',
+    region_id: null as number | null
   });
 
   const [assignData, setAssignData] = useState({
@@ -129,12 +147,27 @@ export default function TeamManagement() {
     }
   };
 
+  const fetchRegions = async () => {
+    try {
+      const res = await fetch(`${BASE_URL}/regions`, {
+        credentials: 'include'
+      });
+      
+      if (res.ok) {
+        const data = await res.json();
+        setRegions(data.success ? data.data : []);
+      }
+    } catch (err) {
+      console.error('Error fetching regions:', err);
+    }
+  };
+
   const fetchData = useCallback(async () => {
     setLoading(true);
     setError('');
     
     try {
-      await Promise.all([fetchTeams(), fetchUnassignedMembers()]);
+      await Promise.all([fetchTeams(), fetchUnassignedMembers(), fetchRegions()]);
     } finally {
       setLoading(false);
     }
@@ -173,7 +206,8 @@ export default function TeamManagement() {
     setEditingTeam(team);
     setFormData({
       name: team.name,
-      description: team.description || ''
+      description: team.description || '',
+      region_id: team.regionId
     });
     setIsEditModalOpen(true);
   };
@@ -282,7 +316,8 @@ export default function TeamManagement() {
   const resetForm = () => {
     setFormData({
       name: '',
-      description: ''
+      description: '',
+      region_id: null
     });
   };
 
@@ -303,6 +338,35 @@ export default function TeamManagement() {
     return assignData.memberType === 'dispatcher' 
       ? unassignedMembers.dispatchers 
       : unassignedMembers.agents;
+  };
+
+  const handleRegionChange = async (team: Team, newRegionId: number) => {
+    try {
+      const res = await fetch(`${BASE_URL}/teams/${team.teamId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+        body: JSON.stringify({ 
+          name: team.name,
+          description: team.description || '',
+          region_id: newRegionId 
+        }),
+      });
+
+      if (res.ok) {
+        setSuccess('Team region updated successfully');
+        await fetchData();
+        setTimeout(() => setSuccess(''), 3000);
+      } else {
+        const errorData = await res.json();
+        setError(errorData.error || 'Failed to update team region');
+      }
+    } catch (err) {
+      setError('Failed to update team region');
+      console.error('Error updating team region:', err);
+    }
   };
 
   if (loading) {
@@ -331,6 +395,12 @@ export default function TeamManagement() {
       {error && (
         <Alert severity="error" sx={{ mb: 3 }} onClose={() => setError('')}>
           {error}
+        </Alert>
+      )}
+
+      {success && (
+        <Alert severity="success" sx={{ mb: 3 }} onClose={() => setSuccess('')}>
+          {success}
         </Alert>
       )}
 
@@ -367,6 +437,28 @@ export default function TeamManagement() {
                     {team.description}
                   </Typography>
                 )}
+
+                {/* Region Information */}
+                <Box sx={{ display: 'flex', alignItems: 'center', mb: 2, gap: 1 }}>
+                  <BusinessIcon color={team.region_is_global ? 'primary' : 'action'} />
+                  <Typography variant="body2" color="textSecondary">
+                    Region:
+                  </Typography>
+                  <FormControl size="small" sx={{ minWidth: 120 }}>
+                    <Select
+                      value={team.regionId || ''}
+                      onChange={(e) => handleRegionChange(team, Number(e.target.value))}
+                      variant="outlined"
+                      size="small"
+                    >
+                      {regions.map((region) => (
+                        <MenuItem key={region.regionId} value={region.regionId}>
+                          {region.name} {region.is_global ? '(Global)' : ''}
+                        </MenuItem>
+                      ))}
+                    </Select>
+                  </FormControl>
+                </Box>
 
                 {/* Warning for teams without dispatcher */}
                 {team.dispatchers.length === 0 && (
@@ -514,12 +606,30 @@ export default function TeamManagement() {
             multiline
             rows={3}
           />
+          <FormControl fullWidth margin="normal" required>
+            <InputLabel>Region</InputLabel>
+            <Select
+              value={formData.region_id || ''}
+              onChange={(e) => setFormData({ ...formData, region_id: Number(e.target.value) })}
+              label="Region"
+            >
+              {regions.map((region) => (
+                <MenuItem key={region.regionId} value={region.regionId}>
+                  {region.name} {region.is_global ? '(Global)' : ''}
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
         </DialogContent>
         <DialogActions>
           <Button onClick={() => { setIsCreateModalOpen(false); resetForm(); }}>
             Cancel
           </Button>
-          <Button onClick={handleCreateTeam} variant="contained">
+          <Button 
+            onClick={handleCreateTeam} 
+            variant="contained"
+            disabled={!formData.name || !formData.region_id}
+          >
             Create
           </Button>
         </DialogActions>
@@ -546,12 +656,30 @@ export default function TeamManagement() {
             multiline
             rows={3}
           />
+          <FormControl fullWidth margin="normal" required>
+            <InputLabel>Region</InputLabel>
+            <Select
+              value={formData.region_id || ''}
+              onChange={(e) => setFormData({ ...formData, region_id: Number(e.target.value) })}
+              label="Region"
+            >
+              {regions.map((region) => (
+                <MenuItem key={region.regionId} value={region.regionId}>
+                  {region.name} {region.is_global ? '(Global)' : ''}
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
         </DialogContent>
         <DialogActions>
           <Button onClick={() => { setIsEditModalOpen(false); setEditingTeam(null); resetForm(); }}>
             Cancel
           </Button>
-          <Button onClick={handleUpdateTeam} variant="contained">
+          <Button 
+            onClick={handleUpdateTeam} 
+            variant="contained"
+            disabled={!formData.name || !formData.region_id}
+          >
             Update
           </Button>
         </DialogActions>

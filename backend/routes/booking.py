@@ -634,6 +634,9 @@ def create_call_center_booking():
         if region_id is None:
             return jsonify({"success": False, "error": "Region selection is required for all appointments"}), 400
         
+        conn = get_connection()
+        cursor = conn.cursor(dictionary=True)
+        
         # Check if region exists
         cursor.execute("SELECT regionId, is_global, name FROM regions WHERE regionId = %s", (region_id,))
         region = cursor.fetchone()
@@ -644,9 +647,6 @@ def create_call_center_booking():
         warning_message = None
         if region['is_global']:
             warning_message = "Warning: Global region selected. This appointment will be visible to all teams, which is not recommended for optimal workflow."
-
-        conn = get_connection()
-        cursor = conn.cursor(dictionary=True)
 
         # Location lookup/insert (same logic as regular booking creation)
         cursor.execute("""
