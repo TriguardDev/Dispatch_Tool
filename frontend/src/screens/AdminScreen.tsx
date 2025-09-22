@@ -11,6 +11,12 @@ import { getAllBookings } from "../api/crud";
 import { FormControl, InputLabel, Select, MenuItem } from "@mui/material";
 import { useSmartPolling } from "../hooks/useSmartPolling";
 
+interface Region {
+  regionId: number;
+  name: string;
+  description?: string;
+}
+
 interface AdminScreenProps {
   onLogout: () => void;
 }
@@ -48,7 +54,7 @@ export default function AdminScreen({ onLogout }: AdminScreenProps) {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [tabValue, setTabValue] = useState(0);
   const [selectedRegionFilter, setSelectedRegionFilter] = useState<number | 'all'>('all');
-  const [regions, setRegions] = useState<any[]>([]);
+  const [regions, setRegions] = useState<Region[]>([]);
   
   // Memoize the fetch function to prevent useEffect dependency issues
   const fetchBookingsWithRegion = useCallback(() => {

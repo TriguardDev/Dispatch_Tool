@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { 
   Dialog, 
   DialogTitle, 
@@ -17,6 +17,12 @@ import { findLatLong } from "../api/location_conversion";
 import { createBooking, searchAgents } from "../api/crud";
 import AgentSelector from "./AgentSelector";
 import PhoneInput from "./PhoneInput";
+
+interface Region {
+  regionId: number;
+  name: string;
+  description?: string;
+}
 
 interface Props {
   isOpen: boolean;
@@ -52,7 +58,7 @@ export default function NewAppointmentModal({ isOpen, onClose, onSave, onLogout 
   const [latLon, setLatLon] = useState<{ lat: number | null, lon: number | null }>({ lat: null, lon: null });
   const [phoneValid, setPhoneValid] = useState(false);
   const [agents, setAgents] = useState<Agent[]>([]);
-  const [regions, setRegions] = useState<any[]>([]);
+  const [regions, setRegions] = useState<Region[]>([]);
   const [loadingRegions, setLoadingRegions] = useState(true);
   const [loadingAgents, setLoadingAgents] = useState(false);
   const [regionWarning, setRegionWarning] = useState<string | null>(null);
@@ -201,7 +207,7 @@ export default function NewAppointmentModal({ isOpen, onClose, onSave, onLogout 
   };
 
   // Fetch regions when component mounts
-  const fetchRegions = async () => {
+  const fetchRegions = useCallback(async () => {
     try {
       const BASE_URL = import.meta.env.VITE_BASE_API_URL;
       const response = await fetch(`${BASE_URL}/regions`, {
@@ -232,14 +238,14 @@ export default function NewAppointmentModal({ isOpen, onClose, onSave, onLogout 
     } finally {
       setLoadingRegions(false);
     }
-  };
+  }, [onLogout]);
 
   // Load regions when modal opens
   useEffect(() => {
     if (isOpen && regions.length === 0) {
       fetchRegions();
     }
-  }, [isOpen]);
+  }, [isOpen, fetchRegions, regions.length]);
 
   return (
     <Dialog 
