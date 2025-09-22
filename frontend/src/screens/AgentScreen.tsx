@@ -6,6 +6,8 @@ import AppointmentCard from "../components/AppointmentCard";
 import { type Booking, getAgentBookings, updateBooking, saveDisposition } from "../api/crud";
 import { useSmartPolling } from "../hooks/useSmartPolling";
 import TimeOffRequest from "../components/TimeOffRequest";
+import TimesheetSubmission from "../components/TimesheetSubmission";
+import TimesheetHistory from "../components/TimesheetHistory";
 
 interface AgentScreenProps {
   agentId: number; // passed from login
@@ -130,6 +132,8 @@ export default function AgentScreen({ agentId, onLogout }: AgentScreenProps) {
           <Tabs value={tabValue} onChange={(_, newValue) => setTabValue(newValue)}>
             <Tab label="My Appointments" />
             <Tab label="Time-Off Requests" />
+            <Tab label="Weekly Timesheet" />
+            <Tab label="Timesheet History" />
           </Tabs>
         </Box>
 
@@ -209,6 +213,16 @@ export default function AgentScreen({ agentId, onLogout }: AgentScreenProps) {
         {/* Time-Off Requests Tab */}
         {tabValue === 1 && (
           <TimeOffRequest onLogout={onLogout} />
+        )}
+
+        {/* Weekly Timesheet Tab */}
+        {tabValue === 2 && (
+          <TimesheetSubmission onLogout={onLogout} />
+        )}
+
+        {/* Timesheet History Tab */}
+        {tabValue === 3 && (
+          <TimesheetHistory onLogout={onLogout} userRole="field_agent" />
         )}
       </Container>
     </Box>

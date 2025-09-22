@@ -6,6 +6,8 @@ import QueueCard from "../components/QueueCard";
 import AppointmentCard from "../components/AppointmentCard";
 import NewAppointmentModal from "../components/NewAppointmentModal";
 import TimeOffManagement from "../components/TimeOffManagement";
+import TimesheetManagement from "../components/TimesheetManagement";
+import TimesheetHistory from "../components/TimesheetHistory";
 import { getAllBookings } from "../api/crud";
 import { useSmartPolling } from "../hooks/useSmartPolling";
 
@@ -97,6 +99,8 @@ export default function DispatcherScreen({ onLogout }: DispatcherScreenProps) {
             <Tab label="Global Appointments" />
             <Tab label="Team Appointments" />
             <Tab label="Team Time-Off" />
+            <Tab label="Team Timesheets" />
+            <Tab label="Timesheet History" />
           </Tabs>
         </Box>
 
@@ -263,6 +267,16 @@ export default function DispatcherScreen({ onLogout }: DispatcherScreenProps) {
         {/* Time-Off Management Tab */}
         {tabValue === 2 && (
           <TimeOffManagement onLogout={onLogout} userRole="dispatcher" />
+        )}
+
+        {/* Timesheet Management Tab */}
+        {tabValue === 3 && (
+          <TimesheetManagement onLogout={onLogout} userRole="dispatcher" />
+        )}
+
+        {/* Timesheet History Tab */}
+        {tabValue === 4 && (
+          <TimesheetHistory onLogout={onLogout} userRole="dispatcher" />
         )}
       </Container>
 
