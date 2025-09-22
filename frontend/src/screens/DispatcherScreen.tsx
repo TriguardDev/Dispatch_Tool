@@ -45,6 +45,11 @@ export default function DispatcherScreen({ onLogout }: DispatcherScreenProps) {
     refetch(); // Refresh data after saving
   };
 
+  const handleDeleteAppointment = (bookingId: number) => {
+    // Just trigger a refetch - the AppointmentCard handles the actual deletion
+    refetch();
+  };
+
   // Categorize bookings by status and region
   const globalBookings = bookings.filter((b) => b.region_is_global);
   const teamBookings = bookings.filter((b) => !b.region_is_global);
@@ -119,6 +124,7 @@ export default function DispatcherScreen({ onLogout }: DispatcherScreenProps) {
                     appt={appt}
                     addressText={appt.customer_address ?? ""}
                     onAgentChange={refetch}
+                    onDelete={handleDeleteAppointment}
                     userRole="dispatcher" />
                 ))}
               </QueueCard>
@@ -134,6 +140,7 @@ export default function DispatcherScreen({ onLogout }: DispatcherScreenProps) {
                     appt={appt}
                     addressText={appt.customer_address ?? ""}
                     onAgentChange={refetch}
+                    onDelete={handleDeleteAppointment}
                     userRole="dispatcher" />
                 ))}
               </QueueCard>
@@ -149,6 +156,7 @@ export default function DispatcherScreen({ onLogout }: DispatcherScreenProps) {
                     appt={appt}
                     addressText={appt.customer_address ?? ""}
                     onAgentChange={refetch}
+                    onDelete={handleDeleteAppointment}
                     userRole="dispatcher" />
                 ))}
               </QueueCard>
@@ -164,6 +172,7 @@ export default function DispatcherScreen({ onLogout }: DispatcherScreenProps) {
                     appt={appt}
                     addressText={appt.customer_address ?? ""}
                     onAgentChange={refetch}
+                    onDelete={handleDeleteAppointment}
                     userRole="dispatcher" />
                 ))}
               </QueueCard>
@@ -195,6 +204,7 @@ export default function DispatcherScreen({ onLogout }: DispatcherScreenProps) {
                     appt={appt}
                     addressText={appt.customer_address ?? ""}
                     onAgentChange={refetch}
+                    onDelete={handleDeleteAppointment}
                     userRole="dispatcher" />
                 ))}
               </QueueCard>
@@ -210,6 +220,7 @@ export default function DispatcherScreen({ onLogout }: DispatcherScreenProps) {
                     appt={appt}
                     addressText={appt.customer_address ?? ""}
                     onAgentChange={refetch}
+                    onDelete={handleDeleteAppointment}
                     userRole="dispatcher" />
                 ))}
               </QueueCard>
@@ -225,6 +236,7 @@ export default function DispatcherScreen({ onLogout }: DispatcherScreenProps) {
                     appt={appt}
                     addressText={appt.customer_address ?? ""}
                     onAgentChange={refetch}
+                    onDelete={handleDeleteAppointment}
                     userRole="dispatcher" />
                 ))}
               </QueueCard>
@@ -240,6 +252,7 @@ export default function DispatcherScreen({ onLogout }: DispatcherScreenProps) {
                     appt={appt}
                     addressText={appt.customer_address ?? ""}
                     onAgentChange={refetch}
+                    onDelete={handleDeleteAppointment}
                     userRole="dispatcher" />
                 ))}
               </QueueCard>

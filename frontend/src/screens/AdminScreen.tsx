@@ -83,6 +83,11 @@ export default function AdminScreen({ onLogout }: AdminScreenProps) {
     refetch(); // Refresh data after saving
   };
 
+  const handleDeleteAppointment = (bookingId: number) => {
+    // Just trigger a refetch - the AppointmentCard handles the actual deletion
+    refetch();
+  };
+
   const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
     setTabValue(newValue);
   };
@@ -197,6 +202,7 @@ export default function AdminScreen({ onLogout }: AdminScreenProps) {
                   appt={appt}
                   addressText={appt.customer_address ?? ""}
                   onAgentChange={refetch}
+                  onDelete={handleDeleteAppointment}
                   userRole="admin" />
               ))}
             </QueueCard>
@@ -212,6 +218,7 @@ export default function AdminScreen({ onLogout }: AdminScreenProps) {
                   appt={appt}
                   addressText={appt.customer_address ?? ""}
                   onAgentChange={refetch}
+                  onDelete={handleDeleteAppointment}
                   userRole="admin" />
               ))}
             </QueueCard>
@@ -227,6 +234,7 @@ export default function AdminScreen({ onLogout }: AdminScreenProps) {
                   appt={appt}
                   addressText={appt.customer_address ?? ""}
                   onAgentChange={refetch}
+                  onDelete={handleDeleteAppointment}
                   userRole="admin" />
               ))}
             </QueueCard>
@@ -242,6 +250,7 @@ export default function AdminScreen({ onLogout }: AdminScreenProps) {
                   appt={appt}
                   addressText={appt.customer_address ?? ""}
                   onAgentChange={refetch}
+                  onDelete={handleDeleteAppointment}
                   userRole="admin" />
               ))}
             </QueueCard>

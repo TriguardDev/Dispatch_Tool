@@ -146,3 +146,19 @@ export async function searchAgents(params: {
   // The search endpoint returns agents array directly, not wrapped in success/data
   return Array.isArray(result) ? result : (result.success ? result.data : []);
 }
+
+export async function deleteBooking(bookingId: number): Promise<{ success: boolean; message?: string; error?: string }> {
+  const res = await authenticatedFetch(`${BASE_URL}/bookings/${bookingId}`, {
+    method: 'DELETE',
+  });
+
+  if (!res.ok) {
+    if (res.status === 401) {
+      throw new Error("Authentication required");
+    }
+    const errorData = await res.json();
+    throw new Error(errorData.error || "Failed to delete booking");
+  }
+
+  return await res.json();
+}

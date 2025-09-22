@@ -1,8 +1,8 @@
 import { useState, useMemo, useCallback, memo, useEffect } from "react";
 import type { Booking } from "../api/crud";
 import { Card, CardContent, Typography, Chip, Box, Divider, Select, MenuItem, FormControl, TextField, Button, InputLabel, IconButton, Collapse, CircularProgress } from "@mui/material";
-import { AccessTime, LocationOn, Person, Assignment, Add, Remove } from "@mui/icons-material";
-import { searchAgents, updateBooking } from "../api/crud";
+import { AccessTime, LocationOn, Person, Assignment, Add, Remove, Delete } from "@mui/icons-material";
+import { searchAgents, updateBooking, deleteBooking } from "../api/crud";
 
 interface Props {
   appt: Booking;
@@ -10,6 +10,7 @@ interface Props {
   onStatusChange?: (bookingId: number, status: string) => void;
   onDispositionSave?: (bookingId: number, dispositionType: string, note: string) => void;
   onAgentChange?: () => void; // Callback to refresh data after agent assignment
+  onDelete?: (bookingId: number) => void; // Callback when appointment is deleted
   userRole?: "admin" | "dispatcher" | "field_agent"; // User role to control permissions
 }
 
@@ -80,7 +81,7 @@ const DispositionNote = memo(({ note, expanded }: { note: string; expanded: bool
   </Collapse>
 ));
 
-const AppointmentCard = memo(function AppointmentCard({ appt, addressText, onStatusChange, onDispositionSave, onAgentChange, userRole }: Props) {
+const AppointmentCard = memo(function AppointmentCard({ appt, addressText, onStatusChange, onDispositionSave, onAgentChange, onDelete, userRole }: Props) {
   // State management
   const [note, setNote] = useState("");
   const [selectedDisposition, setSelectedDisposition] = useState(appt.disposition_code || "");
@@ -207,6 +208,33 @@ const AppointmentCard = memo(function AppointmentCard({ appt, addressText, onSta
     }
   }, [appt.bookingId, onAgentChange]);
 
+  const handleDelete = useCallback(async () => {
+    if (!onDelete || userRole === 'field_agent') return;
+    
+    const confirmDelete = window.confirm(
+      `Are you sure you want to delete the appointment for ${appt.customer_name} on ${appt.booking_date}?`
+    );
+    
+    if (confirmDelete) {
+      try {
+        console.log("Attempting to delete booking with ID:", appt.bookingId);
+        const result = await deleteBooking(appt.bookingId);
+        console.log("Delete result:", result);
+        
+        if (result.success) {
+          // Call the onDelete callback to refresh the data
+          onDelete(appt.bookingId);
+        } else {
+          throw new Error(result.error || "Delete failed");
+        }
+      } catch (err) {
+        console.error("Error deleting appointment:", err);
+        console.error("Booking ID that failed:", appt.bookingId);
+        alert(`Failed to delete appointment: ${err instanceof Error ? err.message : 'Unknown error'}`);
+      }
+    }
+  }, [appt.bookingId, appt.customer_name, appt.booking_date, onDelete, userRole]);
+
   // Render sections
   const renderHeader = () => (
     <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
@@ -219,7 +247,7 @@ const AppointmentCard = memo(function AppointmentCard({ appt, addressText, onSta
           overflow: 'hidden',
           textOverflow: 'ellipsis',
           whiteSpace: 'nowrap',
-          maxWidth: '70%'
+          maxWidth: userRole === 'field_agent' ? '70%' : '55%'
         }}
       >
         {appt.customer_name}
@@ -440,6 +468,7 @@ const AppointmentCard = memo(function AppointmentCard({ appt, addressText, onSta
         borderRadius: 2,
         boxShadow: '0 2px 4px rgba(0,0,0,0.05)',
         transition: 'all 0.2s ease-in-out',
+        position: 'relative',
         '&:hover': {
           boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
           transform: 'translateY(-1px)',
@@ -554,6 +583,31 @@ const AppointmentCard = memo(function AppointmentCard({ appt, addressText, onSta
               </Box>
             </Box>
           </>
+        )}
+        
+        {/* Delete button positioned at bottom right */}
+        {userRole !== 'field_agent' && onDelete && (
+          <IconButton
+            size="small"
+            onClick={handleDelete}
+            sx={{ 
+              position: 'absolute',
+              bottom: 8,
+              right: 8,
+              color: 'error.main',
+              backgroundColor: 'background.paper',
+              border: '1px solid',
+              borderColor: 'error.main',
+              '&:hover': { 
+                backgroundColor: 'error.main',
+                color: 'error.contrastText'
+              },
+              zIndex: 1
+            }}
+            title="Delete appointment"
+          >
+            <Delete sx={{ fontSize: 16 }} />
+          </IconButton>
         )}
       </CardContent>
     </Card>
