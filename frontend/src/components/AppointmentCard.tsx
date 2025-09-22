@@ -366,7 +366,7 @@ const AppointmentCard = memo(function AppointmentCard({ appt, addressText, onSta
                       <MenuItem 
                         key={agent.agentId} 
                         value={agent.agentId}
-                        onClick={() => handleAgentChange(agent.agentId)}
+                        onClick={() => handleAgentChange(agent.agentId.toString())}
                       >
                         <Box sx={{ display: 'flex', justifyContent: 'space-between', width: '100%' }}>
                           <Typography variant="body2" fontWeight="500">
