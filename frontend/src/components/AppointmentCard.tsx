@@ -352,8 +352,8 @@ const AppointmentCard = memo(function AppointmentCard({ appt, addressText, onSta
                       </Box>
                     </MenuItem>
                   ] : [
-                    // Available agents
-                    ...agents.map((agent) => (
+                    // Available agents only
+                    ...agents.filter((agent: any) => agent.availability_status === 'available').map((agent) => (
                       <MenuItem 
                         key={agent.agentId} 
                         value={agent.agentId}
@@ -370,8 +370,8 @@ const AppointmentCard = memo(function AppointmentCard({ appt, addressText, onSta
                       </MenuItem>
                     )),
                     
-                    // Show message if no agents found (only if agents have been loaded)
-                    ...(agents.length === 0 && agentsLoaded && !loadingAgents ? [
+                    // Show message if no available agents found (only if agents have been loaded)
+                    ...(agents.filter((agent: any) => agent.availability_status === 'available').length === 0 && agentsLoaded && !loadingAgents ? [
                       <MenuItem key="no-agents" disabled>
                         <Typography variant="body2" color="text.secondary" sx={{ fontStyle: 'italic' }}>
                           No nearby agents available
