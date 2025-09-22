@@ -15,7 +15,6 @@ interface PhoneInputProps {
   label?: string;
   fullWidth?: boolean;
   size?: 'small' | 'medium';
-  international?: boolean;
 }
 
 export default function PhoneInput({
@@ -29,9 +28,7 @@ export default function PhoneInput({
   name,
   label = "Phone",
   fullWidth = true,
-  size = "medium",
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  international = false
+  size = "medium"
 }: PhoneInputProps) {
   const [displayValue, setDisplayValue] = useState('');
   const [isValid, setIsValid] = useState(false);

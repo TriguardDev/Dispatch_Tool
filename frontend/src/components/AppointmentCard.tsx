@@ -4,6 +4,15 @@ import { Card, CardContent, Typography, Chip, Box, Divider, Select, MenuItem, Fo
 import { AccessTime, LocationOn, Person, Assignment, Add, Remove, Delete } from "@mui/icons-material";
 import { searchAgents, updateBooking, deleteBooking } from "../api/crud";
 
+interface AgentWithAvailability {
+  agentId: number;
+  name: string;
+  distance: number;
+  availability_status: string;
+  team_id?: number;
+  unavailable_reason?: string;
+}
+
 interface Props {
   appt: Booking;
   addressText: string;
@@ -87,7 +96,7 @@ const AppointmentCard = memo(function AppointmentCard({ appt, addressText, onSta
   const [selectedDisposition, setSelectedDisposition] = useState(appt.disposition_code || "");
   const [dispositionSaved, setDispositionSaved] = useState(false);
   const [noteExpanded, setNoteExpanded] = useState(false);
-  const [agents, setAgents] = useState<Agent[]>([]);
+  const [agents, setAgents] = useState<AgentWithAvailability[]>([]);
   const [loadingAgents, setLoadingAgents] = useState(false);
   const [agentDropdownOpen, setAgentDropdownOpen] = useState(false);
   const [agentsLoaded, setAgentsLoaded] = useState(false); // Track if agents have been loaded
@@ -353,11 +362,11 @@ const AppointmentCard = memo(function AppointmentCard({ appt, addressText, onSta
                     </MenuItem>
                   ] : [
                     // Available agents only
-                    ...agents.filter((agent: any) => agent.availability_status === 'available').map((agent) => (
+                    ...agents.filter(agent => agent.availability_status === 'available').map((agent) => (
                       <MenuItem 
                         key={agent.agentId} 
                         value={agent.agentId}
-                        onClick={() => handleAgentChange(agent.agentId)}
+                        onClick={() => handleAgentChange(agent.agentId.toString())}
                       >
                         <Box sx={{ display: 'flex', justifyContent: 'space-between', width: '100%' }}>
                           <Typography variant="body2" fontWeight="500">
@@ -371,7 +380,7 @@ const AppointmentCard = memo(function AppointmentCard({ appt, addressText, onSta
                     )),
                     
                     // Show message if no available agents found (only if agents have been loaded)
-                    ...(agents.filter((agent: any) => agent.availability_status === 'available').length === 0 && agentsLoaded && !loadingAgents ? [
+                    ...(agents.filter(agent => agent.availability_status === 'available').length === 0 && agentsLoaded && !loadingAgents ? [
                       <MenuItem key="no-agents" disabled>
                         <Typography variant="body2" color="text.secondary" sx={{ fontStyle: 'italic' }}>
                           No nearby agents available

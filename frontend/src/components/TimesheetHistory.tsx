@@ -150,7 +150,7 @@ export default function TimesheetHistory({ onLogout, userRole }: Props) {
     fetchTimesheetHistory(1, statusFilter, newLimit);
   };
 
-  const handleStatusFilterChange = (event: any) => {
+  const handleStatusFilterChange = (event: { target: { value: string } }) => {
     const newStatus = event.target.value;
     setStatusFilter(newStatus);
     fetchTimesheetHistory(1, newStatus, pagination.limit);
