@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { 
   Dialog, 
   DialogTitle, 
@@ -12,6 +12,7 @@ import {
 } from "@mui/material";
 import Grid from '@mui/material/Grid';
 import { Close } from "@mui/icons-material";
+import { FormControl, InputLabel, Select, MenuItem, Alert } from "@mui/material";
 import { findLatLong } from "../api/location_conversion";
 import { createBooking, searchAgents } from "../api/crud";
 import AgentSelector from "./AgentSelector";
@@ -45,12 +46,16 @@ export default function NewAppointmentModal({ isOpen, onClose, onSave, onLogout 
     time: "",
     rep: "",
     type: "Roof Replacement",
+    region_id: null as number | null,
   });
 
   const [latLon, setLatLon] = useState<{ lat: number | null, lon: number | null }>({ lat: null, lon: null });
   const [phoneValid, setPhoneValid] = useState(false);
   const [agents, setAgents] = useState<Agent[]>([]);
+  const [regions, setRegions] = useState<any[]>([]);
+  const [loadingRegions, setLoadingRegions] = useState(true);
   const [loadingAgents, setLoadingAgents] = useState(false);
+  const [regionWarning, setRegionWarning] = useState<string | null>(null);
 
   // ensure HH:MM:SS
   const formatTime = (time: string) => {
@@ -94,6 +99,11 @@ export default function NewAppointmentModal({ isOpen, onClose, onSave, onLogout 
       return;
     }
 
+    if (!form.region_id) {
+      alert("Please select a region for this appointment");
+      return;
+    }
+
     // Transform flat form into backend format
     const payload = {
       customer: {
@@ -115,6 +125,7 @@ export default function NewAppointmentModal({ isOpen, onClose, onSave, onLogout 
         agentId: Number(form.rep),
         booking_date: form.date,
         booking_time: formatTime(form.time),
+        region_id: form.region_id,
       },
     };
     
@@ -176,6 +187,59 @@ export default function NewAppointmentModal({ isOpen, onClose, onSave, onLogout 
   const handlePhoneChange = (phoneValue: string) => {
     setForm((prev) => ({ ...prev, phone: phoneValue }));
   };
+
+  const handleRegionChange = (regionId: number) => {
+    setForm((prev) => ({ ...prev, region_id: regionId }));
+    
+    // Check if Global region was selected and show warning
+    const selectedRegion = regions.find(r => r.regionId === regionId);
+    if (selectedRegion && selectedRegion.is_global) {
+      setRegionWarning("Warning: Global region selected. This appointment will be visible to all teams, which is not recommended for optimal workflow.");
+    } else {
+      setRegionWarning(null);
+    }
+  };
+
+  // Fetch regions when component mounts
+  const fetchRegions = async () => {
+    try {
+      const BASE_URL = import.meta.env.VITE_BASE_API_URL;
+      const response = await fetch(`${BASE_URL}/regions`, {
+        credentials: 'include'
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to fetch regions');
+      }
+      
+      const text = await response.text();
+      console.log('Raw response:', text); // Debug log
+      
+      const data = JSON.parse(text);
+      if (data.success) {
+        setRegions(data.data);
+      } else {
+        throw new Error(data.error || 'Failed to fetch regions');
+      }
+    } catch (err) {
+      console.error('Error fetching regions:', err);
+      const errorMessage = (err as Error).message || "Error fetching regions";
+      
+      if (errorMessage.includes("Authentication required")) {
+        onLogout();
+      }
+      // Remove alert to avoid spam during infinite loops
+    } finally {
+      setLoadingRegions(false);
+    }
+  };
+
+  // Load regions when modal opens
+  useEffect(() => {
+    if (isOpen && regions.length === 0) {
+      fetchRegions();
+    }
+  }, [isOpen]);
 
   return (
     <Dialog 
@@ -335,6 +399,33 @@ export default function NewAppointmentModal({ isOpen, onClose, onSave, onLogout 
                 }}
               />
             </Grid>
+
+            {/* Region Selection */}
+            <Grid size={{ xs: 12, md: 6 }}>
+              <FormControl fullWidth required>
+                <InputLabel>Region</InputLabel>
+                <Select
+                  value={form.region_id || ''}
+                  onChange={(e) => handleRegionChange(Number(e.target.value))}
+                  label="Region"
+                >
+                  {regions.map((region) => (
+                    <MenuItem key={region.regionId} value={region.regionId}>
+                      {region.name} {region.is_global ? '(Global)' : ''}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+            </Grid>
+
+            {/* Region Warning */}
+            {regionWarning && (
+              <Grid size={{ xs: 12 }}>
+                <Alert severity="warning">
+                  {regionWarning}
+                </Alert>
+              </Grid>
+            )}
 
             {/* Agent Selection */}
             <Grid size={{ xs: 12 }}>

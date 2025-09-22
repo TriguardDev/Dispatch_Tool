@@ -16,10 +16,14 @@ export interface Booking {
   disposition_code: string | null
   disposition_description: string | null
   disposition_note: string | null
+  regionId?: number;
+  region_name?: string;
+  region_is_global?: boolean;
 }
 
-export async function getAllBookings(): Promise<Booking[]> {
-  const res = await authenticatedFetch(`${BASE_URL}/bookings`);
+export async function getAllBookings(regionId?: number): Promise<Booking[]> {
+  const url = regionId ? `${BASE_URL}/bookings?region_id=${regionId}` : `${BASE_URL}/bookings`;
+  const res = await authenticatedFetch(url);
 
   if (!res.ok) {
     if (res.status === 401) {
@@ -141,4 +145,20 @@ export async function searchAgents(params: {
   const result = await res.json();
   // The search endpoint returns agents array directly, not wrapped in success/data
   return Array.isArray(result) ? result : (result.success ? result.data : []);
+}
+
+export async function deleteBooking(bookingId: number): Promise<{ success: boolean; message?: string; error?: string }> {
+  const res = await authenticatedFetch(`${BASE_URL}/bookings/${bookingId}`, {
+    method: 'DELETE',
+  });
+
+  if (!res.ok) {
+    if (res.status === 401) {
+      throw new Error("Authentication required");
+    }
+    const errorData = await res.json();
+    throw new Error(errorData.error || "Failed to delete booking");
+  }
+
+  return await res.json();
 }
