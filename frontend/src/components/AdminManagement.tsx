@@ -40,6 +40,7 @@ import {
 import PhoneInput from './PhoneInput';
 import TeamManagement from './TeamManagement';
 import DispositionManagement from './DispositionManagement';
+import RegionManagement from './RegionManagement';
 
 interface User {
   id: number;
@@ -505,6 +506,14 @@ export default function AdminManagement() {
               </Box>
             } 
           />
+          <Tab 
+            label={
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                <AdminIcon />
+                <span>Regions</span>
+              </Box>
+            } 
+          />
         </Tabs>
       </Box>
 
@@ -708,6 +717,11 @@ export default function AdminManagement() {
       {/* Dispositions Tab */}
       <TabPanel value={tabValue} index={4}>
         <DispositionManagement />
+      </TabPanel>
+
+      {/* Regions Tab */}
+      <TabPanel value={tabValue} index={5}>
+        <RegionManagement />
       </TabPanel>
 
       {/* Create User Modal */}

@@ -9,6 +9,8 @@ from routes.admin import admin_bp
 from routes.dispatcher import dispatcher_bp
 from routes.teams import teams_bp
 from routes.timeoff import timeoff_bp
+from routes.regions import regions_bp
+from routes.timesheet import timesheet_bp
 from config import Config
 from extensions import mail
 import logging
@@ -24,7 +26,7 @@ def create_app():
              "http://localhost:5173",    # Vite dev server
              "http://localhost:4173",    # Vite preview
              "https://app.salesdispatcher.com",  # Replace with your actual domain
-             "http://54.88.30.22"       # Appointment form server
+             "https://appointment-form.thspros.com"       # Appointment form server
          ],
          allow_headers=["Content-Type", "Authorization", "X-API-Key"],
          methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"]
@@ -40,6 +42,8 @@ def create_app():
     app.register_blueprint(dispatcher_bp)
     app.register_blueprint(teams_bp)
     app.register_blueprint(timeoff_bp)
+    app.register_blueprint(regions_bp)
+    app.register_blueprint(timesheet_bp)
     
     app.config["MAIL_SERVER"] = Config.MAIL_SERVER
     app.config["MAIL_PORT"] = Config.MAIL_PORT

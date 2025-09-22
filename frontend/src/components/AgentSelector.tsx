@@ -5,6 +5,7 @@ interface Agent {
   agentId: string;
   name: string;
   distance: string;
+  availability_status?: string;
 }
 
 interface AgentSelectorProps {
@@ -33,7 +34,8 @@ export default function AgentSelector({
     return "text-green-600";
   };
 
-  const selectedAgent = agents.find(a => a.agentId === selectedRep);
+  const availableAgents = agents.filter(agent => agent.availability_status === 'available');
+  const selectedAgent = availableAgents.find(a => a.agentId === selectedRep);
 
   return (
     <div className="md:col-span-2 flex flex-col md:flex-row items-end gap-3 relative">
@@ -50,13 +52,13 @@ export default function AgentSelector({
             ? `${selectedAgent.name} - ${Math.ceil(Number(selectedAgent.distance))} km`
             : loading
             ? "Searching..."
-            : agents.length > 0
+            : availableAgents.length > 0
             ? "Select an agent"
-            : "No agents found"}
+            : "No available agents found"}
           <span className="ml-2">▼</span>
         </div>
 
-        {isOpen && agents.length > 0 && (
+        {isOpen && availableAgents.length > 0 && (
           <div 
             className="absolute mt-1 w-full max-h-60 overflow-y-auto border rounded-lg shadow-lg z-50"
             style={{ 
@@ -64,7 +66,7 @@ export default function AgentSelector({
               borderColor: theme.palette.divider 
             }}
           >
-            {agents.map((agent) => {
+            {availableAgents.map((agent) => {
               const distance = Math.ceil(Number(agent.distance));
               const color = getDistanceColor(distance);
               return (

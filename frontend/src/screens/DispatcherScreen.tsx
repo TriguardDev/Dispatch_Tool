@@ -6,6 +6,8 @@ import QueueCard from "../components/QueueCard";
 import AppointmentCard from "../components/AppointmentCard";
 import NewAppointmentModal from "../components/NewAppointmentModal";
 import TimeOffManagement from "../components/TimeOffManagement";
+import TimesheetManagement from "../components/TimesheetManagement";
+import TimesheetHistory from "../components/TimesheetHistory";
 import { getAllBookings } from "../api/crud";
 import { useSmartPolling } from "../hooks/useSmartPolling";
 
@@ -45,11 +47,24 @@ export default function DispatcherScreen({ onLogout }: DispatcherScreenProps) {
     refetch(); // Refresh data after saving
   };
 
-  // Categorize bookings by status
-  const scheduled = bookings.filter((b) => ["scheduled"].includes(b.status.toLowerCase()));
-  const enroute = bookings.filter((b) => ["enroute"].includes(b.status.toLowerCase()));
-  const onsite = bookings.filter((b) => ["on-site"].includes(b.status.toLowerCase()));
-  const completed = bookings.filter((b) => ["completed"].includes(b.status.toLowerCase()));
+  const handleDeleteAppointment = (bookingId: number) => {
+    // Just trigger a refetch - the AppointmentCard handles the actual deletion
+    refetch();
+  };
+
+  // Categorize bookings by status and region
+  const globalBookings = bookings.filter((b) => b.region_is_global);
+  const teamBookings = bookings.filter((b) => !b.region_is_global);
+  
+  const globalScheduled = globalBookings.filter((b) => ["scheduled"].includes(b.status.toLowerCase()));
+  const globalEnroute = globalBookings.filter((b) => ["enroute"].includes(b.status.toLowerCase()));
+  const globalOnsite = globalBookings.filter((b) => ["on-site"].includes(b.status.toLowerCase()));
+  const globalCompleted = globalBookings.filter((b) => ["completed"].includes(b.status.toLowerCase()));
+
+  const teamScheduled = teamBookings.filter((b) => ["scheduled"].includes(b.status.toLowerCase()));
+  const teamEnroute = teamBookings.filter((b) => ["enroute"].includes(b.status.toLowerCase()));
+  const teamOnsite = teamBookings.filter((b) => ["on-site"].includes(b.status.toLowerCase()));
+  const teamCompleted = teamBookings.filter((b) => ["completed"].includes(b.status.toLowerCase()));
 
   if (loading) {
     return (
@@ -81,14 +96,20 @@ export default function DispatcherScreen({ onLogout }: DispatcherScreenProps) {
         {/* Tabs */}
         <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 3 }}>
           <Tabs value={tabValue} onChange={(_, newValue) => setTabValue(newValue)}>
-            <Tab label="All Appointments" />
+            <Tab label="Global Appointments" />
+            <Tab label="Team Appointments" />
             <Tab label="Team Time-Off" />
+            <Tab label="Team Timesheets" />
+            <Tab label="Timesheet History" />
           </Tabs>
         </Box>
 
-        {/* Appointments Tab */}
+        {/* Global Appointments Tab */}
         {tabValue === 0 && (
           <>
+            <Typography variant="h6" sx={{ mb: 2 }}>
+              Global Appointments (accessible by all teams)
+            </Typography>
             <Filters 
               onNewAppt={handleModalOpen} 
               onRefresh={refetch}
@@ -96,68 +117,166 @@ export default function DispatcherScreen({ onLogout }: DispatcherScreenProps) {
             />
 
             <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
-          <QueueCard
-            title="Queue — Scheduled"
-            badgeColor="bg-blue-50 text-blue-700"
-            count={scheduled.length}
-          >
-            {scheduled.map((appt) => (
-              <AppointmentCard 
-                key={appt.bookingId} 
-                appt={appt}
-                addressText={appt.customer_address ?? ""}
-                onAgentChange={refetch} />
-            ))}
-          </QueueCard>
+              <QueueCard
+                title="Queue — Scheduled"
+                badgeColor="bg-blue-50 text-blue-700"
+                count={globalScheduled.length}
+              >
+                {globalScheduled.map((appt) => (
+                  <AppointmentCard 
+                    key={appt.bookingId} 
+                    appt={appt}
+                    addressText={appt.customer_address ?? ""}
+                    onAgentChange={refetch}
+                    onDelete={handleDeleteAppointment}
+                    userRole="dispatcher" />
+                ))}
+              </QueueCard>
 
-          <QueueCard
-            title="En Route"
-            badgeColor="bg-blue-50 text-blue-700"
-            count={enroute.length}
-          >
-            {enroute.map((appt) => (
-              <AppointmentCard 
-                key={appt.bookingId} 
-                appt={appt}
-                addressText={appt.customer_address ?? ""}
-                onAgentChange={refetch} />
-            ))}
-          </QueueCard>
+              <QueueCard
+                title="En Route"
+                badgeColor="bg-blue-50 text-blue-700"
+                count={globalEnroute.length}
+              >
+                {globalEnroute.map((appt) => (
+                  <AppointmentCard 
+                    key={appt.bookingId} 
+                    appt={appt}
+                    addressText={appt.customer_address ?? ""}
+                    onAgentChange={refetch}
+                    onDelete={handleDeleteAppointment}
+                    userRole="dispatcher" />
+                ))}
+              </QueueCard>
 
-          <QueueCard
-            title="On Site"
-            badgeColor="bg-yellow-50 text-yellow-700"
-            count={onsite.length}
-          >
-            {onsite.map((appt) => (
-              <AppointmentCard 
-                key={appt.bookingId} 
-                appt={appt}
-                addressText={appt.customer_address ?? ""}
-                onAgentChange={refetch} />
-            ))}
-          </QueueCard>
+              <QueueCard
+                title="On Site"
+                badgeColor="bg-yellow-50 text-yellow-700"
+                count={globalOnsite.length}
+              >
+                {globalOnsite.map((appt) => (
+                  <AppointmentCard 
+                    key={appt.bookingId} 
+                    appt={appt}
+                    addressText={appt.customer_address ?? ""}
+                    onAgentChange={refetch}
+                    onDelete={handleDeleteAppointment}
+                    userRole="dispatcher" />
+                ))}
+              </QueueCard>
 
-          <QueueCard
-            title="Completed Today"
-            badgeColor="bg-emerald-50 text-emerald-700"
-            count={completed.length}
-          >
-            {completed.map((appt) => (
-              <AppointmentCard 
-                key={appt.bookingId} 
-                appt={appt}
-                addressText={appt.customer_address ?? ""}
-                onAgentChange={refetch} />
-            ))}
-          </QueueCard>
+              <QueueCard
+                title="Completed Today"
+                badgeColor="bg-emerald-50 text-emerald-700"
+                count={globalCompleted.length}
+              >
+                {globalCompleted.map((appt) => (
+                  <AppointmentCard 
+                    key={appt.bookingId} 
+                    appt={appt}
+                    addressText={appt.customer_address ?? ""}
+                    onAgentChange={refetch}
+                    onDelete={handleDeleteAppointment}
+                    userRole="dispatcher" />
+                ))}
+              </QueueCard>
+            </div>
+          </>
+        )}
+
+        {/* Team Appointments Tab */}
+        {tabValue === 1 && (
+          <>
+            <Typography variant="h6" sx={{ mb: 2 }}>
+              Team Appointments (your region only)
+            </Typography>
+            <Filters 
+              onNewAppt={handleModalOpen} 
+              onRefresh={refetch}
+              refreshing={loading}
+            />
+
+            <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
+              <QueueCard
+                title="Queue — Scheduled"
+                badgeColor="bg-blue-50 text-blue-700"
+                count={teamScheduled.length}
+              >
+                {teamScheduled.map((appt) => (
+                  <AppointmentCard 
+                    key={appt.bookingId} 
+                    appt={appt}
+                    addressText={appt.customer_address ?? ""}
+                    onAgentChange={refetch}
+                    onDelete={handleDeleteAppointment}
+                    userRole="dispatcher" />
+                ))}
+              </QueueCard>
+
+              <QueueCard
+                title="En Route"
+                badgeColor="bg-blue-50 text-blue-700"
+                count={teamEnroute.length}
+              >
+                {teamEnroute.map((appt) => (
+                  <AppointmentCard 
+                    key={appt.bookingId} 
+                    appt={appt}
+                    addressText={appt.customer_address ?? ""}
+                    onAgentChange={refetch}
+                    onDelete={handleDeleteAppointment}
+                    userRole="dispatcher" />
+                ))}
+              </QueueCard>
+
+              <QueueCard
+                title="On Site"
+                badgeColor="bg-yellow-50 text-yellow-700"
+                count={teamOnsite.length}
+              >
+                {teamOnsite.map((appt) => (
+                  <AppointmentCard 
+                    key={appt.bookingId} 
+                    appt={appt}
+                    addressText={appt.customer_address ?? ""}
+                    onAgentChange={refetch}
+                    onDelete={handleDeleteAppointment}
+                    userRole="dispatcher" />
+                ))}
+              </QueueCard>
+
+              <QueueCard
+                title="Completed Today"
+                badgeColor="bg-emerald-50 text-emerald-700"
+                count={teamCompleted.length}
+              >
+                {teamCompleted.map((appt) => (
+                  <AppointmentCard 
+                    key={appt.bookingId} 
+                    appt={appt}
+                    addressText={appt.customer_address ?? ""}
+                    onAgentChange={refetch}
+                    onDelete={handleDeleteAppointment}
+                    userRole="dispatcher" />
+                ))}
+              </QueueCard>
             </div>
           </>
         )}
 
         {/* Time-Off Management Tab */}
-        {tabValue === 1 && (
+        {tabValue === 2 && (
           <TimeOffManagement onLogout={onLogout} userRole="dispatcher" />
+        )}
+
+        {/* Timesheet Management Tab */}
+        {tabValue === 3 && (
+          <TimesheetManagement onLogout={onLogout} userRole="dispatcher" />
+        )}
+
+        {/* Timesheet History Tab */}
+        {tabValue === 4 && (
+          <TimesheetHistory onLogout={onLogout} userRole="dispatcher" />
         )}
       </Container>
 

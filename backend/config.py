@@ -3,6 +3,9 @@ from dotenv import load_dotenv
 load_dotenv()
 
 class Config:
+    # Environment detection
+    FLASK_ENV = os.getenv("FLASK_ENV", "development")
+    
     MYSQL_HOST = os.getenv("MYSQL_HOST")
     MYSQL_PORT = int(os.getenv("MYSQL_PORT"))
     MYSQL_USER = os.getenv("MYSQL_USER")

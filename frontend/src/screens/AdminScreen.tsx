@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Box, Typography, CircularProgress, Container, Tabs, Tab } from "@mui/material";
 import TopBar from "../components/TopBar";
 import Filters from "../components/Filters";
@@ -8,6 +8,7 @@ import NewAppointmentModal from "../components/NewAppointmentModal";
 import AdminManagement from "../components/AdminManagement";
 import TimeOffManagement from "../components/TimeOffManagement";
 import { getAllBookings } from "../api/crud";
+import { FormControl, InputLabel, Select, MenuItem } from "@mui/material";
 import { useSmartPolling } from "../hooks/useSmartPolling";
 
 interface AdminScreenProps {
@@ -46,6 +47,13 @@ function a11yProps(index: number) {
 export default function AdminScreen({ onLogout }: AdminScreenProps) {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [tabValue, setTabValue] = useState(0);
+  const [selectedRegionFilter, setSelectedRegionFilter] = useState<number | 'all'>('all');
+  const [regions, setRegions] = useState<any[]>([]);
+  
+  // Memoize the fetch function to prevent useEffect dependency issues
+  const fetchBookingsWithRegion = useCallback(() => {
+    return getAllBookings(selectedRegionFilter === 'all' ? undefined : selectedRegionFilter);
+  }, [selectedRegionFilter]);
   
   const {
     data: bookings,
@@ -55,7 +63,7 @@ export default function AdminScreen({ onLogout }: AdminScreenProps) {
     pausePolling,
     resumePolling
   } = useSmartPolling({
-    fetchFunction: getAllBookings,
+    fetchFunction: fetchBookingsWithRegion,
     onLogout
   });
 
@@ -75,9 +83,43 @@ export default function AdminScreen({ onLogout }: AdminScreenProps) {
     refetch(); // Refresh data after saving
   };
 
+  const handleDeleteAppointment = (bookingId: number) => {
+    // Just trigger a refetch - the AppointmentCard handles the actual deletion
+    refetch();
+  };
+
   const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
     setTabValue(newValue);
   };
+
+  // Fetch regions for filter
+  const fetchRegions = async () => {
+    try {
+      const BASE_URL = import.meta.env.VITE_BASE_API_URL;
+      const response = await fetch(`${BASE_URL}/regions`, {
+        credentials: 'include'
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to fetch regions');
+      }
+      
+      const text = await response.text();
+      console.log('AdminScreen - Raw regions response:', text); // Debug log
+      
+      const data = JSON.parse(text);
+      if (data.success) {
+        setRegions(data.data);
+      }
+    } catch (err) {
+      console.error('Error fetching regions:', err);
+    }
+  };
+
+  // Load regions when component mounts
+  useEffect(() => {
+    fetchRegions();
+  }, []);
 
   // Categorize bookings by status
   const scheduled = bookings.filter((b) => ["scheduled"].includes(b.status.toLowerCase()));
@@ -124,6 +166,24 @@ export default function AdminScreen({ onLogout }: AdminScreenProps) {
 
         {/* Bookings Dashboard Tab */}
         <TabPanel value={tabValue} index={0}>
+          <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
+            <FormControl sx={{ minWidth: 200 }}>
+              <InputLabel>Filter by Region</InputLabel>
+              <Select
+                value={selectedRegionFilter}
+                onChange={(e) => setSelectedRegionFilter(e.target.value as number | 'all')}
+                label="Filter by Region"
+              >
+                <MenuItem value="all">All Regions</MenuItem>
+                {regions.map((region) => (
+                  <MenuItem key={region.regionId} value={region.regionId}>
+                    {region.name} {region.is_global ? '(Global)' : ''}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+          </Box>
+          
           <Filters 
             onNewAppt={handleModalOpen} 
             onRefresh={refetch}
@@ -141,7 +201,9 @@ export default function AdminScreen({ onLogout }: AdminScreenProps) {
                   key={appt.bookingId} 
                   appt={appt}
                   addressText={appt.customer_address ?? ""}
-                  onAgentChange={refetch} />
+                  onAgentChange={refetch}
+                  onDelete={handleDeleteAppointment}
+                  userRole="admin" />
               ))}
             </QueueCard>
 
@@ -155,7 +217,9 @@ export default function AdminScreen({ onLogout }: AdminScreenProps) {
                   key={appt.bookingId} 
                   appt={appt}
                   addressText={appt.customer_address ?? ""}
-                  onAgentChange={refetch} />
+                  onAgentChange={refetch}
+                  onDelete={handleDeleteAppointment}
+                  userRole="admin" />
               ))}
             </QueueCard>
 
@@ -169,7 +233,9 @@ export default function AdminScreen({ onLogout }: AdminScreenProps) {
                   key={appt.bookingId} 
                   appt={appt}
                   addressText={appt.customer_address ?? ""}
-                  onAgentChange={refetch} />
+                  onAgentChange={refetch}
+                  onDelete={handleDeleteAppointment}
+                  userRole="admin" />
               ))}
             </QueueCard>
 
@@ -183,7 +249,9 @@ export default function AdminScreen({ onLogout }: AdminScreenProps) {
                   key={appt.bookingId} 
                   appt={appt}
                   addressText={appt.customer_address ?? ""}
-                  onAgentChange={refetch} />
+                  onAgentChange={refetch}
+                  onDelete={handleDeleteAppointment}
+                  userRole="admin" />
               ))}
             </QueueCard>
           </div>

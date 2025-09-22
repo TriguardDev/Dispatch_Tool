@@ -53,11 +53,13 @@ def validate_team_data(data):
 def get_teams(cursor, conn):
     """Get all teams with their members"""
     try:
-        # Get all teams
+        # Get all teams with their region information
         teams_query = """
-        SELECT teamId, name, description, created_time, updated_time 
-        FROM teams 
-        ORDER BY name
+        SELECT t.teamId, t.name, t.description, t.created_time, t.updated_time,
+               r.regionId, r.name as region_name, r.is_global as region_is_global
+        FROM teams t
+        LEFT JOIN regions r ON t.region_id = r.regionId
+        ORDER BY t.name
         """
         cursor.execute(teams_query)
         teams = cursor.fetchall()
@@ -111,21 +113,37 @@ def create_team(cursor, conn):
         if cursor.fetchone():
             return jsonify({"success": False, "error": "Team name already exists"}), 409
         
+        # Validate region_id if provided
+        region_id = data.get('region_id')
+        if region_id is not None:
+            cursor.execute("SELECT regionId FROM regions WHERE regionId = %s", (region_id,))
+            if not cursor.fetchone():
+                return jsonify({"success": False, "error": "Invalid region ID"}), 400
+        else:
+            # Default to Global region (regionId = 1)
+            region_id = 1
+        
         # Insert new team
         insert_query = """
-        INSERT INTO teams (name, description) 
-        VALUES (%s, %s)
+        INSERT INTO teams (name, description, region_id) 
+        VALUES (%s, %s, %s)
         """
         cursor.execute(insert_query, (
             data['name'].strip(),
-            data.get('description', '').strip() if data.get('description') else None
+            data.get('description', '').strip() if data.get('description') else None,
+            region_id
         ))
         
         team_id = cursor.lastrowid
         conn.commit()
         
-        # Return the created team
-        cursor.execute("SELECT * FROM teams WHERE teamId = %s", (team_id,))
+        # Return the created team with region information
+        cursor.execute("""
+            SELECT t.*, r.regionId, r.name as region_name, r.is_global as region_is_global
+            FROM teams t
+            LEFT JOIN regions r ON t.region_id = r.regionId
+            WHERE t.teamId = %s
+        """, (team_id,))
         team = cursor.fetchone()
         
         return jsonify({"success": True, "data": team}), 201
@@ -141,8 +159,14 @@ def create_team(cursor, conn):
 def get_team(cursor, conn, team_id):
     """Get a specific team with its members"""
     try:
-        # Get team details
-        cursor.execute("SELECT * FROM teams WHERE teamId = %s", (team_id,))
+        # Get team details with region information
+        team_query = """
+        SELECT t.*, r.regionId, r.name as region_name, r.is_global as region_is_global
+        FROM teams t
+        LEFT JOIN regions r ON t.region_id = r.regionId
+        WHERE t.teamId = %s
+        """
+        cursor.execute(team_query, (team_id,))
         team = cursor.fetchone()
         
         if not team:
@@ -199,22 +223,80 @@ def update_team(cursor, conn, team_id):
         if cursor.fetchone():
             return jsonify({"success": False, "error": "Team name already exists"}), 409
         
+        # Validate region_id if provided
+        update_values = [data['name'].strip()]
+        set_clauses = ["name = %s"]
+        
+        # Handle description
+        if 'description' in data:
+            set_clauses.append("description = %s")
+            update_values.append(data.get('description', '').strip() if data.get('description') else None)
+        
+        # Handle region reassignment
+        if 'region_id' in data:
+            region_id = data['region_id']
+            if region_id is not None:
+                cursor.execute("SELECT regionId FROM regions WHERE regionId = %s", (region_id,))
+                if not cursor.fetchone():
+                    return jsonify({"success": False, "error": "Invalid region ID"}), 400
+            
+            # Check if team has incomplete appointments before allowing region change
+            # First get the team's current region and name
+            cursor.execute("SELECT region_id, name FROM teams WHERE teamId = %s", (team_id,))
+            current_team = cursor.fetchone()
+            
+            if current_team and current_team['region_id']:
+                # Check for appointments in the current region that are incomplete
+                cursor.execute("""
+                    SELECT COUNT(*) as count FROM bookings b
+                    WHERE b.region_id = %s AND b.status IN ('scheduled', 'in-progress')
+                """, (current_team['region_id'],))
+                region_result = cursor.fetchone()
+                
+                if region_result['count'] > 0:
+                    return jsonify({
+                        "success": False, 
+                        "error": f"Cannot change region for team '{current_team['name']}'. There are {region_result['count']} incomplete appointments in the current region. Please complete or reassign these appointments first."
+                    }), 400
+            
+            # Also check for appointments directly assigned to team members
+            cursor.execute("""
+                SELECT COUNT(*) as count FROM bookings b
+                JOIN field_agents fa ON b.agentId = fa.agentId
+                WHERE fa.team_id = %s AND b.status IN ('scheduled', 'in-progress')
+            """, (team_id,))
+            member_result = cursor.fetchone()
+            
+            if member_result['count'] > 0:
+                team_name = current_team['name'] if current_team else 'Unknown'
+                return jsonify({
+                    "success": False, 
+                    "error": f"Cannot change region for team '{team_name}'. There are {member_result['count']} incomplete appointments assigned to team members. Please complete or reassign these appointments first."
+                }), 400
+            
+            set_clauses.append("region_id = %s")
+            update_values.append(region_id)
+        
+        set_clauses.append("updated_time = CURRENT_TIMESTAMP")
+        update_values.append(team_id)
+        
         # Update team
-        update_query = """
+        update_query = f"""
         UPDATE teams 
-        SET name = %s, description = %s, updated_time = CURRENT_TIMESTAMP 
+        SET {', '.join(set_clauses)}
         WHERE teamId = %s
         """
-        cursor.execute(update_query, (
-            data['name'].strip(),
-            data.get('description', '').strip() if data.get('description') else None,
-            team_id
-        ))
+        cursor.execute(update_query, update_values)
         
         conn.commit()
         
-        # Return updated team
-        cursor.execute("SELECT * FROM teams WHERE teamId = %s", (team_id,))
+        # Return updated team with region information
+        cursor.execute("""
+            SELECT t.*, r.regionId, r.name as region_name, r.is_global as region_is_global
+            FROM teams t
+            LEFT JOIN regions r ON t.region_id = r.regionId
+            WHERE t.teamId = %s
+        """, (team_id,))
         team = cursor.fetchone()
         
         return jsonify({"success": True, "data": team}), 200
@@ -231,9 +313,43 @@ def delete_team(cursor, conn, team_id):
     """Delete a team (removes team assignments from members)"""
     try:
         # Check if team exists
-        cursor.execute("SELECT teamId FROM teams WHERE teamId = %s", (team_id,))
-        if not cursor.fetchone():
+        cursor.execute("SELECT teamId, name FROM teams WHERE teamId = %s", (team_id,))
+        team = cursor.fetchone()
+        if not team:
             return jsonify({"success": False, "error": "Team not found"}), 404
+        
+        # Check for incomplete appointments in the team's region or assigned to team members
+        # First get the team's region
+        cursor.execute("SELECT region_id FROM teams WHERE teamId = %s", (team_id,))
+        team_region = cursor.fetchone()
+        
+        if team_region and team_region['region_id']:
+            # Check for appointments in this team's region that are incomplete
+            cursor.execute("""
+                SELECT COUNT(*) as count FROM bookings b
+                WHERE b.region_id = %s AND b.status IN ('scheduled', 'in-progress')
+            """, (team_region['region_id'],))
+            region_result = cursor.fetchone()
+            
+            if region_result['count'] > 0:
+                return jsonify({
+                    "success": False, 
+                    "error": f"Cannot delete team '{team['name']}'. There are {region_result['count']} incomplete appointments in this team's region. Please complete or reassign these appointments first."
+                }), 400
+        
+        # Also check for appointments directly assigned to team members
+        cursor.execute("""
+            SELECT COUNT(*) as count FROM bookings b
+            JOIN field_agents fa ON b.agentId = fa.agentId
+            WHERE fa.team_id = %s AND b.status IN ('scheduled', 'in-progress')
+        """, (team_id,))
+        member_result = cursor.fetchone()
+        
+        if member_result['count'] > 0:
+            return jsonify({
+                "success": False, 
+                "error": f"Cannot delete team '{team['name']}'. There are {member_result['count']} incomplete appointments assigned to team members. Please complete or reassign these appointments first."
+            }), 400
         
         # Remove team assignments from dispatchers and agents
         cursor.execute("UPDATE dispatchers SET team_id = NULL WHERE team_id = %s", (team_id,))

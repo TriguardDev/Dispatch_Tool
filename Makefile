@@ -12,10 +12,12 @@ help:
 	@echo "  make prod-bg   - Start production environment in background"
 	@echo "  make logs      - View development logs"
 	@echo "  make down      - Stop all containers"
+	@echo "  make dev-down  - Stop and remove dev containers and volumes"
 	@echo "  make clean     - Clean Docker system"
 	@echo "  make test      - Run tests"
 	@echo "  make backup    - Backup database"
-
+	@echo "  make add-test-data - Add test data to the database"
+	
 # Setup dependencies
 setup:
 	@echo "Installing dependencies..."
@@ -30,6 +32,11 @@ dev:
 dev-bg:
 	@echo "Starting development environment in background..."
 	docker-compose -f docker-compose.dev.yml up --build -d
+
+dev-bg-data:
+	@echo "Starting development environment in background with test data..."
+	docker-compose -f docker-compose.dev.yml up --build -d
+	./scripts/add_test_data.sh
 
 # Production environment
 prod:
@@ -50,10 +57,19 @@ down:
 	docker-compose -f docker-compose.dev.yml down
 	docker-compose -f docker-compose.prod.yml down
 
+# Stop and remove containers, networks, volumes
+dev-down:
+	@echo "Removing dev volume..."
+	docker-compose -f docker-compose.dev.yml down -v
+
 # Clean Docker system
 clean:
 	@echo "Cleaning Docker system..."
 	docker system prune -a --volumes -f
+
+add-test-data:
+	@echo "Adding test data..."
+	./scripts/add_test_data.sh
 
 # Run tests (placeholder)
 test:
