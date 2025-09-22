@@ -510,3 +510,136 @@ def review_timesheet(cursor, conn, timesheet_id):
         
     except Exception as e:
         return jsonify({"success": False, "error": str(e)}), 500
+
+@timesheet_bp.route('/timesheet/history', methods=['GET'])
+@require_any_role('field_agent', 'dispatcher', 'admin')
+@database_operation
+def get_timesheet_history(cursor, conn):
+    """Get timesheet history with pagination and filtering"""
+    try:
+        user_role = request.role
+        user_id = request.user_id
+        
+        # Get query parameters
+        page = int(request.args.get('page', 1))
+        limit = int(request.args.get('limit', 10))
+        status_filter = request.args.get('status')  # 'pending', 'approved', 'rejected'
+        agent_id_param = request.args.get('agent_id')
+        
+        offset = (page - 1) * limit
+        
+        # Build base query
+        base_query = """
+            SELECT t.*, fa.name as agent_name, fa.email as agent_email,
+                   CASE 
+                       WHEN t.reviewer_type = 'dispatcher' THEN d.name
+                       WHEN t.reviewer_type = 'admin' THEN a.name
+                       ELSE NULL
+                   END as reviewer_name
+            FROM timesheets t
+            JOIN field_agents fa ON t.agentId = fa.agentId
+            LEFT JOIN dispatchers d ON t.reviewed_by = d.dispatcherId AND t.reviewer_type = 'dispatcher'
+            LEFT JOIN admins a ON t.reviewed_by = a.adminId AND t.reviewer_type = 'admin'
+        """
+        
+        # Build WHERE clause based on user role
+        where_conditions = []
+        params = []
+        
+        if user_role == 'field_agent':
+            # Field agents see only their own timesheets
+            where_conditions.append("t.agentId = %s")
+            params.append(user_id)
+        elif user_role == 'dispatcher':
+            # Dispatchers see timesheets from their team
+            if agent_id_param:
+                # Specific agent requested
+                where_conditions.append("t.agentId = %s")
+                where_conditions.append("fa.team_id = (SELECT team_id FROM dispatchers WHERE dispatcherId = %s)")
+                params.extend([agent_id_param, user_id])
+            else:
+                # All agents in their team
+                where_conditions.append("fa.team_id = (SELECT team_id FROM dispatchers WHERE dispatcherId = %s)")
+                params.append(user_id)
+        # Admins see all timesheets (no additional WHERE clause needed)
+        
+        # Add status filter if provided
+        if status_filter and status_filter in ['pending', 'approved', 'rejected']:
+            where_conditions.append("t.status = %s")
+            params.append(status_filter)
+        
+        # Combine WHERE conditions
+        if where_conditions:
+            base_query += " WHERE " + " AND ".join(where_conditions)
+        
+        # Add ordering and pagination
+        query = base_query + " ORDER BY t.week_start_date DESC, t.created_time DESC LIMIT %s OFFSET %s"
+        params.extend([limit, offset])
+        
+        cursor.execute(query, params)
+        timesheets = cursor.fetchall()
+        
+        # Get total count for pagination
+        count_query = """
+            SELECT COUNT(*) as total
+            FROM timesheets t
+            JOIN field_agents fa ON t.agentId = fa.agentId
+        """
+        if where_conditions:
+            count_query += " WHERE " + " AND ".join(where_conditions)
+        
+        cursor.execute(count_query, params[:-2])  # Exclude limit and offset
+        total_count = cursor.fetchone()['total']
+        
+        # Get slots for each timesheet
+        for timesheet in timesheets:
+            cursor.execute("""
+                SELECT day_of_week, start_time, end_time
+                FROM timesheet_slots
+                WHERE timesheet_id = %s
+                ORDER BY 
+                    FIELD(day_of_week, 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'),
+                    start_time
+            """, (timesheet['timesheet_id'],))
+            
+            slots = cursor.fetchall()
+            
+            # Convert time objects to strings
+            for slot in slots:
+                slot['start_time'] = str(slot['start_time'])
+                slot['end_time'] = str(slot['end_time'])
+            
+            timesheet['slots'] = slots
+            
+            # Convert timestamps
+            if timesheet['submitted_at']:
+                timesheet['submitted_at'] = timesheet['submitted_at'].isoformat()
+            if timesheet['reviewed_at']:
+                timesheet['reviewed_at'] = timesheet['reviewed_at'].isoformat()
+            if timesheet['created_time']:
+                timesheet['created_time'] = timesheet['created_time'].isoformat()
+            if timesheet['updated_time']:
+                timesheet['updated_time'] = timesheet['updated_time'].isoformat()
+            
+            timesheet['week_start_date'] = str(timesheet['week_start_date'])
+        
+        # Calculate pagination info
+        total_pages = (total_count + limit - 1) // limit
+        has_next = page < total_pages
+        has_prev = page > 1
+        
+        return jsonify({
+            "success": True, 
+            "data": timesheets,
+            "pagination": {
+                "page": page,
+                "limit": limit,
+                "total": total_count,
+                "total_pages": total_pages,
+                "has_next": has_next,
+                "has_prev": has_prev
+            }
+        }), 200
+        
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
