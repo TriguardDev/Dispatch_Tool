@@ -148,6 +148,7 @@ export default function AgentScreen({ agentId, onLogout }: AgentScreenProps) {
                 appt={appt}
                 addressText="Address hidden until en route"
                 onStatusChange={handleStatusChange}
+                userRole="field_agent"
               />
             ))}
           </QueueCard>
@@ -164,6 +165,7 @@ export default function AgentScreen({ agentId, onLogout }: AgentScreenProps) {
                 appt={appt}
                 addressText={appt.customer_address ?? ""}
                 onStatusChange={handleStatusChange}
+                userRole="field_agent"
               />
             ))}
           </QueueCard>
@@ -180,6 +182,7 @@ export default function AgentScreen({ agentId, onLogout }: AgentScreenProps) {
                 appt={appt}
                 addressText={appt.customer_address ?? ""}
                 onStatusChange={handleStatusChange}
+                userRole="field_agent"
               />
             ))}
           </QueueCard>
@@ -196,6 +199,7 @@ export default function AgentScreen({ agentId, onLogout }: AgentScreenProps) {
                 appt={appt}
                 addressText={appt.customer_address ?? ""}
                 onDispositionSave={handleDispositionChange}
+                userRole="field_agent"
               />
             ))}
           </QueueCard>

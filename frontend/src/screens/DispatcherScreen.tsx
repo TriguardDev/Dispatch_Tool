@@ -118,7 +118,8 @@ export default function DispatcherScreen({ onLogout }: DispatcherScreenProps) {
                     key={appt.bookingId} 
                     appt={appt}
                     addressText={appt.customer_address ?? ""}
-                    onAgentChange={refetch} />
+                    onAgentChange={refetch}
+                    userRole="dispatcher" />
                 ))}
               </QueueCard>
 
@@ -132,7 +133,8 @@ export default function DispatcherScreen({ onLogout }: DispatcherScreenProps) {
                     key={appt.bookingId} 
                     appt={appt}
                     addressText={appt.customer_address ?? ""}
-                    onAgentChange={refetch} />
+                    onAgentChange={refetch}
+                    userRole="dispatcher" />
                 ))}
               </QueueCard>
 
@@ -146,7 +148,8 @@ export default function DispatcherScreen({ onLogout }: DispatcherScreenProps) {
                     key={appt.bookingId} 
                     appt={appt}
                     addressText={appt.customer_address ?? ""}
-                    onAgentChange={refetch} />
+                    onAgentChange={refetch}
+                    userRole="dispatcher" />
                 ))}
               </QueueCard>
 
@@ -160,7 +163,8 @@ export default function DispatcherScreen({ onLogout }: DispatcherScreenProps) {
                     key={appt.bookingId} 
                     appt={appt}
                     addressText={appt.customer_address ?? ""}
-                    onAgentChange={refetch} />
+                    onAgentChange={refetch}
+                    userRole="dispatcher" />
                 ))}
               </QueueCard>
             </div>
@@ -190,7 +194,8 @@ export default function DispatcherScreen({ onLogout }: DispatcherScreenProps) {
                     key={appt.bookingId} 
                     appt={appt}
                     addressText={appt.customer_address ?? ""}
-                    onAgentChange={refetch} />
+                    onAgentChange={refetch}
+                    userRole="dispatcher" />
                 ))}
               </QueueCard>
 
@@ -204,7 +209,8 @@ export default function DispatcherScreen({ onLogout }: DispatcherScreenProps) {
                     key={appt.bookingId} 
                     appt={appt}
                     addressText={appt.customer_address ?? ""}
-                    onAgentChange={refetch} />
+                    onAgentChange={refetch}
+                    userRole="dispatcher" />
                 ))}
               </QueueCard>
 
@@ -218,7 +224,8 @@ export default function DispatcherScreen({ onLogout }: DispatcherScreenProps) {
                     key={appt.bookingId} 
                     appt={appt}
                     addressText={appt.customer_address ?? ""}
-                    onAgentChange={refetch} />
+                    onAgentChange={refetch}
+                    userRole="dispatcher" />
                 ))}
               </QueueCard>
 
@@ -232,7 +239,8 @@ export default function DispatcherScreen({ onLogout }: DispatcherScreenProps) {
                     key={appt.bookingId} 
                     appt={appt}
                     addressText={appt.customer_address ?? ""}
-                    onAgentChange={refetch} />
+                    onAgentChange={refetch}
+                    userRole="dispatcher" />
                 ))}
               </QueueCard>
             </div>

@@ -239,6 +239,41 @@ def update_team(cursor, conn, team_id):
                 cursor.execute("SELECT regionId FROM regions WHERE regionId = %s", (region_id,))
                 if not cursor.fetchone():
                     return jsonify({"success": False, "error": "Invalid region ID"}), 400
+            
+            # Check if team has incomplete appointments before allowing region change
+            # First get the team's current region and name
+            cursor.execute("SELECT region_id, name FROM teams WHERE teamId = %s", (team_id,))
+            current_team = cursor.fetchone()
+            
+            if current_team and current_team['region_id']:
+                # Check for appointments in the current region that are incomplete
+                cursor.execute("""
+                    SELECT COUNT(*) as count FROM bookings b
+                    WHERE b.region_id = %s AND b.status IN ('scheduled', 'in-progress')
+                """, (current_team['region_id'],))
+                region_result = cursor.fetchone()
+                
+                if region_result['count'] > 0:
+                    return jsonify({
+                        "success": False, 
+                        "error": f"Cannot change region for team '{current_team['name']}'. There are {region_result['count']} incomplete appointments in the current region. Please complete or reassign these appointments first."
+                    }), 400
+            
+            # Also check for appointments directly assigned to team members
+            cursor.execute("""
+                SELECT COUNT(*) as count FROM bookings b
+                JOIN field_agents fa ON b.agentId = fa.agentId
+                WHERE fa.team_id = %s AND b.status IN ('scheduled', 'in-progress')
+            """, (team_id,))
+            member_result = cursor.fetchone()
+            
+            if member_result['count'] > 0:
+                team_name = current_team['name'] if current_team else 'Unknown'
+                return jsonify({
+                    "success": False, 
+                    "error": f"Cannot change region for team '{team_name}'. There are {member_result['count']} incomplete appointments assigned to team members. Please complete or reassign these appointments first."
+                }), 400
+            
             set_clauses.append("region_id = %s")
             update_values.append(region_id)
         
@@ -278,9 +313,43 @@ def delete_team(cursor, conn, team_id):
     """Delete a team (removes team assignments from members)"""
     try:
         # Check if team exists
-        cursor.execute("SELECT teamId FROM teams WHERE teamId = %s", (team_id,))
-        if not cursor.fetchone():
+        cursor.execute("SELECT teamId, name FROM teams WHERE teamId = %s", (team_id,))
+        team = cursor.fetchone()
+        if not team:
             return jsonify({"success": False, "error": "Team not found"}), 404
+        
+        # Check for incomplete appointments in the team's region or assigned to team members
+        # First get the team's region
+        cursor.execute("SELECT region_id FROM teams WHERE teamId = %s", (team_id,))
+        team_region = cursor.fetchone()
+        
+        if team_region and team_region['region_id']:
+            # Check for appointments in this team's region that are incomplete
+            cursor.execute("""
+                SELECT COUNT(*) as count FROM bookings b
+                WHERE b.region_id = %s AND b.status IN ('scheduled', 'in-progress')
+            """, (team_region['region_id'],))
+            region_result = cursor.fetchone()
+            
+            if region_result['count'] > 0:
+                return jsonify({
+                    "success": False, 
+                    "error": f"Cannot delete team '{team['name']}'. There are {region_result['count']} incomplete appointments in this team's region. Please complete or reassign these appointments first."
+                }), 400
+        
+        # Also check for appointments directly assigned to team members
+        cursor.execute("""
+            SELECT COUNT(*) as count FROM bookings b
+            JOIN field_agents fa ON b.agentId = fa.agentId
+            WHERE fa.team_id = %s AND b.status IN ('scheduled', 'in-progress')
+        """, (team_id,))
+        member_result = cursor.fetchone()
+        
+        if member_result['count'] > 0:
+            return jsonify({
+                "success": False, 
+                "error": f"Cannot delete team '{team['name']}'. There are {member_result['count']} incomplete appointments assigned to team members. Please complete or reassign these appointments first."
+            }), 400
         
         # Remove team assignments from dispatchers and agents
         cursor.execute("UPDATE dispatchers SET team_id = NULL WHERE team_id = %s", (team_id,))

@@ -74,7 +74,8 @@ def get_all_bookings():
                 l.postal_code, ' ', 
                 l.city
             ) AS customer_address,
-            r.regionId, r.name AS region_name, r.is_global AS region_is_global
+            r.regionId, r.name AS region_name, r.is_global AS region_is_global,
+            b.call_center_agent_name, b.call_center_agent_email
           FROM bookings b
           JOIN customers c ON b.customerId = c.customerId
           LEFT JOIN field_agents fa ON b.agentId = fa.agentId
@@ -175,7 +176,9 @@ def get_agent_bookings(agent_id):
                   l.street_name, ', ', 
                   l.postal_code, ' ', 
                   l.city
-              ) AS customer_address
+              ) AS customer_address,
+              r.regionId, r.name AS region_name, r.is_global AS region_is_global,
+              b.call_center_agent_name, b.call_center_agent_email
           FROM bookings b
           JOIN customers c 
               ON b.customerId = c.customerId
@@ -187,6 +190,8 @@ def get_agent_bookings(agent_id):
               ON d.typeCode = dt.typeCode
           LEFT JOIN locations l
               ON c.location_id = l.id
+          LEFT JOIN regions r 
+              ON b.region_id = r.regionId
           WHERE b.agentId = %s
           ORDER BY b.booking_date, b.booking_time;
         """
@@ -245,7 +250,9 @@ def get_booking(booking_id):
                         l.street_name, ', ', 
                         l.postal_code, ' ', 
                         l.city
-                    ) AS customer_address
+                    ) AS customer_address,
+                    r.regionId, r.name AS region_name, r.is_global AS region_is_global,
+                    b.call_center_agent_name, b.call_center_agent_email
                 FROM bookings b
                 JOIN customers c 
                     ON b.customerId = c.customerId
@@ -257,6 +264,8 @@ def get_booking(booking_id):
                     ON d.typeCode = dt.typeCode
                 LEFT JOIN locations l
                     ON c.location_id = l.id
+                LEFT JOIN regions r 
+                    ON b.region_id = r.regionId
                 WHERE b.bookingId = %s AND b.agentId = %s
             """
             cursor.execute(query, (booking_id, request.user_id))
@@ -285,13 +294,16 @@ def get_booking(booking_id):
                         l.street_name, ', ', 
                         l.postal_code, ' ', 
                         l.city
-                    ) AS customer_address
+                    ) AS customer_address,
+                    r.regionId, r.name AS region_name, r.is_global AS region_is_global,
+                    b.call_center_agent_name, b.call_center_agent_email
                 FROM bookings b
                 JOIN customers c ON b.customerId = c.customerId
                 LEFT JOIN field_agents fa ON b.agentId = fa.agentId
                 LEFT JOIN dispositions d ON b.dispositionId = d.dispositionId
                 LEFT JOIN disposition_types dt ON d.typeCode = dt.typeCode
                 LEFT JOIN locations l ON c.location_id = l.id
+                LEFT JOIN regions r ON b.region_id = r.regionId
                 WHERE b.bookingId = %s
             """
             cursor.execute(query, (booking_id,))
@@ -512,6 +524,16 @@ def update_booking(booking_id):
             update_fields.append("agentId = %s")
             update_values.append(data["agentId"])
 
+        if "region_id" in data and request.role == 'admin':  # Only admins can change region
+            region_id = data["region_id"]
+            if region_id is not None:
+                # Validate region exists
+                cursor.execute("SELECT regionId FROM regions WHERE regionId = %s", (region_id,))
+                if not cursor.fetchone():
+                    return jsonify({"success": False, "error": "Invalid region ID"}), 400
+            update_fields.append("region_id = %s")
+            update_values.append(region_id)
+
         if not update_fields:
             return jsonify({"success": False, "error": "No valid fields to update"}), 400
 
@@ -539,11 +561,14 @@ def update_booking(booking_id):
                     l.street_name, ', ', 
                     l.postal_code, ' ', 
                     l.city
-                ) AS customer_address
+                ) AS customer_address,
+                r.regionId, r.name AS region_name, r.is_global AS region_is_global,
+                b.call_center_agent_name, b.call_center_agent_email
             FROM bookings b
             JOIN customers c ON b.customerId = c.customerId
             LEFT JOIN field_agents fa ON b.agentId = fa.agentId
             LEFT JOIN locations l ON c.location_id = l.id
+            LEFT JOIN regions r ON b.region_id = r.regionId
             WHERE b.bookingId = %s
         """, (booking_id,))
         
@@ -569,10 +594,10 @@ def update_booking(booking_id):
 
 
 @booking_bp.route("/bookings/<int:booking_id>", methods=["DELETE"])
-@require_any_role('admin')  # Only admins can delete bookings
+@require_any_role('admin', 'dispatcher')  # Admins and dispatchers can delete bookings
 def delete_booking(booking_id):
     """
-    Delete a booking (admin access only).
+    Delete a booking (admin and dispatcher access).
     """
     try:
         conn = get_connection()
@@ -698,15 +723,17 @@ def create_call_center_booking():
 
         # Create booking with agentId=NULL (unassigned) and specified region
         cursor.execute("""
-            INSERT INTO bookings (agentId, customerId, booking_date, booking_time, status, region_id)
-            VALUES (%s,%s,%s,%s,%s,%s)
+            INSERT INTO bookings (agentId, customerId, booking_date, booking_time, status, region_id, call_center_agent_name, call_center_agent_email)
+            VALUES (%s,%s,%s,%s,%s,%s,%s,%s)
         """, (
             None,  # Always unassigned from call center
             customer_id,
             data["booking"]["booking_date"],
             data["booking"]["booking_time"],
             "scheduled",  # Default status
-            region_id
+            region_id,
+            call_center_agent["name"],
+            call_center_agent["email"]
         ))
         booking_id = cursor.lastrowid
 

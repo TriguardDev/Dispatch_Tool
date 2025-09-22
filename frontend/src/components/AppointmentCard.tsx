@@ -10,6 +10,7 @@ interface Props {
   onStatusChange?: (bookingId: number, status: string) => void;
   onDispositionSave?: (bookingId: number, dispositionType: string, note: string) => void;
   onAgentChange?: () => void; // Callback to refresh data after agent assignment
+  userRole?: "admin" | "dispatcher" | "field_agent"; // User role to control permissions
 }
 
 interface Agent {
@@ -79,7 +80,7 @@ const DispositionNote = memo(({ note, expanded }: { note: string; expanded: bool
   </Collapse>
 ));
 
-const AppointmentCard = memo(function AppointmentCard({ appt, addressText, onStatusChange, onDispositionSave, onAgentChange }: Props) {
+const AppointmentCard = memo(function AppointmentCard({ appt, addressText, onStatusChange, onDispositionSave, onAgentChange, userRole }: Props) {
   // State management
   const [note, setNote] = useState("");
   const [selectedDisposition, setSelectedDisposition] = useState(appt.disposition_code || "");
@@ -234,118 +235,126 @@ const AppointmentCard = memo(function AppointmentCard({ appt, addressText, onSta
           <Typography variant="body2" color="text.secondary" fontWeight="600" sx={{ mb: 0.5 }}>
             Assigned to:
           </Typography>
-          <FormControl fullWidth size="small" variant="outlined">
-            <Select
-              value={agentDropdownOpen ? "" : (appt.agent_name || "")}
-              open={agentDropdownOpen}
-              onOpen={() => {
-                setAgentDropdownOpen(true);
-                if (!agentsLoaded && !loadingAgents) {
-                  handleSearchAgents(); // Only search if not already loaded
-                }
-              }}
-              onClose={() => setAgentDropdownOpen(false)}
-              displayEmpty
-              renderValue={(selected) => {
-                if (loadingAgents) {
-                  return (
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                      <CircularProgress size={14} />
-                      <Typography variant="body2">Loading agents...</Typography>
-                    </Box>
-                  );
-                }
-                return selected || appt.agent_name || "No agent assigned";
-              }}
-              sx={{
-                '& .MuiSelect-select': {
-                  py: 1,
-                  fontSize: '0.875rem',
-                  fontWeight: 500,
-                },
-                '& .MuiOutlinedInput-notchedOutline': {
-                  borderColor: 'divider',
-                },
-                '&:hover .MuiOutlinedInput-notchedOutline': {
-                  borderColor: 'primary.main',
-                },
-                '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
-                  borderWidth: 1,
-                }
-              }}
-            >
-              {[
-                // Unassigned option
-                <MenuItem 
-                  key="unassigned" 
-                  value="unassigned"
-                  onClick={() => handleAgentChange("unassigned")}
-                  sx={{ borderBottom: '1px solid', borderColor: 'divider' }}
-                >
-                  <Typography variant="body2" fontWeight="500" color="text.secondary" sx={{ fontStyle: 'italic' }}>
-                    Unassigned
-                  </Typography>
-                </MenuItem>,
-                
-                // Refresh agents option (only show if agents are loaded)
-                ...(agentsLoaded ? [
+          {userRole === 'field_agent' ? (
+            // Field agents see read-only assigned agent info
+            <Typography variant="body2" fontWeight="500" sx={{ py: 1 }}>
+              {appt.agent_name || "No agent assigned"}
+            </Typography>
+          ) : (
+            // Admins and dispatchers can reassign agents
+            <FormControl fullWidth size="small" variant="outlined">
+              <Select
+                value={agentDropdownOpen ? "" : (appt.agent_name || "")}
+                open={agentDropdownOpen}
+                onOpen={() => {
+                  setAgentDropdownOpen(true);
+                  if (!agentsLoaded && !loadingAgents) {
+                    handleSearchAgents(); // Only search if not already loaded
+                  }
+                }}
+                onClose={() => setAgentDropdownOpen(false)}
+                displayEmpty
+                renderValue={(selected) => {
+                  if (loadingAgents) {
+                    return (
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <CircularProgress size={14} />
+                        <Typography variant="body2">Loading agents...</Typography>
+                      </Box>
+                    );
+                  }
+                  return selected || appt.agent_name || "No agent assigned";
+                }}
+                sx={{
+                  '& .MuiSelect-select': {
+                    py: 1,
+                    fontSize: '0.875rem',
+                    fontWeight: 500,
+                  },
+                  '& .MuiOutlinedInput-notchedOutline': {
+                    borderColor: 'divider',
+                  },
+                  '&:hover .MuiOutlinedInput-notchedOutline': {
+                    borderColor: 'primary.main',
+                  },
+                  '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                    borderWidth: 1,
+                  }
+                }}
+              >
+                {[
+                  // Unassigned option
                   <MenuItem 
-                    key="refresh" 
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleSearchAgents();
-                    }}
+                    key="unassigned" 
+                    value="unassigned"
+                    onClick={() => handleAgentChange("unassigned")}
                     sx={{ borderBottom: '1px solid', borderColor: 'divider' }}
-                    disabled={loadingAgents}
                   >
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                      {loadingAgents && <CircularProgress size={14} />}
-                      <Typography variant="body2" color="primary.main" sx={{ fontStyle: 'italic' }}>
-                        {loadingAgents ? 'Refreshing...' : 'Refresh agents'}
-                      </Typography>
-                    </Box>
-                  </MenuItem>
-                ] : []),
-                
-                // Available agents or loading state
-                ...(loadingAgents && !agentsLoaded ? [
-                  <MenuItem key="loading" disabled>
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                      <CircularProgress size={16} />
-                      <Typography variant="body2">Searching for nearby agents...</Typography>
-                    </Box>
-                  </MenuItem>
-                ] : [
-                  // Available agents
-                  ...agents.map((agent) => (
+                    <Typography variant="body2" fontWeight="500" color="text.secondary" sx={{ fontStyle: 'italic' }}>
+                      Unassigned
+                    </Typography>
+                  </MenuItem>,
+                  
+                  // Refresh agents option (only show if agents are loaded)
+                  ...(agentsLoaded ? [
                     <MenuItem 
-                      key={agent.agentId} 
-                      value={agent.agentId}
-                      onClick={() => handleAgentChange(agent.agentId)}
+                      key="refresh" 
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleSearchAgents();
+                      }}
+                      sx={{ borderBottom: '1px solid', borderColor: 'divider' }}
+                      disabled={loadingAgents}
                     >
-                      <Box sx={{ display: 'flex', justifyContent: 'space-between', width: '100%' }}>
-                        <Typography variant="body2" fontWeight="500">
-                          {agent.name}
-                        </Typography>
-                        <Typography variant="body2" color="text.secondary">
-                          {Math.ceil(Number(agent.distance))} km
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        {loadingAgents && <CircularProgress size={14} />}
+                        <Typography variant="body2" color="primary.main" sx={{ fontStyle: 'italic' }}>
+                          {loadingAgents ? 'Refreshing...' : 'Refresh agents'}
                         </Typography>
                       </Box>
                     </MenuItem>
-                  )),
+                  ] : []),
                   
-                  // Show message if no agents found (only if agents have been loaded)
-                  ...(agents.length === 0 && agentsLoaded && !loadingAgents ? [
-                    <MenuItem key="no-agents" disabled>
-                      <Typography variant="body2" color="text.secondary" sx={{ fontStyle: 'italic' }}>
-                        No nearby agents available
-                      </Typography>
+                  // Available agents or loading state
+                  ...(loadingAgents && !agentsLoaded ? [
+                    <MenuItem key="loading" disabled>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <CircularProgress size={16} />
+                        <Typography variant="body2">Searching for nearby agents...</Typography>
+                      </Box>
                     </MenuItem>
-                  ] : [])
-                ])
-              ]}
-            </Select>
-          </FormControl>
+                  ] : [
+                    // Available agents
+                    ...agents.map((agent) => (
+                      <MenuItem 
+                        key={agent.agentId} 
+                        value={agent.agentId}
+                        onClick={() => handleAgentChange(agent.agentId)}
+                      >
+                        <Box sx={{ display: 'flex', justifyContent: 'space-between', width: '100%' }}>
+                          <Typography variant="body2" fontWeight="500">
+                            {agent.name}
+                          </Typography>
+                          <Typography variant="body2" color="text.secondary">
+                            {Math.ceil(Number(agent.distance))} km
+                          </Typography>
+                        </Box>
+                      </MenuItem>
+                    )),
+                    
+                    // Show message if no agents found (only if agents have been loaded)
+                    ...(agents.length === 0 && agentsLoaded && !loadingAgents ? [
+                      <MenuItem key="no-agents" disabled>
+                        <Typography variant="body2" color="text.secondary" sx={{ fontStyle: 'italic' }}>
+                          No nearby agents available
+                        </Typography>
+                      </MenuItem>
+                    ] : [])
+                  ])
+                ]}
+              </Select>
+            </FormControl>
+          )}
         </Box>
       </InfoRow>
 

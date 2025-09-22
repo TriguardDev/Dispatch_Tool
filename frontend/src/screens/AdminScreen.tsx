@@ -196,7 +196,8 @@ export default function AdminScreen({ onLogout }: AdminScreenProps) {
                   key={appt.bookingId} 
                   appt={appt}
                   addressText={appt.customer_address ?? ""}
-                  onAgentChange={refetch} />
+                  onAgentChange={refetch}
+                  userRole="admin" />
               ))}
             </QueueCard>
 
@@ -210,7 +211,8 @@ export default function AdminScreen({ onLogout }: AdminScreenProps) {
                   key={appt.bookingId} 
                   appt={appt}
                   addressText={appt.customer_address ?? ""}
-                  onAgentChange={refetch} />
+                  onAgentChange={refetch}
+                  userRole="admin" />
               ))}
             </QueueCard>
 
@@ -224,7 +226,8 @@ export default function AdminScreen({ onLogout }: AdminScreenProps) {
                   key={appt.bookingId} 
                   appt={appt}
                   addressText={appt.customer_address ?? ""}
-                  onAgentChange={refetch} />
+                  onAgentChange={refetch}
+                  userRole="admin" />
               ))}
             </QueueCard>
 
@@ -238,7 +241,8 @@ export default function AdminScreen({ onLogout }: AdminScreenProps) {
                   key={appt.bookingId} 
                   appt={appt}
                   addressText={appt.customer_address ?? ""}
-                  onAgentChange={refetch} />
+                  onAgentChange={refetch}
+                  userRole="admin" />
               ))}
             </QueueCard>
           </div>
