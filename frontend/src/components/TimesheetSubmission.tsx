@@ -53,7 +53,7 @@ interface Timesheet {
   agent_name: string;
   reviewer_name?: string;
   slots: TimesheetSlot[];
-  target_week_type?: 'current' | 'next';
+  target_week_type?: 'current' | 'next' | 'future';
 }
 
 const BASE_URL = import.meta.env.VITE_BASE_API_URL;
@@ -78,7 +78,7 @@ const DAY_LABELS = {
 
 export default function TimesheetSubmission({ onLogout }: Props) {
   const [currentTimesheet, setCurrentTimesheet] = useState<Timesheet | null>(null);
-  const [targetWeekType, setTargetWeekType] = useState<'current' | 'next'>('current');
+  const [targetWeekType, setTargetWeekType] = useState<'current' | 'next' | 'future'>('current');
   const [targetWeekStart, setTargetWeekStart] = useState<string>('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -265,7 +265,9 @@ export default function TimesheetSubmission({ onLogout }: Props) {
   };
 
   const getWeekTypeDisplay = () => {
-    return targetWeekType === 'current' ? 'This Week' : 'Next Week';
+    if (targetWeekType === 'current') return 'This Week';
+    if (targetWeekType === 'next') return 'Next Week';
+    return 'Future Week';
   };
 
   const groupSlotsByDay = (slots: TimesheetSlot[]) => {

@@ -44,8 +44,10 @@ def get_target_week_monday(agent_id, cursor):
     Determine which week the agent should be submitting for.
     Logic:
     1. If no current week timesheet exists -> submit for current week
-    2. If current week timesheet exists and approved -> submit for next week
-    3. If current week timesheet exists but not approved -> can modify current week
+    2. If current week timesheet exists but not approved -> can modify current week
+    3. If current week approved -> check next week
+    4. If next week also approved -> submit for week after next
+    5. If next week not approved/exists -> submit for next week
     """
     current_monday = get_current_week_monday()
     next_monday = get_next_week_monday()
@@ -60,12 +62,24 @@ def get_target_week_monday(agent_id, cursor):
     if not current_week_timesheet:
         # No current week timesheet - submit for current week
         return current_monday, "current"
-    elif current_week_timesheet['status'] == 'approved':
-        # Current week approved - submit for next week
-        return next_monday, "next"
-    else:
+    elif current_week_timesheet['status'] != 'approved':
         # Current week exists but not approved - can modify current week
         return current_monday, "current"
+    else:
+        # Current week approved - check next week
+        cursor.execute("""
+            SELECT timesheet_id, status FROM timesheets 
+            WHERE agentId = %s AND week_start_date = %s
+        """, (agent_id, next_monday))
+        next_week_timesheet = cursor.fetchone()
+        
+        if next_week_timesheet and next_week_timesheet['status'] == 'approved':
+            # Both current and next week approved - submit for week after next
+            week_after_next = next_monday + timedelta(days=7)
+            return week_after_next, "future"
+        else:
+            # Next week not approved or doesn't exist - submit for next week
+            return next_monday, "next"
 
 def validate_timesheet_data(data):
     """Validate timesheet submission data"""
@@ -120,7 +134,8 @@ def check_submission_deadline(target_week_type):
     Check if submission is allowed based on deadline rules.
     Rules:
     - For current week: Can submit until Sunday 7pm of current week
-    - For next week: Can submit Monday-Sunday 7pm of current week
+    - For next week: Can submit Monday-Sunday 7pm of current week  
+    - For future week: Can submit Monday-Sunday 7pm of current week
     """
     now = datetime.now()
     
@@ -130,8 +145,8 @@ def check_submission_deadline(target_week_type):
         current_sunday = current_monday + timedelta(days=6)
         deadline = datetime.combine(current_sunday, datetime.min.time().replace(hour=19))
         return now <= deadline
-    else:  # target_week_type == "next"
-        # Submitting for next week - deadline is Sunday 7pm of current week
+    else:  # target_week_type == "next" or "future"
+        # Submitting for future week - deadline is Sunday 7pm of current week
         if now.weekday() == 6 and now.hour >= 19:  # Sunday 7pm or later
             return False
         return True

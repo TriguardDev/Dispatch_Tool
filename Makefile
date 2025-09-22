@@ -33,6 +33,11 @@ dev-bg:
 	@echo "Starting development environment in background..."
 	docker-compose -f docker-compose.dev.yml up --build -d
 
+dev-bg-data:
+	@echo "Starting development environment in background with test data..."
+	docker-compose -f docker-compose.dev.yml up --build -d
+	./scripts/add_test_data.sh
+
 # Production environment
 prod:
 	@echo "Starting production environment..."
