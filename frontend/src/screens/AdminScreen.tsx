@@ -15,6 +15,7 @@ interface Region {
   regionId: number;
   name: string;
   description?: string;
+  is_global?: boolean;
 }
 
 interface AdminScreenProps {
