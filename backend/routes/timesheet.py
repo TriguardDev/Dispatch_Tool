@@ -28,13 +28,44 @@ def database_operation(f):
                 conn.close()
     return decorated_function
 
-def get_next_monday():
-    """Get the Monday of next week"""
+def get_current_week_monday():
+    """Get the Monday of the current week"""
     today = datetime.now().date()
-    days_ahead = 7 - today.weekday()  # Monday is 0
-    if days_ahead <= 0:  # Target day already happened this week
-        days_ahead += 7
-    return today + timedelta(days_ahead)
+    days_since_monday = today.weekday()  # Monday is 0
+    return today - timedelta(days=days_since_monday)
+
+def get_next_week_monday():
+    """Get the Monday of next week"""
+    current_monday = get_current_week_monday()
+    return current_monday + timedelta(days=7)
+
+def get_target_week_monday(agent_id, cursor):
+    """
+    Determine which week the agent should be submitting for.
+    Logic:
+    1. If no current week timesheet exists -> submit for current week
+    2. If current week timesheet exists and approved -> submit for next week
+    3. If current week timesheet exists but not approved -> can modify current week
+    """
+    current_monday = get_current_week_monday()
+    next_monday = get_next_week_monday()
+    
+    # Check current week timesheet
+    cursor.execute("""
+        SELECT timesheet_id, status FROM timesheets 
+        WHERE agentId = %s AND week_start_date = %s
+    """, (agent_id, current_monday))
+    current_week_timesheet = cursor.fetchone()
+    
+    if not current_week_timesheet:
+        # No current week timesheet - submit for current week
+        return current_monday, "current"
+    elif current_week_timesheet['status'] == 'approved':
+        # Current week approved - submit for next week
+        return next_monday, "next"
+    else:
+        # Current week exists but not approved - can modify current week
+        return current_monday, "current"
 
 def validate_timesheet_data(data):
     """Validate timesheet submission data"""
@@ -84,13 +115,26 @@ def validate_timesheet_data(data):
     
     return None
 
-def check_submission_deadline():
-    """Check if it's past Sunday 7pm deadline"""
+def check_submission_deadline(target_week_type):
+    """
+    Check if submission is allowed based on deadline rules.
+    Rules:
+    - For current week: Can submit until Sunday 7pm of current week
+    - For next week: Can submit Monday-Sunday 7pm of current week
+    """
     now = datetime.now()
-    # Allow submission until Sunday 7pm for next week
-    if now.weekday() == 6 and now.hour >= 19:  # Sunday and 7pm or later
-        return False
-    return True
+    
+    if target_week_type == "current":
+        # Submitting for current week - deadline is Sunday 7pm of THIS week
+        current_monday = get_current_week_monday()
+        current_sunday = current_monday + timedelta(days=6)
+        deadline = datetime.combine(current_sunday, datetime.min.time().replace(hour=19))
+        return now <= deadline
+    else:  # target_week_type == "next"
+        # Submitting for next week - deadline is Sunday 7pm of current week
+        if now.weekday() == 6 and now.hour >= 19:  # Sunday 7pm or later
+            return False
+        return True
 
 @timesheet_bp.route('/timesheet/submit', methods=['POST'])
 @require_any_role('field_agent')
@@ -104,31 +148,37 @@ def submit_timesheet(cursor, conn):
         
         agent_id = request.user_id
         
-        # Check submission deadline
-        if not check_submission_deadline():
-            return jsonify({
-                "success": False, 
-                "error": "Timesheet submission deadline has passed. Please contact your dispatcher."
-            }), 400
-        
         # Check if agent has a team
         cursor.execute("SELECT team_id FROM field_agents WHERE agentId = %s", (agent_id,))
         agent = cursor.fetchone()
         if not agent or not agent['team_id']:
             return jsonify({"success": False, "error": "You must be assigned to a team to submit timesheets"}), 400
         
+        # Determine target week and check deadline
+        target_week_start, target_week_type = get_target_week_monday(agent_id, cursor)
+        
+        if not check_submission_deadline(target_week_type):
+            if target_week_type == "current":
+                return jsonify({
+                    "success": False, 
+                    "error": "Timesheet submission deadline for this week has passed (Sunday 7PM)."
+                }), 400
+            else:
+                return jsonify({
+                    "success": False, 
+                    "error": "Timesheet submission deadline has passed. Please contact your dispatcher."
+                }), 400
+        
         # Validate input
         validation_error = validate_timesheet_data(data)
         if validation_error:
             return jsonify({"success": False, "error": validation_error}), 400
         
-        week_start_date = get_next_monday()
-        
-        # Check if timesheet already exists for this week
+        # Check if timesheet already exists for target week
         cursor.execute("""
             SELECT timesheet_id, status FROM timesheets 
             WHERE agentId = %s AND week_start_date = %s
-        """, (agent_id, week_start_date))
+        """, (agent_id, target_week_start))
         existing_timesheet = cursor.fetchone()
         
         if existing_timesheet:
@@ -145,7 +195,7 @@ def submit_timesheet(cursor, conn):
         cursor.execute("""
             INSERT INTO timesheets (agentId, week_start_date, status, submitted_at)
             VALUES (%s, %s, 'pending', NOW())
-        """, (agent_id, week_start_date))
+        """, (agent_id, target_week_start))
         
         timesheet_id = cursor.lastrowid
         
@@ -202,7 +252,7 @@ def submit_timesheet(cursor, conn):
 @require_any_role('field_agent', 'dispatcher', 'admin')
 @database_operation
 def get_current_timesheet(cursor, conn):
-    """Get timesheet for the upcoming week"""
+    """Get timesheet for the target week (current or next based on approval status)"""
     try:
         user_role = request.role
         user_id = request.user_id
@@ -213,7 +263,8 @@ def get_current_timesheet(cursor, conn):
         if user_role in ['dispatcher', 'admin']:
             agent_id = request.args.get('agent_id', user_id)
         
-        week_start_date = get_next_monday()
+        # Determine which week to show based on approval status
+        target_week_start, target_week_type = get_target_week_monday(agent_id, cursor)
         
         # Get timesheet with slots
         cursor.execute("""
@@ -228,7 +279,7 @@ def get_current_timesheet(cursor, conn):
             LEFT JOIN dispatchers d ON t.reviewed_by = d.dispatcherId AND t.reviewer_type = 'dispatcher'
             LEFT JOIN admins a ON t.reviewed_by = a.adminId AND t.reviewer_type = 'admin'
             WHERE t.agentId = %s AND t.week_start_date = %s
-        """, (agent_id, week_start_date))
+        """, (agent_id, target_week_start))
         
         timesheet = cursor.fetchone()
         
@@ -236,7 +287,9 @@ def get_current_timesheet(cursor, conn):
             return jsonify({
                 "success": True, 
                 "data": None,
-                "message": "No timesheet found for upcoming week"
+                "target_week_start": str(target_week_start),
+                "target_week_type": target_week_type,
+                "message": f"No timesheet found for {target_week_type} week"
             }), 200
         
         # Get slots for this timesheet
@@ -268,8 +321,13 @@ def get_current_timesheet(cursor, conn):
         
         timesheet['week_start_date'] = str(timesheet['week_start_date'])
         timesheet['slots'] = slots
+        timesheet['target_week_type'] = target_week_type
         
-        return jsonify({"success": True, "data": timesheet}), 200
+        return jsonify({
+            "success": True, 
+            "data": timesheet,
+            "target_week_type": target_week_type
+        }), 200
         
     except Exception as e:
         return jsonify({"success": False, "error": str(e)}), 500

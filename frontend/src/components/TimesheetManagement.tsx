@@ -328,7 +328,7 @@ export default function TimesheetManagement({ onLogout, userRole }: Props) {
                             </Typography>
                             <Grid container spacing={1}>
                               {Object.entries(groupSlotsByDay(timesheet.slots)).map(([day, daySlots]) => (
-                                <Grid item xs={12} sm={6} md={3} key={day}>
+                                <Grid size={{xs: 12, sm: 6, md: 3}} key={day}>
                                   <Paper sx={{ p: 1.5, height: '100%', bgcolor: 'background.default' }}>
                                     <Typography variant="caption" fontWeight="bold" display="block">
                                       {DAY_LABELS[day as keyof typeof DAY_LABELS]}
@@ -391,7 +391,7 @@ export default function TimesheetManagement({ onLogout, userRole }: Props) {
 
               <Grid container spacing={2}>
                 {Object.entries(groupSlotsByDay(selectedTimesheet.slots)).map(([day, daySlots]) => (
-                  <Grid item xs={12} sm={6} md={4} key={day}>
+                  <Grid size={{xs: 12, sm: 6, md: 4}} key={day}>
                     <Paper sx={{ p: 2, height: '100%' }}>
                       <Typography variant="subtitle2" fontWeight="bold" sx={{ mb: 1 }}>
                         {DAY_LABELS[day as keyof typeof DAY_LABELS]}

@@ -7,7 +7,6 @@ import {
   DialogTitle,
   DialogContent,
   DialogActions,
-  TextField,
   FormControl,
   Alert,
   CircularProgress,
@@ -31,7 +30,6 @@ import {
 import {
   Add as AddIcon,
   Delete as DeleteIcon,
-  Edit as EditIcon,
   Schedule as ScheduleIcon,
   DateRange as DateRangeIcon,
   CheckCircle as CheckCircleIcon
@@ -55,6 +53,7 @@ interface Timesheet {
   agent_name: string;
   reviewer_name?: string;
   slots: TimesheetSlot[];
+  target_week_type?: 'current' | 'next';
 }
 
 const BASE_URL = import.meta.env.VITE_BASE_API_URL;
@@ -79,6 +78,8 @@ const DAY_LABELS = {
 
 export default function TimesheetSubmission({ onLogout }: Props) {
   const [currentTimesheet, setCurrentTimesheet] = useState<Timesheet | null>(null);
+  const [targetWeekType, setTargetWeekType] = useState<'current' | 'next'>('current');
+  const [targetWeekStart, setTargetWeekStart] = useState<string>('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [isSubmitModalOpen, setIsSubmitModalOpen] = useState(false);
@@ -100,8 +101,14 @@ export default function TimesheetSubmission({ onLogout }: Props) {
       
       if (res.ok) {
         const data = await res.json();
-        if (data.success && data.data) {
+        if (data.success) {
           setCurrentTimesheet(data.data);
+          setTargetWeekType(data.target_week_type || 'current');
+          if (data.data) {
+            setTargetWeekStart(data.data.week_start_date);
+          } else if (data.target_week_start) {
+            setTargetWeekStart(data.target_week_start);
+          }
         } else {
           setCurrentTimesheet(null);
         }
@@ -245,17 +252,20 @@ export default function TimesheetSubmission({ onLogout }: Props) {
     });
   };
 
-  const getNextMondayDate = () => {
-    const today = new Date();
-    const daysUntilMonday = (7 - today.getDay() + 1) % 7 || 7;
-    const nextMonday = new Date(today);
-    nextMonday.setDate(today.getDate() + daysUntilMonday);
-    return nextMonday;
+  const getTargetWeekDates = () => {
+    if (!targetWeekStart) {
+      const today = new Date();
+      return { startDate: today, endDate: today };
+    }
+    
+    const startDate = new Date(targetWeekStart);
+    const endDate = new Date(startDate);
+    endDate.setDate(endDate.getDate() + 6);
+    return { startDate, endDate };
   };
 
-  const isDeadlinePassed = () => {
-    const now = new Date();
-    return now.getDay() === 0 && now.getHours() >= 19; // Sunday 7pm or later
+  const getWeekTypeDisplay = () => {
+    return targetWeekType === 'current' ? 'This Week' : 'Next Week';
   };
 
   const groupSlotsByDay = (slots: TimesheetSlot[]) => {
@@ -275,9 +285,7 @@ export default function TimesheetSubmission({ onLogout }: Props) {
     );
   }
 
-  const nextMonday = getNextMondayDate();
-  const weekEndDate = new Date(nextMonday);
-  weekEndDate.setDate(weekEndDate.getDate() + 6);
+  const { startDate, endDate } = getTargetWeekDates();
 
   return (
     <Box>
@@ -287,10 +295,10 @@ export default function TimesheetSubmission({ onLogout }: Props) {
             Weekly Timesheet
           </Typography>
           <Typography variant="subtitle1" color="text.secondary">
-            Week of {nextMonday.toLocaleDateString()} - {weekEndDate.toLocaleDateString()}
+            {getWeekTypeDisplay()}: {startDate.toLocaleDateString()} - {endDate.toLocaleDateString()}
           </Typography>
         </Box>
-        {!currentTimesheet && !isDeadlinePassed() && (
+        {!currentTimesheet && (
           <Button
             variant="contained"
             startIcon={<AddIcon />}
@@ -307,11 +315,6 @@ export default function TimesheetSubmission({ onLogout }: Props) {
         </Alert>
       )}
 
-      {isDeadlinePassed() && !currentTimesheet && (
-        <Alert severity="warning" sx={{ mb: 3 }}>
-          The deadline for timesheet submission has passed (Sunday 7:00 PM). Please contact your dispatcher for assistance.
-        </Alert>
-      )}
 
       {currentTimesheet ? (
         <Card>
@@ -340,7 +343,7 @@ export default function TimesheetSubmission({ onLogout }: Props) {
 
             <Grid container spacing={2}>
               {Object.entries(groupSlotsByDay(currentTimesheet.slots)).map(([day, daySlots]) => (
-                <Grid item xs={12} sm={6} md={4} key={day}>
+                <Grid size={{xs: 12, sm: 6, md: 4}} key={day}>
                   <Paper sx={{ p: 2, height: '100%' }}>
                     <Typography variant="subtitle2" fontWeight="bold" sx={{ mb: 1 }}>
                       {DAY_LABELS[day as keyof typeof DAY_LABELS]}
@@ -374,10 +377,7 @@ export default function TimesheetSubmission({ onLogout }: Props) {
                 No Timesheet Submitted
               </Typography>
               <Typography variant="body2" color="text.secondary">
-                {isDeadlinePassed() 
-                  ? 'Submission deadline has passed. Contact your dispatcher.'
-                  : 'Submit your availability for the upcoming week'
-                }
+                Submit your availability for {getWeekTypeDisplay().toLowerCase()}
               </Typography>
             </Box>
           </CardContent>
@@ -389,7 +389,7 @@ export default function TimesheetSubmission({ onLogout }: Props) {
         <DialogTitle>Submit Weekly Timesheet</DialogTitle>
         <DialogContent>
           <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-            Select your available 2-hour time slots for the week of {nextMonday.toLocaleDateString()} - {weekEndDate.toLocaleDateString()}
+            Select your available 2-hour time slots for {getWeekTypeDisplay().toLowerCase()}: {startDate.toLocaleDateString()} - {endDate.toLocaleDateString()}
           </Typography>
 
           {error && (
@@ -402,7 +402,7 @@ export default function TimesheetSubmission({ onLogout }: Props) {
           <Box sx={{ border: 1, borderColor: 'divider', borderRadius: 1, p: 2, mb: 3 }}>
             <Typography variant="subtitle2" sx={{ mb: 2 }}>Add Time Slot</Typography>
             <Grid container spacing={2} alignItems="center">
-              <Grid item xs={12} sm={4}>
+              <Grid size={{xs: 12, sm: 4}}>
                 <FormControl fullWidth>
                   <InputLabel>Day</InputLabel>
                   <Select
@@ -418,7 +418,7 @@ export default function TimesheetSubmission({ onLogout }: Props) {
                   </Select>
                 </FormControl>
               </Grid>
-              <Grid item xs={12} sm={4}>
+              <Grid size={{xs: 12, sm: 4}}>
                 <FormControl fullWidth>
                   <InputLabel>Start Time</InputLabel>
                   <Select
@@ -434,7 +434,7 @@ export default function TimesheetSubmission({ onLogout }: Props) {
                   </Select>
                 </FormControl>
               </Grid>
-              <Grid item xs={12} sm={4}>
+              <Grid size={{xs: 12, sm: 4}}>
                 <Button
                   variant="outlined"
                   onClick={handleAddSlot}
