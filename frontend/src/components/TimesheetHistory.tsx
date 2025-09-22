@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Box,
   Typography,
@@ -139,7 +139,7 @@ export default function TimesheetHistory({ onLogout, userRole }: Props) {
 
   useEffect(() => {
     fetchTimesheetHistory(1, statusFilter, pagination.limit);
-  }, [fetchTimesheetHistory, statusFilter]);
+  }, [fetchTimesheetHistory, statusFilter, pagination.limit]);
 
   const handlePageChange = (event: unknown, newPage: number) => {
     fetchTimesheetHistory(newPage + 1, statusFilter, pagination.limit);
@@ -288,8 +288,8 @@ export default function TimesheetHistory({ onLogout, userRole }: Props) {
                   const isExpanded = expandedRows.has(timesheet.timesheet_id);
                   
                   return (
-                    <>
-                      <TableRow key={timesheet.timesheet_id}>
+                    <React.Fragment key={timesheet.timesheet_id}>
+                      <TableRow>
                         <TableCell>
                           <IconButton
                             size="small"
@@ -352,14 +352,14 @@ export default function TimesheetHistory({ onLogout, userRole }: Props) {
                               </Typography>
                               <Grid container spacing={1}>
                                 {Object.entries(groupSlotsByDay(timesheet.slots)).map(([day, daySlots]) => (
-                                  <Grid size={{xs: 12, sm: 6, md: 3}} key={day}>
+                                  <Grid size={{xs: 12, sm: 6, md: 3}} key={`${timesheet.timesheet_id}-${day}`}>
                                     <Paper sx={{ p: 1.5, height: '100%', bgcolor: 'background.default' }}>
                                       <Typography variant="caption" fontWeight="bold" display="block">
                                         {DAY_LABELS[day as keyof typeof DAY_LABELS]}
                                       </Typography>
                                       {daySlots.length > 0 ? (
                                         daySlots.map((slot, index) => (
-                                          <Typography key={index} variant="caption" display="block" color="text.secondary">
+                                          <Typography key={`${timesheet.timesheet_id}-${day}-${index}`} variant="caption" display="block" color="text.secondary">
                                             {formatTime(slot.start_time)} - {formatTime(slot.end_time)}
                                           </Typography>
                                         ))
@@ -384,7 +384,7 @@ export default function TimesheetHistory({ onLogout, userRole }: Props) {
                           </Collapse>
                         </TableCell>
                       </TableRow>
-                    </>
+                    </React.Fragment>
                   );
                 })}
               </TableBody>
