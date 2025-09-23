@@ -26,7 +26,9 @@ def create_app():
              "http://localhost:5173",    # Vite dev server
              "http://localhost:4173",    # Vite preview
              "https://app.salesdispatcher.com",  # Replace with your actual domain
-             "https://appointment-form.thspros.com"       # Appointment form server
+             "https://app.salesdispatcher.com/api",
+             "https://appointment-form.thspros.com",       # Appointment form server
+             "http://localhost:8080",    # Common dev server port
          ],
          allow_headers=["Content-Type", "Authorization", "X-API-Key"],
          methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"]

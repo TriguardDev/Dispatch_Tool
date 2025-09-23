@@ -806,3 +806,34 @@ def create_call_center_booking():
             cursor.close()
         if 'conn' in locals():
             conn.close()
+
+
+@booking_bp.route("/call-center/regions", methods=["GET"])
+@require_call_center_auth
+def get_call_center_regions():
+    """
+    Get all regions for call center - public endpoint with API key authentication.
+    """
+    try:
+        conn = get_connection()
+        cursor = conn.cursor(dictionary=True)
+
+        # Get all regions (same query as the admin endpoint but without role restrictions)
+        regions_query = """
+        SELECT regionId, name, description, is_global, created_time, updated_time 
+        FROM regions 
+        ORDER BY is_global DESC, name
+        """
+        cursor.execute(regions_query)
+        regions = cursor.fetchall()
+        
+        return jsonify({"success": True, "data": regions}), 200
+        
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
+
+    finally:
+        if 'cursor' in locals():
+            cursor.close()
+        if 'conn' in locals():
+            conn.close()
