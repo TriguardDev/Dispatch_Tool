@@ -398,12 +398,17 @@ def create_booking():
             # Default to Global region (regionId = 1)
             region_id = 1
         
+        # Handle agentId (0 means unassigned, should be NULL)
+        agent_id = data["booking"]["agentId"]
+        if agent_id == 0:
+            agent_id = None
+        
         # Booking insert
         cursor.execute("""
             INSERT INTO bookings (agentId, customerId, booking_date, booking_time, region_id)
             VALUES (%s,%s,%s,%s,%s)
         """, (
-            data["booking"]["agentId"],
+            agent_id,
             customer_id,
             data["booking"]["booking_date"],
             data["booking"]["booking_time"],
@@ -411,9 +416,11 @@ def create_booking():
         ))
         booking_id = cursor.lastrowid
 
-        # Fetch agent info
-        cursor.execute("SELECT name, email, phone FROM field_agents WHERE agentId=%s", (data["booking"]["agentId"],))
-        agent = cursor.fetchone()
+        # Fetch agent info (only if agent is assigned)
+        agent = None
+        if agent_id:
+            cursor.execute("SELECT name, email, phone FROM field_agents WHERE agentId=%s", (agent_id,))
+            agent = cursor.fetchone()
 
         conn.commit()
 
@@ -423,9 +430,9 @@ def create_booking():
             'customer_name': data['customer']['name'],
             'customer_email': data['customer'].get('email'),
             'customer_phone': data['customer'].get('phone'),
-            'agent_name': agent['name'],
-            'agent_email': agent.get('email'),
-            'agent_phone': agent.get('phone'),
+            'agent_name': agent['name'] if agent else None,
+            'agent_email': agent.get('email') if agent else None,
+            'agent_phone': agent.get('phone') if agent else None,
             'booking_date': data['booking']['booking_date'],
             'booking_time': data['booking']['booking_time']
         }
