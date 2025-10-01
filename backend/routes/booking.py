@@ -62,6 +62,12 @@ def get_all_bookings():
           SELECT b.bookingId, b.booking_date, b.booking_time, b.status,
             c.name AS customer_name,
             fa.name AS agent_name,
+            disp.name AS dispatcher_name,
+            CASE 
+              WHEN b.agentId IS NOT NULL THEN fa.name
+              WHEN b.dispatcherId IS NOT NULL THEN CONCAT(disp.name, ' (Dispatcher)')
+              ELSE NULL
+            END AS assigned_to,
             d.dispositionId AS disposition_id,
             d.typeCode AS disposition_code,
             d.note AS disposition_note,
@@ -75,10 +81,12 @@ def get_all_bookings():
                 l.city
             ) AS customer_address,
             r.regionId, r.name AS region_name, r.is_global AS region_is_global,
-            b.call_center_agent_name, b.call_center_agent_email
+            b.call_center_agent_name, b.call_center_agent_email,
+            b.agentId, b.dispatcherId
           FROM bookings b
           JOIN customers c ON b.customerId = c.customerId
           LEFT JOIN field_agents fa ON b.agentId = fa.agentId
+          LEFT JOIN dispatchers disp ON b.dispatcherId = disp.dispatcherId
           LEFT JOIN dispositions d ON b.dispositionId = d.dispositionId
           LEFT JOIN disposition_types dt ON d.typeCode = dt.typeCode
           LEFT JOIN locations l ON c.location_id = l.id
@@ -196,6 +204,88 @@ def get_agent_bookings(agent_id):
           ORDER BY b.booking_date, b.booking_time;
         """
         cursor.execute(query, (agent_id,))
+
+        bookings = cursor.fetchall()
+
+        # Serialize timestamps for all bookings
+        for booking in bookings:
+            serialize_booking_timestamps(booking)
+
+        return jsonify({"success": True, "data": bookings}), 200
+
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
+
+    finally:
+        if 'cursor' in locals():
+            cursor.close()
+        if 'conn' in locals():
+            conn.close()
+
+
+@booking_bp.route("/dispatchers/<int:dispatcher_id>/bookings", methods=["GET"])
+@require_any_role('admin', 'dispatcher')
+def get_dispatcher_bookings(dispatcher_id):
+    """
+    Get all bookings assigned to a specific dispatcher. Dispatchers can only see their own assigned bookings.
+    """
+    try:
+        # Dispatchers can only see their own assigned bookings
+        if request.role == 'dispatcher' and request.user_id != dispatcher_id:
+            return jsonify({"success": False, "error": "Access denied - can only view your own assigned bookings"}), 403
+
+        conn = get_connection()
+        cursor = conn.cursor(dictionary=True)
+
+        # Verify dispatcher exists
+        cursor.execute("SELECT dispatcherId FROM dispatchers WHERE dispatcherId = %s", (dispatcher_id,))
+        if not cursor.fetchone():
+            return jsonify({"success": False, "error": "Dispatcher not found"}), 404
+
+        # Find all bookings where bookings.dispatcherId = dispatcher_id
+        query = """
+          SELECT 
+              b.bookingId, 
+              b.booking_date, 
+              b.booking_time, 
+              b.status,
+              c.name AS customer_name,
+              c.email AS customer_email,
+              c.phone AS customer_phone,
+              disp.name AS dispatcher_name,
+              CONCAT(disp.name, ' (Dispatcher)') AS assigned_to,
+              d.dispositionId AS disposition_id,
+              d.typeCode AS disposition_code,
+              d.note AS disposition_note,
+              dt.description AS disposition_description,
+              l.latitude AS customer_latitude,
+              l.longitude AS customer_longitude,
+              CONCAT(
+                  l.street_number, ' ', 
+                  l.street_name, ', ', 
+                  l.postal_code, ' ', 
+                  l.city
+              ) AS customer_address,
+              r.regionId, r.name AS region_name, r.is_global AS region_is_global,
+              b.call_center_agent_name, b.call_center_agent_email,
+              b.agentId, b.dispatcherId
+          FROM bookings b
+          JOIN customers c 
+              ON b.customerId = c.customerId
+          LEFT JOIN dispatchers disp 
+              ON b.dispatcherId = disp.dispatcherId
+          LEFT JOIN dispositions d
+              ON b.dispositionId = d.dispositionId
+          LEFT JOIN disposition_types dt
+              ON d.typeCode = dt.typeCode
+          LEFT JOIN locations l
+              ON c.location_id = l.id
+          LEFT JOIN regions r 
+              ON b.region_id = r.regionId
+          WHERE b.dispatcherId = %s
+          ORDER BY b.booking_date, b.booking_time;
+        """
+        cursor.execute(query, (dispatcher_id,))
 
         bookings = cursor.fetchall()
 
@@ -530,6 +620,26 @@ def update_booking(booking_id):
         if "agentId" in data and request.role != 'field_agent':  # Only dispatchers/admins can reassign
             update_fields.append("agentId = %s")
             update_values.append(data["agentId"])
+            # Clear dispatcher assignment if assigning to an agent
+            if data["agentId"] is not None:
+                update_fields.append("dispatcherId = %s")
+                update_values.append(None)
+
+        # Handle dispatcher self-assignment
+        if "dispatcherId" in data and request.role in ['dispatcher', 'admin']:
+            update_fields.append("dispatcherId = %s")
+            update_values.append(data["dispatcherId"])
+            # Clear agent assignment if assigning to a dispatcher
+            if data["dispatcherId"] is not None:
+                update_fields.append("agentId = %s")
+                update_values.append(None)
+
+        # Special case: dispatcher self-assignment (assign to themselves)
+        if data.get("assign_to_self") and request.role == 'dispatcher':
+            update_fields.append("dispatcherId = %s")
+            update_values.append(request.user_id)
+            update_fields.append("agentId = %s")
+            update_values.append(None)
 
         if "region_id" in data and request.role == 'admin':  # Only admins can change region
             region_id = data["region_id"]
