@@ -69,7 +69,7 @@ function AppContent() {
   }
 
   if (user.role === "dispatcher") {
-    return <DispatcherScreen onLogout={handleLogout} />;
+    return <DispatcherScreen dispatcherId={user.id} onLogout={handleLogout} />;
   }
 
   if (user.role === "admin") {

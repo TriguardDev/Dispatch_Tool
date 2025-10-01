@@ -12,6 +12,10 @@ export interface Booking {
   status: string;
   customer_name: string;
   agent_name: string | null;
+  dispatcher_name?: string | null;
+  assigned_to?: string | null; // Combined field showing who it's assigned to
+  agentId?: number | null;
+  dispatcherId?: number | null;
   disposition_id: number | null
   disposition_code: string | null
   disposition_description: string | null
@@ -56,9 +60,30 @@ export async function getAgentBookings(agentId: number): Promise<Booking[]> {
   return result.success ? result.data : [];
 }
 
+export async function getDispatcherBookings(dispatcherId: number): Promise<Booking[]> {
+  const res = await authenticatedFetch(`${BASE_URL}/dispatchers/${dispatcherId}/bookings`);
+
+  if (!res.ok) {
+    if (res.status === 401) {
+      throw new Error("Authentication required");
+    }
+    if (res.status === 403) {
+      throw new Error("Access denied");
+    }
+    if (res.status === 404) {
+      throw new Error("Dispatcher not found");
+    }
+    throw new Error("Failed to fetch dispatcher bookings");
+  }
+
+  const result = await res.json();
+  return result.success ? result.data : [];
+}
 
 export async function updateBooking(bookingId: number, updates: { 
   agentId?: number | null; 
+  dispatcherId?: number | null;
+  assign_to_self?: boolean;
   booking_date?: string; 
   booking_time?: string; 
   status?: string; 

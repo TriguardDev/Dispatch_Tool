@@ -217,6 +217,19 @@ const AppointmentCard = memo(function AppointmentCard({ appt, addressText, onSta
     }
   }, [appt.bookingId, onAgentChange]);
 
+  const handleDispatcherSelfAssign = useCallback(async () => {
+    try {
+      await updateBooking(appt.bookingId, { assign_to_self: true });
+      setAgentDropdownOpen(false);
+      if (onAgentChange) {
+        onAgentChange(); // Refresh the booking data
+      }
+    } catch (err) {
+      console.error("Error assigning to self:", err);
+      alert("Error assigning appointment to yourself");
+    }
+  }, [appt.bookingId, onAgentChange]);
+
   const handleDelete = useCallback(async () => {
     if (!onDelete || userRole === 'field_agent') return;
     
@@ -275,13 +288,13 @@ const AppointmentCard = memo(function AppointmentCard({ appt, addressText, onSta
           {userRole === 'field_agent' ? (
             // Field agents see read-only assigned agent info
             <Typography variant="body2" fontWeight="500" sx={{ py: 1 }}>
-              {appt.agent_name || "No agent assigned"}
+              {appt.assigned_to || appt.agent_name || appt.dispatcher_name || "No one assigned"}
             </Typography>
           ) : (
             // Admins and dispatchers can reassign agents
             <FormControl fullWidth size="small" variant="outlined">
               <Select
-                value={agentDropdownOpen ? "" : (appt.agent_name || "")}
+                value={agentDropdownOpen ? "" : (appt.assigned_to || appt.agent_name || "")}
                 open={agentDropdownOpen}
                 onOpen={() => {
                   setAgentDropdownOpen(true);
@@ -300,7 +313,7 @@ const AppointmentCard = memo(function AppointmentCard({ appt, addressText, onSta
                       </Box>
                     );
                   }
-                  return selected || appt.agent_name || "No agent assigned";
+                  return selected || appt.assigned_to || appt.agent_name || "No assignment";
                 }}
                 sx={{
                   '& .MuiSelect-select': {
@@ -331,6 +344,20 @@ const AppointmentCard = memo(function AppointmentCard({ appt, addressText, onSta
                       Unassigned
                     </Typography>
                   </MenuItem>,
+                  
+                  // Assign to self option (only for dispatchers)
+                  ...(userRole === 'dispatcher' ? [
+                    <MenuItem 
+                      key="assign-to-self" 
+                      value="assign-to-self"
+                      onClick={() => handleDispatcherSelfAssign()}
+                      sx={{ borderBottom: '1px solid', borderColor: 'divider' }}
+                    >
+                      <Typography variant="body2" fontWeight="500" color="primary.main" sx={{ fontStyle: 'italic' }}>
+                        Assign to Self
+                      </Typography>
+                    </MenuItem>
+                  ] : []),
                   
                   // Refresh agents option (only show if agents are loaded)
                   ...(agentsLoaded ? [
