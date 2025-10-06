@@ -23,6 +23,8 @@ export interface Booking {
   regionId?: number;
   region_name?: string;
   region_is_global?: boolean;
+  call_center_agent_name?: string | null;
+  call_center_agent_email?: string | null;
 }
 
 export async function getAllBookings(regionId?: number): Promise<Booking[]> {
