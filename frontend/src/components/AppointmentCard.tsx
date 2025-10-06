@@ -440,6 +440,25 @@ const AppointmentCard = memo(function AppointmentCard({ appt, addressText, onSta
           {appt.booking_date} at {appt.booking_time}
         </Typography>
       </InfoRow>
+
+      {/* Call Center Agent Information */}
+      {appt.call_center_agent_name && (
+        <InfoRow icon={<Person sx={{ fontSize: 16, color: 'info.main' }} />}>
+          <Box>
+            <Typography variant="body2" color="text.secondary" fontWeight="600" sx={{ mb: 0.5 }}>
+              Call Center Agent:
+            </Typography>
+            <Typography variant="body2" color="text.primary" fontWeight="500">
+              {appt.call_center_agent_name}
+            </Typography>
+            {appt.call_center_agent_email && (
+              <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
+                {appt.call_center_agent_email}
+              </Typography>
+            )}
+          </Box>
+        </InfoRow>
+      )}
     </>
   );
 
