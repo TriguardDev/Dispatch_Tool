@@ -178,19 +178,29 @@ const AppointmentCard = memo(function AppointmentCard({ appt, addressText, onSta
   const toggleNoteExpansion = useCallback(() => setNoteExpanded(!noteExpanded), [noteExpanded]);
 
   const handleSearchAgents = useCallback(async () => {
-    if (!appt.customer_latitude || !appt.customer_longitude) {
+    // For virtual bookings, location is not required
+    const isVirtual = appt.booking_type === 'virtual';
+    
+    if (!isVirtual && (!appt.customer_latitude || !appt.customer_longitude)) {
       console.warn("Customer location not available for agent search");
       return;
     }
     
     setLoadingAgents(true);
     try {
-      const data = await searchAgents({
-        latitude: appt.customer_latitude.toString(),
-        longitude: appt.customer_longitude.toString(),
+      const searchParams: any = {
         booking_date: appt.booking_date,
         booking_time: appt.booking_time,
-      });
+        booking_type: appt.booking_type || 'physical',
+      };
+      
+      // Only add coordinates for physical bookings
+      if (!isVirtual) {
+        searchParams.latitude = appt.customer_latitude.toString();
+        searchParams.longitude = appt.customer_longitude.toString();
+      }
+      
+      const data = await searchAgents(searchParams);
       setAgents(data);
       setAgentsLoaded(true);
     } catch (err) {
@@ -198,7 +208,7 @@ const AppointmentCard = memo(function AppointmentCard({ appt, addressText, onSta
     } finally {
       setLoadingAgents(false);
     }
-  }, [appt.customer_latitude, appt.customer_longitude, appt.booking_date, appt.booking_time]);
+  }, [appt.customer_latitude, appt.customer_longitude, appt.booking_date, appt.booking_time, appt.booking_type]);
 
   const handleAgentChange = useCallback(async (newAgentId: string) => {
     try {
@@ -400,7 +410,7 @@ const AppointmentCard = memo(function AppointmentCard({ appt, addressText, onSta
                             {agent.name}
                           </Typography>
                           <Typography variant="body2" color="text.secondary">
-                            {Math.ceil(Number(agent.distance))} km
+                            {agent.distance ? `${Math.ceil(Number(agent.distance))} km` : 'Virtual'}
                           </Typography>
                         </Box>
                       </MenuItem>

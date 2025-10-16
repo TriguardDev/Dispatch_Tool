@@ -4,7 +4,7 @@ import { useTheme } from "@mui/material/styles";
 interface Agent {
   agentId: string;
   name: string;
-  distance: string;
+  distance: string | null;
   availability_status?: string;
 }
 
@@ -49,7 +49,9 @@ export default function AgentSelector({
           onClick={() => setIsOpen(!isOpen)}
         >
           {selectedAgent
-            ? `${selectedAgent.name} - ${Math.ceil(Number(selectedAgent.distance))} km`
+            ? selectedAgent.distance 
+              ? `${selectedAgent.name} - ${Math.ceil(Number(selectedAgent.distance))} km`
+              : `${selectedAgent.name} - Virtual`
             : loading
             ? "Searching..."
             : availableAgents.length > 0
@@ -67,8 +69,8 @@ export default function AgentSelector({
             }}
           >
             {availableAgents.map((agent) => {
-              const distance = Math.ceil(Number(agent.distance));
-              const color = getDistanceColor(distance);
+              const distance = agent.distance ? Math.ceil(Number(agent.distance)) : null;
+              const color = distance ? getDistanceColor(distance) : "text-blue-600";
               return (
                 <div
                   key={agent.agentId}
@@ -92,7 +94,9 @@ export default function AgentSelector({
                   }}
                 >
                   <span style={{ color: theme.palette.text.primary }}>{agent.name}</span>
-                  <span className={`${color} font-semibold`}>{distance} km</span>
+                  <span className={`${color} font-semibold`}>
+                    {distance ? `${distance} km` : "Virtual"}
+                  </span>
                 </div>
               );
             })}
