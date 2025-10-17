@@ -156,13 +156,19 @@ export async function saveDisposition(
 }
 
 export async function searchAgents(params: {
-  latitude: string;
-  longitude: string;
+  latitude?: string;
+  longitude?: string;
   booking_date: string;
   booking_time: string;
+  booking_type?: string;
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 }): Promise<any[]> {
-  const queryParams = new URLSearchParams(params);
+  const queryParams = new URLSearchParams();
+  queryParams.append('booking_date', params.booking_date);
+  queryParams.append('booking_time', params.booking_time);
+  if (params.latitude) queryParams.append('latitude', params.latitude);
+  if (params.longitude) queryParams.append('longitude', params.longitude);
+  if (params.booking_type) queryParams.append('booking_type', params.booking_type);
   const res = await authenticatedFetch(`${BASE_URL}/search?${queryParams.toString()}`);
 
   if (!res.ok) {

@@ -191,7 +191,7 @@ const AppointmentCard = memo(function AppointmentCard({ appt, addressText, onSta
       const searchParams: {
         booking_date: string;
         booking_time: string;
-        booking_type: string;
+        booking_type?: string;
         latitude?: string;
         longitude?: string;
       } = {
@@ -201,7 +201,7 @@ const AppointmentCard = memo(function AppointmentCard({ appt, addressText, onSta
       };
       
       // Only add coordinates for physical bookings
-      if (!isVirtual) {
+      if (!isVirtual && appt.customer_latitude !== null && appt.customer_longitude !== null) {
         searchParams.latitude = appt.customer_latitude.toString();
         searchParams.longitude = appt.customer_longitude.toString();
       }
