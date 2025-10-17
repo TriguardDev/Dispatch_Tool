@@ -119,7 +119,31 @@ export default function NewAppointmentModal({ isOpen, onClose, onSave, onLogout 
     }
 
     // Transform flat form into backend format
-    const payload: any = {
+    const payload: {
+      booking_type: string;
+      customer: {
+        name: string;
+        email: string;
+        phone: string;
+      };
+      booking: {
+        agentId: number;
+        booking_date: string;
+        booking_time: string;
+        region_id?: number;
+      };
+      location?: {
+        latitude: number;
+        longitude: number;
+        street_number: string;
+        street_name: string;
+        postal_code: string;
+        city: string;
+        state_province: string;
+        country: string;
+      };
+    } = {
+      booking_type: form.booking_type,
       customer: {
         name: form.name,
         email: form.email,
@@ -131,7 +155,6 @@ export default function NewAppointmentModal({ isOpen, onClose, onSave, onLogout 
         booking_time: formatTime(form.time),
         region_id: form.region_id,
       },
-      booking_type: form.booking_type,
     };
 
     // Only add location data for physical bookings
@@ -172,7 +195,13 @@ export default function NewAppointmentModal({ isOpen, onClose, onSave, onLogout 
     setLoadingAgents(true);
     console.log("Searching...")
     try {
-      const searchParams: any = {
+      const searchParams: {
+        booking_date: string;
+        booking_time: string;
+        booking_type?: string;
+        latitude?: string;
+        longitude?: string;
+      } = {
         booking_date: form.date,
         booking_time: formatTime(form.time),
         booking_type: form.booking_type,
@@ -423,6 +452,17 @@ export default function NewAppointmentModal({ isOpen, onClose, onSave, onLogout 
                     fullWidth
                   />
                 </Grid>
+                <Grid size={{xs:12, md:6}}>
+                  <TextField
+                    id="f-postal_code"
+                    label="Zip Code"
+                    placeholder="BA4 3J7"
+                    value={form.postal_code}
+                    onChange={handleChange}
+                    required={form.booking_type === "physical"}
+                    fullWidth
+                  />
+                </Grid>
               </>
             )}
 
@@ -436,8 +476,10 @@ export default function NewAppointmentModal({ isOpen, onClose, onSave, onLogout 
                 onChange={handleChange}
                 required
                 fullWidth
-                InputLabelProps={{
-                  shrink: true,
+                slotProps={{
+                  inputLabel: {
+                    shrink: true,
+                  }
                 }}
               />
             </Grid>
@@ -451,8 +493,10 @@ export default function NewAppointmentModal({ isOpen, onClose, onSave, onLogout 
                 onChange={handleChange}
                 required
                 fullWidth
-                InputLabelProps={{
-                  shrink: true,
+                slotProps={{
+                  inputLabel: {
+                    shrink: true,
+                  }
                 }}
               />
             </Grid>
