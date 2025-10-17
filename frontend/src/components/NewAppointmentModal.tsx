@@ -54,6 +54,7 @@ export default function NewAppointmentModal({ isOpen, onClose, onSave, onLogout 
     rep: "",
     type: "Roof Replacement",
     region_id: null as number | null,
+    booking_type: "physical" as "physical" | "virtual",
   });
 
   const [latLon, setLatLon] = useState<{ lat: number | null, lon: number | null }>({ lat: null, lon: null });
@@ -111,14 +112,31 @@ export default function NewAppointmentModal({ isOpen, onClose, onSave, onLogout 
       return;
     }
 
+    // For physical bookings, validate address fields
+    if (form.booking_type === "physical" && (!form.street_number || !form.street_name || !form.postal_code || !form.city)) {
+      alert("Please fill in all address fields for physical appointments");
+      return;
+    }
+
     // Transform flat form into backend format
-    const payload = {
+    const payload: any = {
       customer: {
         name: form.name,
         email: form.email,
         phone: form.phone,
       },
-      location: {
+      booking: {
+        agentId: Number(form.rep),
+        booking_date: form.date,
+        booking_time: formatTime(form.time),
+        region_id: form.region_id,
+      },
+      booking_type: form.booking_type,
+    };
+
+    // Only add location data for physical bookings
+    if (form.booking_type === "physical") {
+      payload.location = {
         latitude: latLon.lat,
         longitude: latLon.lon,
         postal_code: form.postal_code,
@@ -127,14 +145,8 @@ export default function NewAppointmentModal({ isOpen, onClose, onSave, onLogout 
         city: form.city,
         state_province: form.state_province,
         country: form.country,
-      },
-      booking: {
-        agentId: Number(form.rep),
-        booking_date: form.date,
-        booking_time: formatTime(form.time),
-        region_id: form.region_id,
-      },
-    };
+      };
+    }
     
     console.log(JSON.stringify(payload))
 
@@ -160,23 +172,30 @@ export default function NewAppointmentModal({ isOpen, onClose, onSave, onLogout 
     setLoadingAgents(true);
     console.log("Searching...")
     try {
-      // First get lat/long
-      const { lat, lon } = await findLatLong({street_number: form.street_number, street_name: form.street_name, postal_code: form.postal_code })
-
-      if (lat === null || lon === null){
-        console.error("Could not find lat/lon for address.")
-        setLatLon({ lat: null, lon: null });
-        setAgents([])
-      } else{
+      const searchParams: any = {
+        booking_date: form.date,
+        booking_time: formatTime(form.time),
+        booking_type: form.booking_type,
+      };
+      
+      // For physical bookings, get coordinates and add them to search
+      if (form.booking_type === "physical") {
+        const { lat, lon } = await findLatLong({street_number: form.street_number, street_name: form.street_name, postal_code: form.postal_code });
+        
+        if (lat === null || lon === null){
+          console.error("Could not find lat/lon for address.")
+          setLatLon({ lat: null, lon: null });
+          setAgents([]);
+          return;
+        }
+        
         setLatLon({ lat, lon });
-        const data = await searchAgents({
-          latitude: lat.toString(),
-          longitude: lon.toString(),
-          booking_date: form.date,
-          booking_time: formatTime(form.time),
-        });
-        setAgents(data);
-      }      
+        searchParams.latitude = lat.toString();
+        searchParams.longitude = lon.toString();
+      }
+      
+      const data = await searchAgents(searchParams);
+      setAgents(data);
     } catch (err) {
       console.error("Error fetching agents:", err);
       const errorMessage = (err as Error).message || "Error searching agents";
@@ -272,6 +291,21 @@ export default function NewAppointmentModal({ isOpen, onClose, onSave, onLogout 
 
         <DialogContent>
           <Grid container spacing={3} sx={{ mt: 1 }}>
+            {/* Booking Type Selection */}
+            <Grid size={{ xs: 12 }}>
+              <FormControl fullWidth>
+                <InputLabel>Booking Type</InputLabel>
+                <Select
+                  value={form.booking_type}
+                  onChange={(e) => setForm(prev => ({ ...prev, booking_type: e.target.value as "physical" | "virtual" }))}
+                  label="Booking Type"
+                >
+                  <MenuItem value="physical">Physical Appointment</MenuItem>
+                  <MenuItem value="virtual">Virtual Appointment</MenuItem>
+                </Select>
+              </FormControl>
+            </Grid>
+
             {/* Customer Fields */}
             <Grid size={{xs:12, md:6}}>
               <TextField
@@ -309,72 +343,88 @@ export default function NewAppointmentModal({ isOpen, onClose, onSave, onLogout 
               />
             </Grid>
 
-            {/* Address Fields */}
-            <Grid size={{xs:12, md:6}}>
-              <TextField
-                id="f-street_number"
-                label="Street Number"
-                placeholder="5580"
-                value={form.street_number}
-                onChange={handleChange}
-                fullWidth
-              />
-            </Grid>
+            {/* Address Fields - Only show for physical bookings */}
+            {form.booking_type === "physical" && (
+              <>
+                <Grid size={{ xs: 12 }}>
+                  <Typography variant="h6" sx={{ mb: 1, color: 'text.secondary' }}>
+                    Address Information
+                  </Typography>
+                </Grid>
+                
+                <Grid size={{xs:12, md:6}}>
+                  <TextField
+                    id="f-street_number"
+                    label="Street Number"
+                    placeholder="5580"
+                    value={form.street_number}
+                    onChange={handleChange}
+                    required={form.booking_type === "physical"}
+                    fullWidth
+                  />
+                </Grid>
 
-            <Grid size={{xs:12, md:6}}>
-              <TextField
-                id="f-street_name"
-                label="Street Name"
-                placeholder="Lacklon Lane"
-                value={form.street_name}
-                onChange={handleChange}
-                fullWidth
-              />
-            </Grid>
+                <Grid size={{xs:12, md:6}}>
+                  <TextField
+                    id="f-street_name"
+                    label="Street Name"
+                    placeholder="Lacklon Lane"
+                    value={form.street_name}
+                    onChange={handleChange}
+                    required={form.booking_type === "physical"}
+                    fullWidth
+                  />
+                </Grid>
 
-            <Grid size={{xs:12, md:6}}>
-              <TextField
-                id="f-city"
-                label="City"
-                placeholder="Bedford"
-                value={form.city}
-                onChange={handleChange}
-                fullWidth
-              />
-            </Grid>
+                <Grid size={{xs:12, md:6}}>
+                  <TextField
+                    id="f-city"
+                    label="City"
+                    placeholder="Bedford"
+                    value={form.city}
+                    onChange={handleChange}
+                    required={form.booking_type === "physical"}
+                    fullWidth
+                  />
+                </Grid>
 
-            <Grid size={{xs:12, md:6}}>
-              <TextField
-                id="f-state_province"
-                label="State"
-                placeholder="NS"
-                value={form.state_province}
-                onChange={handleChange}
-                fullWidth
-              />
-            </Grid>
+                <Grid size={{xs:12, md:6}}>
+                  <TextField
+                    id="f-state_province"
+                    label="State"
+                    placeholder="NS"
+                    value={form.state_province}
+                    onChange={handleChange}
+                    required={form.booking_type === "physical"}
+                    fullWidth
+                  />
+                </Grid>
 
-            <Grid size={{xs:12, md:6}}>
-              <TextField
-                id="f-country"
-                label="Country"
-                placeholder="Canada"
-                value={form.country}
-                onChange={handleChange}
-                fullWidth
-              />
-            </Grid>
+                <Grid size={{xs:12, md:6}}>
+                  <TextField
+                    id="f-country"
+                    label="Country"
+                    placeholder="Canada"
+                    value={form.country}
+                    onChange={handleChange}
+                    required={form.booking_type === "physical"}
+                    fullWidth
+                  />
+                </Grid>
 
-            <Grid size={{xs:12, md:6}}>
-              <TextField
-                id="f-postal_code"
-                label="Zip Code"
-                placeholder="BA4 3J7"
-                value={form.postal_code}
-                onChange={handleChange}
-                fullWidth
-              />
-            </Grid>
+                <Grid size={{xs:12, md:6}}>
+                  <TextField
+                    id="f-postal_code"
+                    label="Zip Code"
+                    placeholder="BA4 3J7"
+                    value={form.postal_code}
+                    onChange={handleChange}
+                    required={form.booking_type === "physical"}
+                    fullWidth
+                  />
+                </Grid>
+              </>
+            )}
 
             {/* Date + Time */}
             <Grid size={{xs:12, md:6}}>
@@ -443,7 +493,10 @@ export default function NewAppointmentModal({ isOpen, onClose, onSave, onLogout 
                   loading={loadingAgents}
                   onChange={(agentId: string) => setForm(prev => ({ ...prev, rep: agentId }))}
                   onSearch={handleSearchAgents}
-                  disabledSearch={!form.postal_code || !form.date || !form.time}
+                  disabledSearch={
+                    !form.date || !form.time || 
+                    (form.booking_type === "physical" && !form.postal_code)
+                  }
                 />
               </Box>
             </Grid>
