@@ -1,0 +1,2529 @@
+openapi: 3.0.3
+info:
+  title: Dispatch Tool API
+  version: "1.0.0"
+  description: API for managing field agent dispatch operations, bookings, and team management.
+
+servers:
+  - url: http://localhost:8000/api
+    description: Development server
+  - url: https://app.salesdispatcher.com/api
+    description: Production server
+
+security:
+  - cookieAuth: []
+  - apiKeyAuth: []
+
+paths:
+  # Authentication endpoints
+  /login:
+    post:
+      summary: Authenticate user
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+            examples:
+              dispatcher:
+                summary: Dispatcher login
+                value:
+                  email: dispatcher@example.com
+                  password: password123
+                  role: dispatcher
+              field_agent:
+                summary: Field agent login
+                value:
+                  email: agent@example.com
+                  password: password123
+                  role: field_agent
+              admin:
+                summary: Admin login
+                value:
+                  email: admin@example.com
+                  password: password123
+                  role: admin
+      responses:
+        "200":
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoginResponse'
+        "401":
+          description: Invalid credentials
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /logout:
+    post:
+      summary: Logout user
+      responses:
+        "200":
+          description: Logout successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+
+  /verify:
+    get:
+      summary: Verify authentication token
+      responses:
+        "200":
+          description: Token is valid
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TokenVerifyResponse'
+        "401":
+          description: Token is invalid or expired
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /reset-password:
+    post:
+      summary: Reset user password
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PasswordResetRequest'
+      responses:
+        "200":
+          description: Password reset successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        "401":
+          description: Invalid credentials
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  # Booking endpoints
+  /bookings:
+    get:
+      summary: Get all bookings
+      security:
+        - cookieAuth: []
+      parameters:
+        - in: query
+          name: region_id
+          schema:
+            type: integer
+          description: Filter by region ID (admin only)
+      responses:
+        "200":
+          description: List of bookings
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BookingsResponse'
+        "403":
+          description: Access denied
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+    post:
+      summary: Create a new booking
+      security:
+        - cookieAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BookingCreateRequest'
+            examples:
+              newBooking:
+                summary: Sample booking creation
+                value:
+                  customer:
+                    name: John Smith
+                    email: john.smith@example.com
+                    phone: "+1234567890"
+                  location:
+                    street_number: "123"
+                    street_name: "Main Street"
+                    city: "Toronto"
+                    state_province: "ON"
+                    postal_code: "M5V 3A8"
+                    country: "Canada"
+                    latitude: 43.6532
+                    longitude: -79.3832
+                  booking:
+                    booking_date: "2024-02-15"
+                    booking_time: "14:00:00"
+                    agentId: 5
+                    region_id: 2
+      responses:
+        "201":
+          description: Booking created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BookingResponse'
+        "400":
+          description: Invalid request data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /bookings/{bookingId}:
+    get:
+      summary: Get specific booking
+      security:
+        - cookieAuth: []
+      parameters:
+        - in: path
+          name: bookingId
+          required: true
+          schema:
+            type: integer
+          description: Booking ID
+      responses:
+        "200":
+          description: Booking details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BookingResponse'
+        "404":
+          description: Booking not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+    put:
+      summary: Update booking
+      security:
+        - cookieAuth: []
+      parameters:
+        - in: path
+          name: bookingId
+          required: true
+          schema:
+            type: integer
+          description: Booking ID
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BookingUpdateRequest'
+      responses:
+        "200":
+          description: Booking updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BookingResponse'
+        "404":
+          description: Booking not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+    delete:
+      summary: Delete booking
+      security:
+        - cookieAuth: []
+      parameters:
+        - in: path
+          name: bookingId
+          required: true
+          schema:
+            type: integer
+          description: Booking ID
+      responses:
+        "200":
+          description: Booking deleted successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        "404":
+          description: Booking not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /agents/{agentId}/bookings:
+    get:
+      summary: Get bookings for specific agent
+      security:
+        - cookieAuth: []
+      parameters:
+        - in: path
+          name: agentId
+          required: true
+          schema:
+            type: integer
+          description: Agent ID
+      responses:
+        "200":
+          description: Agent's bookings
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BookingsResponse'
+        "403":
+          description: Access denied
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /dispatchers/{dispatcherId}/bookings:
+    get:
+      summary: Get bookings assigned to specific dispatcher
+      security:
+        - cookieAuth: []
+      parameters:
+        - in: path
+          name: dispatcherId
+          required: true
+          schema:
+            type: integer
+          description: Dispatcher ID
+      responses:
+        "200":
+          description: Dispatcher's assigned bookings
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BookingsResponse'
+        "403":
+          description: Access denied
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  # Call center endpoints
+  /call-center/booking:
+    post:
+      summary: Create booking from call center
+      security:
+        - apiKeyAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CallCenterBookingRequest'
+            examples:
+              callCenterBooking:
+                summary: Call center booking creation
+                value:
+                  customer:
+                    name: Jane Doe
+                    email: jane.doe@example.com
+                    phone: "+1987654321"
+                  location:
+                    street_number: "456"
+                    street_name: "Oak Avenue"
+                    city: "Vancouver"
+                    state_province: "BC"
+                    postal_code: "V6B 1A1"
+                    country: "Canada"
+                    latitude: 49.2827
+                    longitude: -123.1207
+                  booking:
+                    booking_date: "2024-02-16"
+                    booking_time: "10:00:00"
+                    region_id: 3
+                  call_center_agent:
+                    name: Sarah Johnson
+                    email: sarah@callcenter.com
+      responses:
+        "201":
+          description: Booking created successfully from call center
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CallCenterBookingResponse'
+        "400":
+          description: Invalid request data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /call-center/regions:
+    get:
+      summary: Get all regions for call center
+      security:
+        - apiKeyAuth: []
+      responses:
+        "200":
+          description: List of regions
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RegionsResponse'
+
+  # Agent management endpoints
+  /agents:
+    get:
+      summary: Get all agents
+      security:
+        - cookieAuth: []
+      responses:
+        "200":
+          description: List of agents
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AgentsResponse'
+
+    post:
+      summary: Create new agent
+      security:
+        - cookieAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AgentCreateRequest'
+      responses:
+        "201":
+          description: Agent created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AgentResponse'
+
+  /agents/{agentId}:
+    get:
+      summary: Get specific agent
+      security:
+        - cookieAuth: []
+      parameters:
+        - in: path
+          name: agentId
+          required: true
+          schema:
+            type: integer
+          description: Agent ID
+      responses:
+        "200":
+          description: Agent details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AgentResponse'
+
+    put:
+      summary: Update agent
+      security:
+        - cookieAuth: []
+      parameters:
+        - in: path
+          name: agentId
+          required: true
+          schema:
+            type: integer
+          description: Agent ID
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AgentUpdateRequest'
+      responses:
+        "200":
+          description: Agent updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AgentResponse'
+
+    delete:
+      summary: Delete agent
+      security:
+        - cookieAuth: []
+      parameters:
+        - in: path
+          name: agentId
+          required: true
+          schema:
+            type: integer
+          description: Agent ID
+      responses:
+        "200":
+          description: Agent deleted successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+
+  # Dispatcher management endpoints
+  /dispatchers:
+    get:
+      summary: Get all dispatchers
+      security:
+        - cookieAuth: []
+      responses:
+        "200":
+          description: List of dispatchers
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DispatchersResponse'
+
+    post:
+      summary: Create new dispatcher
+      security:
+        - cookieAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DispatcherCreateRequest'
+      responses:
+        "201":
+          description: Dispatcher created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DispatcherResponse'
+
+  /dispatchers/{dispatcherId}:
+    get:
+      summary: Get specific dispatcher
+      security:
+        - cookieAuth: []
+      parameters:
+        - in: path
+          name: dispatcherId
+          required: true
+          schema:
+            type: integer
+          description: Dispatcher ID
+      responses:
+        "200":
+          description: Dispatcher details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DispatcherResponse'
+
+    put:
+      summary: Update dispatcher
+      security:
+        - cookieAuth: []
+      parameters:
+        - in: path
+          name: dispatcherId
+          required: true
+          schema:
+            type: integer
+          description: Dispatcher ID
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DispatcherUpdateRequest'
+      responses:
+        "200":
+          description: Dispatcher updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DispatcherResponse'
+
+    delete:
+      summary: Delete dispatcher
+      security:
+        - cookieAuth: []
+      parameters:
+        - in: path
+          name: dispatcherId
+          required: true
+          schema:
+            type: integer
+          description: Dispatcher ID
+      responses:
+        "200":
+          description: Dispatcher deleted successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+
+  # Admin management endpoints
+  /admins:
+    get:
+      summary: Get all admins
+      security:
+        - cookieAuth: []
+      responses:
+        "200":
+          description: List of admins
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminsResponse'
+
+    post:
+      summary: Create new admin
+      security:
+        - cookieAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AdminCreateRequest'
+      responses:
+        "201":
+          description: Admin created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminResponse'
+
+  /admins/{adminId}:
+    get:
+      summary: Get specific admin
+      security:
+        - cookieAuth: []
+      parameters:
+        - in: path
+          name: adminId
+          required: true
+          schema:
+            type: integer
+          description: Admin ID
+      responses:
+        "200":
+          description: Admin details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminResponse'
+
+    put:
+      summary: Update admin
+      security:
+        - cookieAuth: []
+      parameters:
+        - in: path
+          name: adminId
+          required: true
+          schema:
+            type: integer
+          description: Admin ID
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AdminUpdateRequest'
+      responses:
+        "200":
+          description: Admin updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminResponse'
+
+    delete:
+      summary: Delete admin
+      security:
+        - cookieAuth: []
+      parameters:
+        - in: path
+          name: adminId
+          required: true
+          schema:
+            type: integer
+          description: Admin ID
+      responses:
+        "200":
+          description: Admin deleted successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+
+  # Disposition endpoints
+  /disposition-types:
+    get:
+      summary: Get all disposition types
+      security:
+        - cookieAuth: []
+      responses:
+        "200":
+          description: List of disposition types
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DispositionTypesResponse'
+
+    post:
+      summary: Create new disposition type
+      security:
+        - cookieAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DispositionTypeCreateRequest'
+      responses:
+        "201":
+          description: Disposition type created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DispositionTypeResponse'
+
+  /disposition-types/{typeCode}:
+    put:
+      summary: Update disposition type
+      security:
+        - cookieAuth: []
+      parameters:
+        - in: path
+          name: typeCode
+          required: true
+          schema:
+            type: string
+          description: Disposition type code
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DispositionTypeUpdateRequest'
+      responses:
+        "200":
+          description: Disposition type updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DispositionTypeResponse'
+
+    delete:
+      summary: Delete disposition type
+      security:
+        - cookieAuth: []
+      parameters:
+        - in: path
+          name: typeCode
+          required: true
+          schema:
+            type: string
+          description: Disposition type code
+      responses:
+        "200":
+          description: Disposition type deleted successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+
+  /dispositions:
+    get:
+      summary: Get dispositions
+      security:
+        - cookieAuth: []
+      parameters:
+        - in: query
+          name: bookingId
+          schema:
+            type: integer
+          description: Filter by booking ID
+      responses:
+        "200":
+          description: List of dispositions
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DispositionsResponse'
+
+    post:
+      summary: Create new disposition
+      security:
+        - cookieAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DispositionCreateRequest'
+      responses:
+        "201":
+          description: Disposition created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DispositionResponse'
+
+  /dispositions/{dispositionId}:
+    get:
+      summary: Get specific disposition
+      security:
+        - cookieAuth: []
+      parameters:
+        - in: path
+          name: dispositionId
+          required: true
+          schema:
+            type: integer
+          description: Disposition ID
+      responses:
+        "200":
+          description: Disposition details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DispositionResponse'
+
+    put:
+      summary: Update disposition
+      security:
+        - cookieAuth: []
+      parameters:
+        - in: path
+          name: dispositionId
+          required: true
+          schema:
+            type: integer
+          description: Disposition ID
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DispositionUpdateRequest'
+      responses:
+        "200":
+          description: Disposition updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DispositionResponse'
+
+    delete:
+      summary: Delete disposition
+      security:
+        - cookieAuth: []
+      parameters:
+        - in: path
+          name: dispositionId
+          required: true
+          schema:
+            type: integer
+          description: Disposition ID
+      responses:
+        "200":
+          description: Disposition deleted successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+
+  # Search endpoints
+  /search:
+    get:
+      summary: Search for available agents
+      security:
+        - cookieAuth: []
+      parameters:
+        - in: query
+          name: latitude
+          required: true
+          schema:
+            type: number
+            format: double
+          description: Customer latitude
+        - in: query
+          name: longitude
+          required: true
+          schema:
+            type: number
+            format: double
+          description: Customer longitude
+        - in: query
+          name: booking_date
+          required: true
+          schema:
+            type: string
+            format: date
+          description: Booking date (YYYY-MM-DD)
+        - in: query
+          name: booking_time
+          required: true
+          schema:
+            type: string
+            format: time
+          description: Booking time (HH:MM:SS)
+      responses:
+        "200":
+          description: List of available agents with distance and availability
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AgentSearchResponse'
+
+  # Time-off endpoints
+  /time-off/requests:
+    get:
+      summary: Get time-off requests
+      security:
+        - cookieAuth: []
+      responses:
+        "200":
+          description: List of time-off requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TimeOffRequestsResponse'
+
+    post:
+      summary: Create time-off request
+      security:
+        - cookieAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TimeOffRequestCreateRequest'
+      responses:
+        "201":
+          description: Time-off request created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TimeOffRequestResponse'
+
+  /time-off/requests/{requestId}:
+    put:
+      summary: Update time-off request
+      security:
+        - cookieAuth: []
+      parameters:
+        - in: path
+          name: requestId
+          required: true
+          schema:
+            type: integer
+          description: Request ID
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TimeOffRequestUpdateRequest'
+      responses:
+        "200":
+          description: Time-off request updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TimeOffRequestResponse'
+
+    delete:
+      summary: Delete time-off request
+      security:
+        - cookieAuth: []
+      parameters:
+        - in: path
+          name: requestId
+          required: true
+          schema:
+            type: integer
+          description: Request ID
+      responses:
+        "200":
+          description: Time-off request deleted successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+
+  # Timesheet endpoints
+  /timesheet/submit:
+    post:
+      summary: Submit timesheet
+      security:
+        - cookieAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TimesheetSubmitRequest'
+      responses:
+        "201":
+          description: Timesheet submitted successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TimesheetResponse'
+
+  /timesheet/current:
+    get:
+      summary: Get current timesheet
+      security:
+        - cookieAuth: []
+      parameters:
+        - in: query
+          name: agent_id
+          schema:
+            type: integer
+          description: Agent ID (for dispatchers/admins)
+      responses:
+        "200":
+          description: Current timesheet
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TimesheetResponse'
+
+  /timesheet/pending:
+    get:
+      summary: Get pending timesheets
+      security:
+        - cookieAuth: []
+      responses:
+        "200":
+          description: List of pending timesheets
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TimesheetsResponse'
+
+  /timesheet/{timesheetId}/review:
+    put:
+      summary: Review timesheet
+      security:
+        - cookieAuth: []
+      parameters:
+        - in: path
+          name: timesheetId
+          required: true
+          schema:
+            type: integer
+          description: Timesheet ID
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TimesheetReviewRequest'
+      responses:
+        "200":
+          description: Timesheet reviewed successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TimesheetResponse'
+
+  /timesheet/history:
+    get:
+      summary: Get timesheet history
+      security:
+        - cookieAuth: []
+      parameters:
+        - in: query
+          name: page
+          schema:
+            type: integer
+            default: 1
+          description: Page number
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            default: 10
+          description: Items per page
+        - in: query
+          name: status
+          schema:
+            type: string
+            enum: [pending, approved, rejected]
+          description: Filter by status
+        - in: query
+          name: agent_id
+          schema:
+            type: integer
+          description: Filter by agent ID
+      responses:
+        "200":
+          description: Timesheet history with pagination
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TimesheetHistoryResponse'
+
+  # Regions endpoints
+  /regions:
+    get:
+      summary: Get all regions
+      security:
+        - cookieAuth: []
+      responses:
+        "200":
+          description: List of regions
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RegionsResponse'
+
+    post:
+      summary: Create new region
+      security:
+        - cookieAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegionCreateRequest'
+      responses:
+        "201":
+          description: Region created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RegionResponse'
+
+  /regions/{regionId}:
+    get:
+      summary: Get specific region
+      security:
+        - cookieAuth: []
+      parameters:
+        - in: path
+          name: regionId
+          required: true
+          schema:
+            type: integer
+          description: Region ID
+      responses:
+        "200":
+          description: Region details with teams
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RegionWithTeamsResponse'
+
+    put:
+      summary: Update region
+      security:
+        - cookieAuth: []
+      parameters:
+        - in: path
+          name: regionId
+          required: true
+          schema:
+            type: integer
+          description: Region ID
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegionUpdateRequest'
+      responses:
+        "200":
+          description: Region updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RegionResponse'
+
+    delete:
+      summary: Delete region
+      security:
+        - cookieAuth: []
+      parameters:
+        - in: path
+          name: regionId
+          required: true
+          schema:
+            type: integer
+          description: Region ID
+      responses:
+        "200":
+          description: Region deleted successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+
+  # Teams endpoints
+  /teams:
+    get:
+      summary: Get all teams
+      security:
+        - cookieAuth: []
+      responses:
+        "200":
+          description: List of teams with members
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TeamsResponse'
+
+    post:
+      summary: Create new team
+      security:
+        - cookieAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TeamCreateRequest'
+      responses:
+        "201":
+          description: Team created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TeamResponse'
+
+  /teams/{teamId}:
+    get:
+      summary: Get specific team
+      security:
+        - cookieAuth: []
+      parameters:
+        - in: path
+          name: teamId
+          required: true
+          schema:
+            type: integer
+          description: Team ID
+      responses:
+        "200":
+          description: Team details with members
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TeamWithMembersResponse'
+
+    put:
+      summary: Update team
+      security:
+        - cookieAuth: []
+      parameters:
+        - in: path
+          name: teamId
+          required: true
+          schema:
+            type: integer
+          description: Team ID
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TeamUpdateRequest'
+      responses:
+        "200":
+          description: Team updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TeamResponse'
+
+    delete:
+      summary: Delete team
+      security:
+        - cookieAuth: []
+      parameters:
+        - in: path
+          name: teamId
+          required: true
+          schema:
+            type: integer
+          description: Team ID
+      responses:
+        "200":
+          description: Team deleted successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+
+  /teams/{teamId}/members:
+    post:
+      summary: Assign member to team
+      security:
+        - cookieAuth: []
+      parameters:
+        - in: path
+          name: teamId
+          required: true
+          schema:
+            type: integer
+          description: Team ID
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TeamMemberAssignRequest'
+      responses:
+        "200":
+          description: Member assigned to team successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+
+  /teams/unassigned:
+    get:
+      summary: Get unassigned members
+      security:
+        - cookieAuth: []
+      responses:
+        "200":
+          description: List of unassigned dispatchers and agents
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UnassignedMembersResponse'
+
+components:
+  securitySchemes:
+    cookieAuth:
+      type: apiKey
+      in: cookie
+      name: auth_token
+    apiKeyAuth:
+      type: apiKey
+      in: header
+      name: X-API-Key
+
+  schemas:
+    # Authentication schemas
+    LoginRequest:
+      type: object
+      required:
+        - email
+        - password
+        - role
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+        role:
+          type: string
+          enum: [dispatcher, field_agent, admin]
+
+    LoginResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        id:
+          type: integer
+        role:
+          type: string
+
+    TokenVerifyResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        user_id:
+          type: integer
+        role:
+          type: string
+
+    PasswordResetRequest:
+      type: object
+      required:
+        - email
+        - role
+        - old_password
+        - new_password
+      properties:
+        email:
+          type: string
+          format: email
+        role:
+          type: string
+          enum: [dispatcher, field_agent, admin]
+        old_password:
+          type: string
+        new_password:
+          type: string
+
+    # Location schema
+    Location:
+      type: object
+      required:
+        - street_number
+        - street_name
+        - city
+        - state_province
+        - postal_code
+        - country
+      properties:
+        id:
+          type: integer
+        street_number:
+          type: string
+        street_name:
+          type: string
+        city:
+          type: string
+        state_province:
+          type: string
+        postal_code:
+          type: string
+        country:
+          type: string
+        latitude:
+          type: number
+          format: double
+        longitude:
+          type: number
+          format: double
+
+    # Customer schema
+    Customer:
+      type: object
+      required:
+        - name
+        - email
+      properties:
+        customerId:
+          type: integer
+        name:
+          type: string
+        email:
+          type: string
+          format: email
+        phone:
+          type: string
+        location_id:
+          type: integer
+
+    # Booking schemas
+    BookingCreateRequest:
+      type: object
+      required:
+        - customer
+        - location
+        - booking
+      properties:
+        customer:
+          type: object
+          required:
+            - name
+            - email
+          properties:
+            name:
+              type: string
+            email:
+              type: string
+              format: email
+            phone:
+              type: string
+        location:
+          $ref: '#/components/schemas/Location'
+        booking:
+          type: object
+          required:
+            - booking_date
+            - booking_time
+          properties:
+            booking_date:
+              type: string
+              format: date
+            booking_time:
+              type: string
+              format: time
+            agentId:
+              type: integer
+              nullable: true
+            region_id:
+              type: integer
+
+    BookingUpdateRequest:
+      type: object
+      properties:
+        booking_date:
+          type: string
+          format: date
+        booking_time:
+          type: string
+          format: time
+        status:
+          type: string
+          enum: [scheduled, in-progress, completed, cancelled]
+        agentId:
+          type: integer
+          nullable: true
+        dispatcherId:
+          type: integer
+          nullable: true
+        assign_to_self:
+          type: boolean
+        region_id:
+          type: integer
+
+    Booking:
+      type: object
+      properties:
+        bookingId:
+          type: integer
+        booking_date:
+          type: string
+          format: date
+        booking_time:
+          type: string
+          format: time
+        status:
+          type: string
+          enum: [scheduled, in-progress, completed, cancelled]
+        customer_name:
+          type: string
+        customer_email:
+          type: string
+        customer_phone:
+          type: string
+        agent_name:
+          type: string
+          nullable: true
+        agent_email:
+          type: string
+          nullable: true
+        agent_phone:
+          type: string
+          nullable: true
+        dispatcher_name:
+          type: string
+          nullable: true
+        assigned_to:
+          type: string
+          nullable: true
+        disposition_id:
+          type: integer
+          nullable: true
+        disposition_code:
+          type: string
+          nullable: true
+        disposition_note:
+          type: string
+          nullable: true
+        disposition_description:
+          type: string
+          nullable: true
+        customer_latitude:
+          type: number
+          format: double
+        customer_longitude:
+          type: number
+          format: double
+        customer_address:
+          type: string
+        regionId:
+          type: integer
+        region_name:
+          type: string
+        region_is_global:
+          type: boolean
+        call_center_agent_name:
+          type: string
+          nullable: true
+        call_center_agent_email:
+          type: string
+          nullable: true
+        agentId:
+          type: integer
+          nullable: true
+        dispatcherId:
+          type: integer
+          nullable: true
+
+    BookingResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          $ref: '#/components/schemas/Booking'
+        message:
+          type: string
+
+    BookingsResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Booking'
+
+    CallCenterBookingRequest:
+      allOf:
+        - $ref: '#/components/schemas/BookingCreateRequest'
+        - type: object
+          required:
+            - call_center_agent
+          properties:
+            call_center_agent:
+              type: object
+              required:
+                - name
+                - email
+              properties:
+                name:
+                  type: string
+                email:
+                  type: string
+                  format: email
+
+    CallCenterBookingResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          $ref: '#/components/schemas/Booking'
+        message:
+          type: string
+        call_center_agent:
+          type: string
+        warning:
+          type: string
+
+    # Agent schemas
+    AgentCreateRequest:
+      type: object
+      required:
+        - name
+        - email
+      properties:
+        name:
+          type: string
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          default: "Room2025!"
+        phone:
+          type: string
+        status:
+          type: string
+          enum: [available, busy, offline]
+          default: available
+        location_id:
+          type: integer
+        street_number:
+          type: string
+        street_name:
+          type: string
+        city:
+          type: string
+        state_province:
+          type: string
+        postal_code:
+          type: string
+        country:
+          type: string
+          default: "USA"
+
+    AgentUpdateRequest:
+      type: object
+      properties:
+        name:
+          type: string
+        email:
+          type: string
+          format: email
+        phone:
+          type: string
+        status:
+          type: string
+          enum: [available, busy, offline]
+        password:
+          type: string
+        location_id:
+          type: integer
+        street_number:
+          type: string
+        street_name:
+          type: string
+        city:
+          type: string
+        state_province:
+          type: string
+        postal_code:
+          type: string
+        country:
+          type: string
+
+    Agent:
+      type: object
+      properties:
+        agentId:
+          type: integer
+        name:
+          type: string
+        email:
+          type: string
+          format: email
+        phone:
+          type: string
+        status:
+          type: string
+          enum: [available, busy, offline]
+        location_id:
+          type: integer
+        created_time:
+          type: string
+          format: date-time
+        updated_time:
+          type: string
+          format: date-time
+
+    AgentResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          $ref: '#/components/schemas/Agent'
+        message:
+          type: string
+
+    AgentsResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Agent'
+
+    AgentSearchResult:
+      type: object
+      properties:
+        name:
+          type: string
+        agentId:
+          type: integer
+        team_id:
+          type: integer
+        distance:
+          type: number
+          format: double
+        availability_status:
+          type: string
+          enum: [available, unavailable (time-off), unavailable (no timesheet), unavailable (timesheet not approved), unavailable (not scheduled), unavailable (already booked)]
+        unavailable_reason:
+          type: string
+          nullable: true
+
+    AgentSearchResponse:
+      type: array
+      items:
+        $ref: '#/components/schemas/AgentSearchResult'
+
+    # Dispatcher schemas
+    DispatcherCreateRequest:
+      type: object
+      required:
+        - name
+        - email
+      properties:
+        name:
+          type: string
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          default: "Room2025!"
+        phone:
+          type: string
+        location_id:
+          type: integer
+        street_number:
+          type: string
+        street_name:
+          type: string
+        city:
+          type: string
+        state_province:
+          type: string
+        postal_code:
+          type: string
+        country:
+          type: string
+          default: "USA"
+
+    DispatcherUpdateRequest:
+      type: object
+      properties:
+        name:
+          type: string
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+        phone:
+          type: string
+        location_id:
+          type: integer
+        street_number:
+          type: string
+        street_name:
+          type: string
+        city:
+          type: string
+        state_province:
+          type: string
+        postal_code:
+          type: string
+        country:
+          type: string
+
+    Dispatcher:
+      type: object
+      properties:
+        dispatcherId:
+          type: integer
+        name:
+          type: string
+        email:
+          type: string
+          format: email
+        phone:
+          type: string
+        location_id:
+          type: integer
+        street_number:
+          type: string
+        street_name:
+          type: string
+        city:
+          type: string
+        state_province:
+          type: string
+        postal_code:
+          type: string
+        country:
+          type: string
+        created_time:
+          type: string
+          format: date-time
+        updated_time:
+          type: string
+          format: date-time
+
+    DispatcherResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          $ref: '#/components/schemas/Dispatcher'
+        message:
+          type: string
+
+    DispatchersResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Dispatcher'
+
+    # Admin schemas
+    AdminCreateRequest:
+      type: object
+      required:
+        - name
+        - email
+      properties:
+        name:
+          type: string
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          default: "Room2025!"
+
+    AdminUpdateRequest:
+      type: object
+      properties:
+        name:
+          type: string
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+
+    Admin:
+      type: object
+      properties:
+        adminId:
+          type: integer
+        name:
+          type: string
+        email:
+          type: string
+          format: email
+        created_time:
+          type: string
+          format: date-time
+        updated_time:
+          type: string
+          format: date-time
+
+    AdminResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          $ref: '#/components/schemas/Admin'
+        message:
+          type: string
+
+    AdminsResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Admin'
+
+    # Disposition schemas
+    DispositionTypeCreateRequest:
+      type: object
+      required:
+        - typeCode
+        - description
+      properties:
+        typeCode:
+          type: string
+          maxLength: 50
+        description:
+          type: string
+          maxLength: 255
+
+    DispositionTypeUpdateRequest:
+      type: object
+      required:
+        - description
+      properties:
+        description:
+          type: string
+          maxLength: 255
+
+    DispositionType:
+      type: object
+      properties:
+        typeCode:
+          type: string
+        description:
+          type: string
+        created_time:
+          type: string
+          format: date-time
+        updated_time:
+          type: string
+          format: date-time
+
+    DispositionTypeResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          $ref: '#/components/schemas/DispositionType'
+
+    DispositionTypesResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/DispositionType'
+
+    DispositionCreateRequest:
+      type: object
+      required:
+        - bookingId
+        - dispositionType
+      properties:
+        bookingId:
+          type: integer
+        dispositionType:
+          type: string
+        note:
+          type: string
+
+    DispositionUpdateRequest:
+      type: object
+      properties:
+        dispositionType:
+          type: string
+        note:
+          type: string
+
+    Disposition:
+      type: object
+      properties:
+        dispositionId:
+          type: integer
+        typeCode:
+          type: string
+        note:
+          type: string
+        created_time:
+          type: string
+          format: date-time
+        updated_time:
+          type: string
+          format: date-time
+        description:
+          type: string
+        bookingId:
+          type: integer
+        customer_name:
+          type: string
+
+    DispositionResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          $ref: '#/components/schemas/Disposition'
+        message:
+          type: string
+
+    DispositionsResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Disposition'
+
+    # Time-off schemas
+    TimeOffRequestCreateRequest:
+      type: object
+      required:
+        - request_date
+      properties:
+        request_date:
+          type: string
+          format: date
+        is_full_day:
+          type: boolean
+          default: false
+        start_time:
+          type: string
+          format: time
+          description: Required if not full day
+        end_time:
+          type: string
+          format: time
+          description: Required if not full day
+        reason:
+          type: string
+
+    TimeOffRequestUpdateRequest:
+      type: object
+      required:
+        - action
+      properties:
+        action:
+          type: string
+          enum: [approve, reject, cancel]
+
+    TimeOffRequest:
+      type: object
+      properties:
+        requestId:
+          type: integer
+        agentId:
+          type: integer
+        request_date:
+          type: string
+          format: date
+        start_time:
+          type: string
+          format: time
+          nullable: true
+        end_time:
+          type: string
+          format: time
+          nullable: true
+        is_full_day:
+          type: boolean
+        reason:
+          type: string
+        status:
+          type: string
+          enum: [pending, approved, rejected, cancelled]
+        requested_by:
+          type: integer
+        reviewed_by:
+          type: integer
+          nullable: true
+        reviewer_type:
+          type: string
+          enum: [dispatcher, admin]
+          nullable: true
+        created_time:
+          type: string
+          format: date-time
+        updated_time:
+          type: string
+          format: date-time
+        agent_name:
+          type: string
+        agent_email:
+          type: string
+        reviewer_name:
+          type: string
+          nullable: true
+
+    TimeOffRequestResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          $ref: '#/components/schemas/TimeOffRequest'
+
+    TimeOffRequestsResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/TimeOffRequest'
+
+    # Timesheet schemas
+    TimesheetSlot:
+      type: object
+      required:
+        - day_of_week
+        - start_time
+        - end_time
+      properties:
+        day_of_week:
+          type: string
+          enum: [monday, tuesday, wednesday, thursday, friday, saturday, sunday]
+        start_time:
+          type: string
+          format: time
+        end_time:
+          type: string
+          format: time
+
+    TimesheetSubmitRequest:
+      type: object
+      required:
+        - slots
+      properties:
+        slots:
+          type: array
+          items:
+            $ref: '#/components/schemas/TimesheetSlot'
+          minItems: 1
+
+    TimesheetReviewRequest:
+      type: object
+      required:
+        - action
+      properties:
+        action:
+          type: string
+          enum: [approve, reject]
+
+    Timesheet:
+      type: object
+      properties:
+        timesheet_id:
+          type: integer
+        agentId:
+          type: integer
+        week_start_date:
+          type: string
+          format: date
+        status:
+          type: string
+          enum: [pending, approved, rejected]
+        submitted_at:
+          type: string
+          format: date-time
+        reviewed_by:
+          type: integer
+          nullable: true
+        reviewer_type:
+          type: string
+          enum: [dispatcher, admin]
+          nullable: true
+        reviewed_at:
+          type: string
+          format: date-time
+          nullable: true
+        created_time:
+          type: string
+          format: date-time
+        updated_time:
+          type: string
+          format: date-time
+        agent_name:
+          type: string
+        agent_email:
+          type: string
+        reviewer_name:
+          type: string
+          nullable: true
+        slots:
+          type: array
+          items:
+            $ref: '#/components/schemas/TimesheetSlot'
+        target_week_type:
+          type: string
+          enum: [current, next, future]
+
+    TimesheetResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          $ref: '#/components/schemas/Timesheet'
+        target_week_type:
+          type: string
+        target_week_start:
+          type: string
+        message:
+          type: string
+
+    TimesheetsResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Timesheet'
+
+    TimesheetHistoryResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Timesheet'
+        pagination:
+          $ref: '#/components/schemas/Pagination'
+
+    # Region schemas
+    RegionCreateRequest:
+      type: object
+      required:
+        - name
+      properties:
+        name:
+          type: string
+          maxLength: 100
+        description:
+          type: string
+          maxLength: 1000
+        is_global:
+          type: boolean
+          default: false
+
+    RegionUpdateRequest:
+      type: object
+      required:
+        - name
+      properties:
+        name:
+          type: string
+          maxLength: 100
+        description:
+          type: string
+          maxLength: 1000
+
+    Region:
+      type: object
+      properties:
+        regionId:
+          type: integer
+        name:
+          type: string
+        description:
+          type: string
+        is_global:
+          type: boolean
+        created_time:
+          type: string
+          format: date-time
+        updated_time:
+          type: string
+          format: date-time
+        team_count:
+          type: integer
+        booking_count:
+          type: integer
+
+    RegionWithTeams:
+      allOf:
+        - $ref: '#/components/schemas/Region'
+        - type: object
+          properties:
+            teams:
+              type: array
+              items:
+                $ref: '#/components/schemas/Team'
+
+    RegionResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          $ref: '#/components/schemas/Region'
+
+    RegionWithTeamsResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          $ref: '#/components/schemas/RegionWithTeams'
+
+    RegionsResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Region'
+
+    # Team schemas
+    TeamCreateRequest:
+      type: object
+      required:
+        - name
+      properties:
+        name:
+          type: string
+          maxLength: 100
+        description:
+          type: string
+          maxLength: 1000
+        region_id:
+          type: integer
+
+    TeamUpdateRequest:
+      type: object
+      required:
+        - name
+      properties:
+        name:
+          type: string
+          maxLength: 100
+        description:
+          type: string
+          maxLength: 1000
+        region_id:
+          type: integer
+
+    TeamMember:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        email:
+          type: string
+        phone:
+          type: string
+        status:
+          type: string
+
+    Team:
+      type: object
+      properties:
+        teamId:
+          type: integer
+        name:
+          type: string
+        description:
+          type: string
+        created_time:
+          type: string
+          format: date-time
+        updated_time:
+          type: string
+          format: date-time
+        regionId:
+          type: integer
+        region_name:
+          type: string
+        region_is_global:
+          type: boolean
+
+    TeamWithMembers:
+      allOf:
+        - $ref: '#/components/schemas/Team'
+        - type: object
+          properties:
+            dispatchers:
+              type: array
+              items:
+                $ref: '#/components/schemas/TeamMember'
+            agents:
+              type: array
+              items:
+                $ref: '#/components/schemas/TeamMember'
+            memberCount:
+              type: integer
+
+    TeamMemberAssignRequest:
+      type: object
+      required:
+        - type
+        - memberId
+      properties:
+        type:
+          type: string
+          enum: [dispatcher, agent]
+        memberId:
+          type: integer
+
+    TeamResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          $ref: '#/components/schemas/Team'
+
+    TeamWithMembersResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          $ref: '#/components/schemas/TeamWithMembers'
+
+    TeamsResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/TeamWithMembers'
+
+    UnassignedMembersResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          type: object
+          properties:
+            dispatchers:
+              type: array
+              items:
+                $ref: '#/components/schemas/TeamMember'
+            agents:
+              type: array
+              items:
+                $ref: '#/components/schemas/TeamMember'
+            total:
+              type: integer
+
+    # Common schemas
+    Pagination:
+      type: object
+      properties:
+        page:
+          type: integer
+        limit:
+          type: integer
+        total:
+          type: integer
+        total_pages:
+          type: integer
+        has_next:
+          type: boolean
+        has_prev:
+          type: boolean
+
+    SuccessResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        message:
+          type: string
+
+    ErrorResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        error:
+          type: string

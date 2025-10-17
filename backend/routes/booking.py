@@ -59,8 +59,8 @@ def get_all_bookings():
         user_id = getattr(request, 'user_id', None)
         
         base_query = """
-          SELECT b.bookingId, b.booking_date, b.booking_time, b.status,
-            c.name AS customer_name,
+          SELECT b.bookingId, b.booking_date, b.booking_time, b.status, b.booking_type,
+            c.name AS customer_name, c.email AS customer_email, c.phone AS customer_phone,
             fa.name AS agent_name,
             disp.name AS dispatcher_name,
             CASE 
@@ -74,12 +74,15 @@ def get_all_bookings():
             dt.description AS disposition_description,
             l.latitude AS customer_latitude,
             l.longitude AS customer_longitude,
-            CONCAT(
+            CASE 
+              WHEN b.booking_type = 'virtual' THEN CONCAT('Virtual - ', c.email, ' / ', c.phone)
+              ELSE CONCAT(
                 l.street_number, ' ', 
                 l.street_name, ', ', 
                 l.postal_code, ' ', 
                 l.city
-            ) AS customer_address,
+              )
+            END AS customer_address,
             r.regionId, r.name AS region_name, r.is_global AS region_is_global,
             b.call_center_agent_name, b.call_center_agent_email,
             b.agentId, b.dispatcherId
@@ -170,8 +173,11 @@ def get_agent_bookings(agent_id):
               b.bookingId, 
               b.booking_date, 
               b.booking_time, 
-              b.status,
+              b.status, 
+              b.booking_type,
               c.name AS customer_name,
+              c.email AS customer_email,
+              c.phone AS customer_phone,
               fa.name AS agent_name,
               d.dispositionId AS disposition_id,
               d.typeCode AS disposition_code,
@@ -179,12 +185,15 @@ def get_agent_bookings(agent_id):
               dt.description AS disposition_description,
               l.latitude AS customer_latitude,
               l.longitude AS customer_longitude,
-              CONCAT(
-                  l.street_number, ' ', 
-                  l.street_name, ', ', 
-                  l.postal_code, ' ', 
-                  l.city
-              ) AS customer_address,
+              CASE 
+                WHEN b.booking_type = 'virtual' THEN CONCAT('Virtual - ', c.email, ' / ', c.phone)
+                ELSE CONCAT(
+                    l.street_number, ' ', 
+                    l.street_name, ', ', 
+                    l.postal_code, ' ', 
+                    l.city
+                )
+              END AS customer_address,
               r.regionId, r.name AS region_name, r.is_global AS region_is_global,
               b.call_center_agent_name, b.call_center_agent_email
           FROM bookings b
@@ -249,6 +258,7 @@ def get_dispatcher_bookings(dispatcher_id):
               b.booking_date, 
               b.booking_time, 
               b.status,
+              b.booking_type,
               c.name AS customer_name,
               c.email AS customer_email,
               c.phone AS customer_phone,
@@ -260,12 +270,15 @@ def get_dispatcher_bookings(dispatcher_id):
               dt.description AS disposition_description,
               l.latitude AS customer_latitude,
               l.longitude AS customer_longitude,
-              CONCAT(
-                  l.street_number, ' ', 
-                  l.street_name, ', ', 
-                  l.postal_code, ' ', 
-                  l.city
-              ) AS customer_address,
+              CASE 
+                WHEN b.booking_type = 'virtual' THEN CONCAT('Virtual - ', c.email, ' / ', c.phone)
+                ELSE CONCAT(
+                    l.street_number, ' ', 
+                    l.street_name, ', ', 
+                    l.postal_code, ' ', 
+                    l.city
+                )
+              END AS customer_address,
               r.regionId, r.name AS region_name, r.is_global AS region_is_global,
               b.call_center_agent_name, b.call_center_agent_email,
               b.agentId, b.dispatcherId
@@ -323,6 +336,7 @@ def get_booking(booking_id):
                     b.booking_date, 
                     b.booking_time, 
                     b.status,
+                    b.booking_type,
                     c.name AS customer_name,
                     c.email AS customer_email,
                     c.phone AS customer_phone,
@@ -335,12 +349,15 @@ def get_booking(booking_id):
                     dt.description AS disposition_description,
                     l.latitude AS customer_latitude,
                     l.longitude AS customer_longitude,
-                    CONCAT(
-                        l.street_number, ' ', 
-                        l.street_name, ', ', 
-                        l.postal_code, ' ', 
-                        l.city
-                    ) AS customer_address,
+                    CASE 
+                      WHEN b.booking_type = 'virtual' THEN CONCAT('Virtual - ', c.email, ' / ', c.phone)
+                      ELSE CONCAT(
+                          l.street_number, ' ', 
+                          l.street_name, ', ', 
+                          l.postal_code, ' ', 
+                          l.city
+                      )
+                    END AS customer_address,
                     r.regionId, r.name AS region_name, r.is_global AS region_is_global,
                     b.call_center_agent_name, b.call_center_agent_email
                 FROM bookings b
@@ -367,6 +384,7 @@ def get_booking(booking_id):
                     b.booking_date, 
                     b.booking_time, 
                     b.status,
+                    b.booking_type,
                     c.name AS customer_name,
                     c.email AS customer_email,
                     c.phone AS customer_phone,
@@ -379,12 +397,15 @@ def get_booking(booking_id):
                     dt.description AS disposition_description,
                     l.latitude AS customer_latitude,
                     l.longitude AS customer_longitude,
-                    CONCAT(
-                        l.street_number, ' ', 
-                        l.street_name, ', ', 
-                        l.postal_code, ' ', 
-                        l.city
-                    ) AS customer_address,
+                    CASE 
+                      WHEN b.booking_type = 'virtual' THEN CONCAT('Virtual - ', c.email, ' / ', c.phone)
+                      ELSE CONCAT(
+                          l.street_number, ' ', 
+                          l.street_name, ', ', 
+                          l.postal_code, ' ', 
+                          l.city
+                      )
+                    END AS customer_address,
                     r.regionId, r.name AS region_name, r.is_global AS region_is_global,
                     b.call_center_agent_name, b.call_center_agent_email
                 FROM bookings b
@@ -423,43 +444,55 @@ def get_booking(booking_id):
 def create_booking():
     """
     Create a new booking, inserting location + customer if new.
+    Supports both physical bookings (with address) and virtual bookings (contact info only).
     """
     try:
         data = request.get_json()
+        
+        # Get booking type, default to physical for backward compatibility
+        booking_type = data.get("booking_type", "physical")
+        
+        if booking_type not in ["physical", "virtual"]:
+            return jsonify({"success": False, "error": "Invalid booking_type. Must be 'physical' or 'virtual'"}), 400
 
         conn = get_connection()
         cursor = conn.cursor(dictionary=True)
 
-        # Location lookup/insert
-        cursor.execute("""
-            SELECT id FROM locations 
-            WHERE street_number=%s AND street_name=%s AND postal_code=%s 
-              AND city=%s AND state_province=%s
-        """, (
-            data["location"]["street_number"],
-            data["location"]["street_name"],
-            data["location"]["postal_code"],
-            data["location"]["city"],
-            data["location"]["state_province"]
-        ))
-        existing_location = cursor.fetchone()
-        location_id = existing_location["id"] if existing_location else None
-
-        if not location_id:
+        # Location lookup/insert (only for physical bookings)
+        location_id = None
+        if booking_type == "physical":
+            if not data.get("location"):
+                return jsonify({"success": False, "error": "Location data required for physical bookings"}), 400
+                
             cursor.execute("""
-                INSERT INTO locations (latitude, longitude, postal_code, city, state_province, country, street_name, street_number)
-                VALUES (%s,%s,%s,%s,%s,%s,%s,%s)
+                SELECT id FROM locations 
+                WHERE street_number=%s AND street_name=%s AND postal_code=%s 
+                  AND city=%s AND state_province=%s
             """, (
-                data["location"]["latitude"],
-                data["location"]["longitude"],
+                data["location"]["street_number"],
+                data["location"]["street_name"],
                 data["location"]["postal_code"],
                 data["location"]["city"],
-                data["location"]["state_province"],
-                data["location"]["country"],
-                data["location"]["street_name"],
-                data["location"]["street_number"]
+                data["location"]["state_province"]
             ))
-            location_id = cursor.lastrowid
+            existing_location = cursor.fetchone()
+            location_id = existing_location["id"] if existing_location else None
+
+            if not location_id:
+                cursor.execute("""
+                    INSERT INTO locations (latitude, longitude, postal_code, city, state_province, country, street_name, street_number)
+                    VALUES (%s,%s,%s,%s,%s,%s,%s,%s)
+                """, (
+                    data["location"]["latitude"],
+                    data["location"]["longitude"],
+                    data["location"]["postal_code"],
+                    data["location"]["city"],
+                    data["location"]["state_province"],
+                    data["location"]["country"],
+                    data["location"]["street_name"],
+                    data["location"]["street_number"]
+                ))
+                location_id = cursor.lastrowid
 
         # Customer lookup/insert
         cursor.execute("SELECT customerId FROM customers WHERE email = %s", (data["customer"]["email"],))
@@ -495,14 +528,15 @@ def create_booking():
         
         # Booking insert
         cursor.execute("""
-            INSERT INTO bookings (agentId, customerId, booking_date, booking_time, region_id)
-            VALUES (%s,%s,%s,%s,%s)
+            INSERT INTO bookings (agentId, customerId, booking_date, booking_time, region_id, booking_type)
+            VALUES (%s,%s,%s,%s,%s,%s)
         """, (
             agent_id,
             customer_id,
             data["booking"]["booking_date"],
             data["booking"]["booking_time"],
-            region_id
+            region_id,
+            booking_type
         ))
         booking_id = cursor.lastrowid
 
@@ -538,14 +572,20 @@ def create_booking():
                 b.booking_date, 
                 b.booking_time, 
                 b.status,
+                b.booking_type,
                 c.name AS customer_name,
+                c.email AS customer_email,
+                c.phone AS customer_phone,
                 fa.name AS agent_name,
-                CONCAT(
-                    l.street_number, ' ', 
-                    l.street_name, ', ', 
-                    l.postal_code, ' ', 
-                    l.city
-                ) AS customer_address,
+                CASE 
+                  WHEN b.booking_type = 'virtual' THEN CONCAT('Virtual - ', c.email, ' / ', c.phone)
+                  ELSE CONCAT(
+                      l.street_number, ' ', 
+                      l.street_name, ', ', 
+                      l.postal_code, ' ', 
+                      l.city
+                  )
+                END AS customer_address,
                 r.regionId, r.name AS region_name, r.is_global AS region_is_global
             FROM bookings b
             JOIN customers c ON b.customerId = c.customerId
@@ -669,16 +709,22 @@ def update_booking(booking_id):
                 b.booking_date, 
                 b.booking_time, 
                 b.status,
+                b.booking_type,
                 c.name AS customer_name,
                 c.email AS customer_email,
                 c.phone AS customer_phone,
+                c.email AS customer_email,
+                c.phone AS customer_phone,
                 fa.name AS agent_name,
-                CONCAT(
-                    l.street_number, ' ', 
-                    l.street_name, ', ', 
-                    l.postal_code, ' ', 
-                    l.city
-                ) AS customer_address,
+                CASE 
+                  WHEN b.booking_type = 'virtual' THEN CONCAT('Virtual - ', c.email, ' / ', c.phone)
+                  ELSE CONCAT(
+                      l.street_number, ' ', 
+                      l.street_name, ', ', 
+                      l.postal_code, ' ', 
+                      l.city
+                  )
+                END AS customer_address,
                 r.regionId, r.name AS region_name, r.is_global AS region_is_global,
                 b.call_center_agent_name, b.call_center_agent_email
             FROM bookings b
@@ -759,6 +805,7 @@ def create_call_center_booking():
     """
     Create a new booking from call center with call center agent tracking.
     Always creates unassigned bookings (agentId = NULL).
+    Supports both physical and virtual bookings.
     """
     try:
         data = request.get_json()
@@ -790,36 +837,47 @@ def create_call_center_booking():
         if region['is_global']:
             warning_message = "Warning: Global region selected. This appointment will be visible to all teams, which is not recommended for optimal workflow."
 
-        # Location lookup/insert (same logic as regular booking creation)
-        cursor.execute("""
-            SELECT id FROM locations 
-            WHERE street_number=%s AND street_name=%s AND postal_code=%s 
-              AND city=%s AND state_province=%s
-        """, (
-            data["location"]["street_number"],
-            data["location"]["street_name"],
-            data["location"]["postal_code"],
-            data["location"]["city"],
-            data["location"]["state_province"]
-        ))
-        existing_location = cursor.fetchone()
-        location_id = existing_location["id"] if existing_location else None
-
-        if not location_id:
+        # Get booking type, defaults to physical for call center backward compatibility
+        booking_type = data.get("booking_type", "physical")
+        
+        if booking_type not in ["physical", "virtual"]:
+            return jsonify({"success": False, "error": "Invalid booking_type. Must be 'physical' or 'virtual'"}), 400
+            
+        # Location lookup/insert (only for physical bookings)
+        location_id = None
+        if booking_type == "physical":
+            if not data.get("location"):
+                return jsonify({"success": False, "error": "Location data required for physical bookings"}), 400
+                
             cursor.execute("""
-                INSERT INTO locations (latitude, longitude, postal_code, city, state_province, country, street_name, street_number)
-                VALUES (%s,%s,%s,%s,%s,%s,%s,%s)
+                SELECT id FROM locations 
+                WHERE street_number=%s AND street_name=%s AND postal_code=%s 
+                  AND city=%s AND state_province=%s
             """, (
-                data["location"]["latitude"],
-                data["location"]["longitude"],
+                data["location"]["street_number"],
+                data["location"]["street_name"],
                 data["location"]["postal_code"],
                 data["location"]["city"],
-                data["location"]["state_province"],
-                data["location"]["country"],
-                data["location"]["street_name"],
-                data["location"]["street_number"]
+                data["location"]["state_province"]
             ))
-            location_id = cursor.lastrowid
+            existing_location = cursor.fetchone()
+            location_id = existing_location["id"] if existing_location else None
+
+            if not location_id:
+                cursor.execute("""
+                    INSERT INTO locations (latitude, longitude, postal_code, city, state_province, country, street_name, street_number)
+                    VALUES (%s,%s,%s,%s,%s,%s,%s,%s)
+                """, (
+                    data["location"]["latitude"],
+                    data["location"]["longitude"],
+                    data["location"]["postal_code"],
+                    data["location"]["city"],
+                    data["location"]["state_province"],
+                    data["location"]["country"],
+                    data["location"]["street_name"],
+                    data["location"]["street_number"]
+                ))
+                location_id = cursor.lastrowid
 
         # Customer lookup/insert (same logic as regular booking creation)
         cursor.execute("SELECT customerId FROM customers WHERE email = %s", (data["customer"]["email"],))
@@ -840,8 +898,8 @@ def create_call_center_booking():
 
         # Create booking with agentId=NULL (unassigned) and specified region
         cursor.execute("""
-            INSERT INTO bookings (agentId, customerId, booking_date, booking_time, status, region_id, call_center_agent_name, call_center_agent_email)
-            VALUES (%s,%s,%s,%s,%s,%s,%s,%s)
+            INSERT INTO bookings (agentId, customerId, booking_date, booking_time, status, region_id, call_center_agent_name, call_center_agent_email, booking_type)
+            VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s)
         """, (
             None,  # Always unassigned from call center
             customer_id,
@@ -850,7 +908,8 @@ def create_call_center_booking():
             "scheduled",  # Default status
             region_id,
             call_center_agent["name"],
-            call_center_agent["email"]
+            call_center_agent["email"],
+            booking_type
         ))
         booking_id = cursor.lastrowid
 
@@ -863,14 +922,20 @@ def create_call_center_booking():
                 b.booking_date, 
                 b.booking_time, 
                 b.status,
+                b.booking_type,
                 c.name AS customer_name,
+                c.email AS customer_email,
+                c.phone AS customer_phone,
                 fa.name AS agent_name,
-                CONCAT(
-                    l.street_number, ' ', 
-                    l.street_name, ', ', 
-                    l.postal_code, ' ', 
-                    l.city
-                ) AS customer_address,
+                CASE 
+                  WHEN b.booking_type = 'virtual' THEN CONCAT('Virtual - ', c.email, ' / ', c.phone)
+                  ELSE CONCAT(
+                      l.street_number, ' ', 
+                      l.street_name, ', ', 
+                      l.postal_code, ' ', 
+                      l.city
+                  )
+                END AS customer_address,
                 r.regionId, r.name AS region_name, r.is_global AS region_is_global
             FROM bookings b
             JOIN customers c ON b.customerId = c.customerId

@@ -11,6 +11,8 @@ export interface Booking {
   customer_longitude: number | null;
   status: string;
   customer_name: string;
+  customer_email?: string;
+  customer_phone?: string;
   agent_name: string | null;
   dispatcher_name?: string | null;
   assigned_to?: string | null; // Combined field showing who it's assigned to
@@ -25,6 +27,7 @@ export interface Booking {
   region_is_global?: boolean;
   call_center_agent_name?: string | null;
   call_center_agent_email?: string | null;
+  booking_type?: 'physical' | 'virtual';
 }
 
 export async function getAllBookings(regionId?: number): Promise<Booking[]> {
