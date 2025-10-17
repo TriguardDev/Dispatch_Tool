@@ -60,6 +60,7 @@ def get_all_bookings():
         
         base_query = """
           SELECT b.bookingId, b.booking_date, b.booking_time, b.status, b.booking_type,
+            b.call_center_notes,
             c.name AS customer_name, c.email AS customer_email, c.phone AS customer_phone,
             fa.name AS agent_name,
             disp.name AS dispatcher_name,
@@ -195,7 +196,7 @@ def get_agent_bookings(agent_id):
                 )
               END AS customer_address,
               r.regionId, r.name AS region_name, r.is_global AS region_is_global,
-              b.call_center_agent_name, b.call_center_agent_email
+              b.call_center_agent_name, b.call_center_agent_email, b.call_center_notes
           FROM bookings b
           JOIN customers c 
               ON b.customerId = c.customerId
@@ -896,9 +897,12 @@ def create_call_center_booking():
             customer_id = cursor.lastrowid
 
         # Create booking with agentId=NULL (unassigned) and specified region
+        # Get optional notes from call center agent
+        call_center_notes = data.get("call_center_notes", "")
+        
         cursor.execute("""
-            INSERT INTO bookings (agentId, customerId, booking_date, booking_time, status, region_id, call_center_agent_name, call_center_agent_email, booking_type)
-            VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s)
+            INSERT INTO bookings (agentId, customerId, booking_date, booking_time, status, region_id, call_center_agent_name, call_center_agent_email, booking_type, call_center_notes)
+            VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
         """, (
             None,  # Always unassigned from call center
             customer_id,
@@ -908,7 +912,8 @@ def create_call_center_booking():
             region_id,
             call_center_agent["name"],
             call_center_agent["email"],
-            booking_type
+            booking_type,
+            call_center_notes
         ))
         booking_id = cursor.lastrowid
 
@@ -922,6 +927,7 @@ def create_call_center_booking():
                 b.booking_time, 
                 b.status,
                 b.booking_type,
+                b.call_center_notes,
                 c.name AS customer_name,
                 c.email AS customer_email,
                 c.phone AS customer_phone,

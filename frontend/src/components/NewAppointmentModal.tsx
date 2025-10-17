@@ -112,9 +112,9 @@ export default function NewAppointmentModal({ isOpen, onClose, onSave, onLogout 
       return;
     }
 
-    // For physical bookings, validate address fields
-    if (form.booking_type === "physical" && (!form.street_number || !form.street_name || !form.postal_code || !form.city)) {
-      alert("Please fill in all address fields for physical appointments");
+    // Address fields are now required for both physical and virtual bookings
+    if (!form.street_number || !form.street_name || !form.postal_code || !form.city) {
+      alert("Please fill in all address fields - location is required for all appointments");
       return;
     }
 
@@ -157,24 +157,22 @@ export default function NewAppointmentModal({ isOpen, onClose, onSave, onLogout 
       },
     };
 
-    // Only add location data for physical bookings
-    if (form.booking_type === "physical") {
-      if (latLon.lat === null || latLon.lon === null) {
-        alert("Unable to get coordinates for the address. Please check the address and try again.");
-        return;
-      }
-      
-      payload.location = {
-        latitude: latLon.lat,
-        longitude: latLon.lon,
-        postal_code: form.postal_code,
-        street_name: form.street_name,
-        street_number: form.street_number,
-        city: form.city,
-        state_province: form.state_province,
-        country: form.country,
-      };
+    // Location data is now required for both physical and virtual bookings
+    if (latLon.lat === null || latLon.lon === null) {
+      alert("Unable to get coordinates for the address. Please check the address and try again.");
+      return;
     }
+    
+    payload.location = {
+      latitude: latLon.lat,
+      longitude: latLon.lon,
+      postal_code: form.postal_code,
+      street_name: form.street_name,
+      street_number: form.street_number,
+      city: form.city,
+      state_province: form.state_province,
+      country: form.country,
+    };
     
     console.log(JSON.stringify(payload))
 
@@ -212,18 +210,19 @@ export default function NewAppointmentModal({ isOpen, onClose, onSave, onLogout 
         booking_type: form.booking_type,
       };
       
-      // For physical bookings, get coordinates and add them to search
+      // Get coordinates for all booking types - location is now always required
+      const { lat, lon } = await findLatLong({street_number: form.street_number, street_name: form.street_name, postal_code: form.postal_code });
+      
+      if (lat === null || lon === null){
+        console.error("Could not find lat/lon for address.")
+        setLatLon({ lat: null, lon: null });
+        setAgents([]);
+        return;
+      }
+      
+      setLatLon({ lat, lon });
+      // For physical bookings, include coordinates in agent search
       if (form.booking_type === "physical") {
-        const { lat, lon } = await findLatLong({street_number: form.street_number, street_name: form.street_name, postal_code: form.postal_code });
-        
-        if (lat === null || lon === null){
-          console.error("Could not find lat/lon for address.")
-          setLatLon({ lat: null, lon: null });
-          setAgents([]);
-          return;
-        }
-        
-        setLatLon({ lat, lon });
         searchParams.latitude = lat.toString();
         searchParams.longitude = lon.toString();
       }
@@ -545,8 +544,7 @@ export default function NewAppointmentModal({ isOpen, onClose, onSave, onLogout 
                   onChange={(agentId: string) => setForm(prev => ({ ...prev, rep: agentId }))}
                   onSearch={handleSearchAgents}
                   disabledSearch={
-                    !form.date || !form.time || 
-                    (form.booking_type === "physical" && !form.postal_code)
+                    !form.date || !form.time || !form.postal_code
                   }
                 />
               </Box>

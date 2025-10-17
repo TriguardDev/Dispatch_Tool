@@ -1,7 +1,7 @@
 import { useState, useMemo, useCallback, memo, useEffect } from "react";
 import type { Booking } from "../api/crud";
-import { Card, CardContent, Typography, Chip, Box, Divider, Select, MenuItem, FormControl, TextField, Button, InputLabel, IconButton, Collapse, CircularProgress } from "@mui/material";
-import { AccessTime, LocationOn, Person, Assignment, Add, Remove, Delete } from "@mui/icons-material";
+import { Card, CardContent, Typography, Chip, Box, Divider, Select, MenuItem, FormControl, TextField, Button, InputLabel, IconButton, Collapse, CircularProgress, Dialog, DialogTitle, DialogContent } from "@mui/material";
+import { AccessTime, LocationOn, Person, Assignment, Add, Remove, Delete, StickyNote2 } from "@mui/icons-material";
 import { searchAgents, updateBooking, deleteBooking } from "../api/crud";
 
 interface AgentWithAvailability {
@@ -96,6 +96,7 @@ const AppointmentCard = memo(function AppointmentCard({ appt, addressText, onSta
   const [selectedDisposition, setSelectedDisposition] = useState(appt.disposition_code || "");
   const [dispositionSaved, setDispositionSaved] = useState(false);
   const [noteExpanded, setNoteExpanded] = useState(false);
+  const [notesModalOpen, setNotesModalOpen] = useState(false);
   const [agents, setAgents] = useState<AgentWithAvailability[]>([]);
   const [loadingAgents, setLoadingAgents] = useState(false);
   const [agentDropdownOpen, setAgentDropdownOpen] = useState(false);
@@ -285,12 +286,28 @@ const AppointmentCard = memo(function AppointmentCard({ appt, addressText, onSta
           overflow: 'hidden',
           textOverflow: 'ellipsis',
           whiteSpace: 'nowrap',
-          maxWidth: userRole === 'field_agent' ? '70%' : '55%'
+          maxWidth: userRole === 'field_agent' ? '65%' : '50%'
         }}
       >
         {appt.customer_name}
       </Typography>
-      <StatusChip status={appt.status} />
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+        {/* Notes button - show when call center notes exist */}
+        {appt.call_center_notes && (
+          <IconButton
+            size="small"
+            onClick={() => setNotesModalOpen(true)}
+            sx={{ 
+              color: 'info.main',
+              '&:hover': { backgroundColor: 'info.main', color: 'white' }
+            }}
+            title="View call center notes"
+          >
+            <StickyNote2 sx={{ fontSize: 16 }} />
+          </IconButton>
+        )}
+        <StatusChip status={appt.status} />
+      </Box>
     </Box>
   );
 
@@ -681,6 +698,24 @@ const AppointmentCard = memo(function AppointmentCard({ appt, addressText, onSta
           </IconButton>
         )}
       </CardContent>
+
+      {/* Notes Modal */}
+      <Dialog
+        open={notesModalOpen}
+        onClose={() => setNotesModalOpen(false)}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          <StickyNote2 sx={{ color: 'info.main' }} />
+          Call Center Notes
+        </DialogTitle>
+        <DialogContent>
+          <Typography variant="body1" sx={{ mt: 1, whiteSpace: 'pre-wrap' }}>
+            {appt.call_center_notes || 'No notes available'}
+          </Typography>
+        </DialogContent>
+      </Dialog>
     </Card>
   );
 });

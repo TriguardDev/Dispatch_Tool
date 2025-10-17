@@ -27,6 +27,7 @@ export interface Booking {
   region_is_global?: boolean;
   call_center_agent_name?: string | null;
   call_center_agent_email?: string | null;
+  call_center_notes?: string | null;
   booking_type?: 'physical' | 'virtual';
 }
 
