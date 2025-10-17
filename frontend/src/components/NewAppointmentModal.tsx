@@ -159,6 +159,11 @@ export default function NewAppointmentModal({ isOpen, onClose, onSave, onLogout 
 
     // Only add location data for physical bookings
     if (form.booking_type === "physical") {
+      if (latLon.lat === null || latLon.lon === null) {
+        alert("Unable to get coordinates for the address. Please check the address and try again.");
+        return;
+      }
+      
       payload.location = {
         latitude: latLon.lat,
         longitude: latLon.lon,
@@ -302,8 +307,10 @@ export default function NewAppointmentModal({ isOpen, onClose, onSave, onLogout 
       onClose={onClose}
       maxWidth="md"
       fullWidth
-      PaperProps={{
-        sx: { maxHeight: '90vh' }
+      slotProps={{
+        paper: {
+          sx: { maxHeight: '90vh' }
+        }
       }}
     >
       <form onSubmit={handleSave}>
