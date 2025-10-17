@@ -138,7 +138,7 @@
             <button class="pill-btn active" data-val="physical">Physical Visit</button>
             <button class="pill-btn" data-val="virtual">Virtual Consultation</button>
           </div>
-          <small class="helper">Physical visits require a service address. Virtual consultations are conducted remotely.</small>
+          <small class="helper">Both physical and virtual appointments require a service address for scheduling purposes.</small>
         </div>
       </div>
       <div class="row">
@@ -370,7 +370,7 @@
 
   // Pills -> state
   const state={married:'',dm:'',appointmentType:'physical'};
-  $$('.pills').forEach(g=>g.addEventListener('click',e=>{ const btn=e.target.closest('.pill-btn'); if(!btn)return; const name=g.dataset.name; const val=btn.dataset.val; g.querySelectorAll('.pill-btn').forEach(b=>b.classList.remove('active')); btn.classList.add('active'); state[name]=val; if(name==='married'){ $('#spouseWrap').hidden=(val!=='Yes'); } if(name==='dm'){ $('#dmNotesWrap').hidden=(val!=='No'); } if(name==='appointmentType'){ $('#addressSection').style.display=(val==='physical'?'block':'none'); } }));
+  $$('.pills').forEach(g=>g.addEventListener('click',e=>{ const btn=e.target.closest('.pill-btn'); if(!btn)return; const name=g.dataset.name; const val=btn.dataset.val; g.querySelectorAll('.pill-btn').forEach(b=>b.classList.remove('active')); btn.classList.add('active'); state[name]=val; if(name==='married'){ $('#spouseWrap').hidden=(val!=='Yes'); } if(name==='dm'){ $('#dmNotesWrap').hidden=(val!=='No'); } }));
 
   // Submit with 72h reconfirm modal
   const modal = document.getElementById('confirmModal'); const confirmChk = document.getElementById('confirmChk'); const confirmYes = document.getElementById('confirmYes'); const confirmNo = document.getElementById('confirmNo');
@@ -379,13 +379,8 @@
   confirmYes?.addEventListener('click',()=>{ modal.style.display='none'; reconfirmAckFor = new Date(selectedDate).toISOString().slice(0,10); doSubmit(); });
 
   document.getElementById('submitBtn').addEventListener('click',()=>{
-    // validations
-    let required = ['#firstName','#lastName','#phone','#repFirst','#repLast','#teamRegion'];
-    
-    // Add address fields only for physical appointments
-    if(state.appointmentType === 'physical') {
-      required = required.concat(['#streetNumber','#streetName','#city','#state','#zip']);
-    }
+    // validations - address is required for both physical and virtual appointments
+    let required = ['#firstName','#lastName','#phone','#repFirst','#repLast','#teamRegion','#streetNumber','#streetName','#city','#state','#zip'];
     
     const missing = required.filter(sel=>{ const el=$(sel); const empty = !el || !el.value || el.value.trim()===''; if(el) el.classList.toggle('invalid', empty); return empty; });
     if(missing.length){ showToast('Please fill the required fields.', 'warn'); return; }
@@ -460,31 +455,27 @@
       }
     };
 
-    // Only add location data for physical appointments
-    if(state.appointmentType === 'physical') {
-      // Get coordinates from Nominatim API
-      showToast('Getting address coordinates...', 'info');
-      const coordinates = await geocodeAddress(
-        $('#streetNumber').value,
-        $('#streetName').value, 
-        $('#city').value,
-        $('#state').value,
-        $('#zip').value
-      );
+    // Get coordinates from Nominatim API for address
+    showToast('Getting address coordinates...', 'info');
+    const coordinates = await geocodeAddress(
+      $('#streetNumber').value,
+      $('#streetName').value, 
+      $('#city').value,
+      $('#state').value,
+      $('#zip').value
+    );
 
-      payload.location = {
-        latitude: coordinates.latitude,
-        longitude: coordinates.longitude,
-        street_number: $('#streetNumber').value,
-        street_name: $('#streetName').value,
-        postal_code: $('#zip').value,
-        city: $('#city').value,
-        state_province: $('#state').value,
-        country: "USA"
-      };
-    } else {
-      showToast('Setting up virtual appointment...', 'info');
-    }
+    // Location data is required for both physical and virtual appointments
+    payload.location = {
+      latitude: coordinates.latitude,
+      longitude: coordinates.longitude,
+      street_number: $('#streetNumber').value,
+      street_name: $('#streetName').value,
+      postal_code: $('#zip').value,
+      city: $('#city').value,
+      state_province: $('#state').value,
+      country: "USA"
+    };
 
     try {
       showToast('Submitting...', 'info');

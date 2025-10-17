@@ -843,41 +843,40 @@ def create_call_center_booking():
         if booking_type not in ["physical", "virtual"]:
             return jsonify({"success": False, "error": "Invalid booking_type. Must be 'physical' or 'virtual'"}), 400
             
-        # Location lookup/insert (only for physical bookings)
+        # Location lookup/insert (required for both physical and virtual bookings)
         location_id = None
-        if booking_type == "physical":
-            if not data.get("location"):
-                return jsonify({"success": False, "error": "Location data required for physical bookings"}), 400
+        if not data.get("location"):
+            return jsonify({"success": False, "error": "Location data required for all bookings"}), 400
                 
+        cursor.execute("""
+            SELECT id FROM locations 
+            WHERE street_number=%s AND street_name=%s AND postal_code=%s 
+              AND city=%s AND state_province=%s
+        """, (
+            data["location"]["street_number"],
+            data["location"]["street_name"],
+            data["location"]["postal_code"],
+            data["location"]["city"],
+            data["location"]["state_province"]
+        ))
+        existing_location = cursor.fetchone()
+        location_id = existing_location["id"] if existing_location else None
+
+        if not location_id:
             cursor.execute("""
-                SELECT id FROM locations 
-                WHERE street_number=%s AND street_name=%s AND postal_code=%s 
-                  AND city=%s AND state_province=%s
+                INSERT INTO locations (latitude, longitude, postal_code, city, state_province, country, street_name, street_number)
+                VALUES (%s,%s,%s,%s,%s,%s,%s,%s)
             """, (
-                data["location"]["street_number"],
-                data["location"]["street_name"],
+                data["location"]["latitude"],
+                data["location"]["longitude"],
                 data["location"]["postal_code"],
                 data["location"]["city"],
-                data["location"]["state_province"]
+                data["location"]["state_province"],
+                data["location"]["country"],
+                data["location"]["street_name"],
+                data["location"]["street_number"]
             ))
-            existing_location = cursor.fetchone()
-            location_id = existing_location["id"] if existing_location else None
-
-            if not location_id:
-                cursor.execute("""
-                    INSERT INTO locations (latitude, longitude, postal_code, city, state_province, country, street_name, street_number)
-                    VALUES (%s,%s,%s,%s,%s,%s,%s,%s)
-                """, (
-                    data["location"]["latitude"],
-                    data["location"]["longitude"],
-                    data["location"]["postal_code"],
-                    data["location"]["city"],
-                    data["location"]["state_province"],
-                    data["location"]["country"],
-                    data["location"]["street_name"],
-                    data["location"]["street_number"]
-                ))
-                location_id = cursor.lastrowid
+            location_id = cursor.lastrowid
 
         # Customer lookup/insert (same logic as regular booking creation)
         cursor.execute("SELECT customerId FROM customers WHERE email = %s", (data["customer"]["email"],))
