@@ -1,5 +1,5 @@
-import { AppBar, Toolbar, Typography, Box, Avatar, IconButton } from '@mui/material';
-import { Brightness4, Brightness7 } from '@mui/icons-material';
+import { AppBar, Toolbar, Typography, Box, Avatar, IconButton, Button } from '@mui/material';
+import { Brightness4, Brightness7, Launch } from '@mui/icons-material';
 import { useTheme } from '../hooks/useTheme';
 import LogoutButton from "./LogoutButton";
 
@@ -33,6 +33,22 @@ export default function TopBar({onLogOut}: TopBarProps) {
           </Box>
         </Box>
         <Box sx={{ ml: 'auto', display: 'flex', alignItems: 'center', gap: 1 }}>
+          <Button
+            variant="outlined"
+            size="small"
+            endIcon={<Launch />}
+            onClick={() => window.open('https://appointment-form.thspros.com/', '_blank')}
+            sx={{ 
+              color: 'inherit', 
+              borderColor: 'rgba(255, 255, 255, 0.23)',
+              '&:hover': {
+                borderColor: 'rgba(255, 255, 255, 0.5)',
+                backgroundColor: 'rgba(255, 255, 255, 0.08)'
+              }
+            }}
+          >
+            Appointment Form
+          </Button>
           <IconButton 
             onClick={toggleTheme} 
             color="inherit"
