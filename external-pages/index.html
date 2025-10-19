@@ -222,6 +222,9 @@
           </select>
         </div>
       </div>
+      <div class="row">
+        <div class="col" style="flex-basis:100%"><label>Call center notes (optional)</label><textarea id="callCenterNotes" rows="3" placeholder="Add any additional notes or special instructions for this appointment"></textarea></div>
+      </div>
       <div class="row" style="justify-content:space-between; margin-top:.75rem; align-items:center">
         <div class="hint">Submitting creates the lead in EspoCRM and notifies dispatch.</div>
         <button class="submit-btn" id="submitBtn">Submit Intake</button>
@@ -476,6 +479,12 @@
       state_province: $('#state').value,
       country: "USA"
     };
+
+    // Add call center notes if provided
+    const notes = $('#callCenterNotes').value.trim();
+    if (notes) {
+      payload.call_center_notes = notes;
+    }
 
     try {
       showToast('Submitting...', 'info');
