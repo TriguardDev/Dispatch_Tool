@@ -94,7 +94,7 @@ export default function Filters({ onNewAppt, onRefresh, refreshing = false }: Fi
           )}
         </Grid>
         
-        <Grid size={{ xs: 6, md: onRefresh ? 1 : 1 }}>
+        {/* <Grid size={{ xs: 6, md: onRefresh ? 1 : 1 }}>
           <Button 
             variant="contained" 
             onClick={onNewAppt}
@@ -106,7 +106,7 @@ export default function Filters({ onNewAppt, onRefresh, refreshing = false }: Fi
           >
             + New Appt
           </Button>
-        </Grid>
+        </Grid> */}
       </Grid>
     </Box>
   );
